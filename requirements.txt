@@ -1,0 +1,36 @@
+fastapi 
+uvicorn 
+sqlalchemy
+psycopg2-binary
+python-dotenv
+pydantic-settings
+asyncpg
+uvicorn[standard]
+alembic
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+pydantic[email]
+beautifulsoup4
+lxml
+price-parser
+pytest
+google-genai
+# Scraping
+patchright
+httpx
+curl-cffi
+
+# Dashboard
+streamlit
+plotly
+pandas
+
+# Scheduling
+apscheduler
+
+# Exports
+openpyxl
+
+# Utilities
+loguru

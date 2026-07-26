@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 # import our settings to get DATABASE_URL from .env
-from app.config import get_settings
+from app.config import settings
 
 # import base = this is how alembic knows about your tables
 from app.database import Base
@@ -31,8 +31,7 @@ target_metadata = Base.metadata
 
 # Inject your real DATABASE_URL from .env into Alembic's config 
 # this replaces the blank sqlalchemy.url we left in alembic.ini
-settings = get_settings()
-config.set_main_option("sqlalchemy.url",settings.database_url)
+config.set_main_option("sqlalchemy.url",settings.DATABASE_URL)
 
 # We can run a migration without a live database connection 
 # (used internally by Alembic, rarely matters from us)

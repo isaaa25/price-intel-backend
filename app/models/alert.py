@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import String, Boolean, DateTime, ForeignKey, func, text
+from sqlalchemy import String, Boolean, DateTime, ForeignKey, func, text, NUMERIC
 
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -29,6 +29,41 @@ class Alert(Base):
     # Optional link to the specific snapshot that triggered the alert
     price_snapshot_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("price_snapshots.id"), nullable=True
+    )
+
+    # The price or value BEFORE the change that triggered this alert.
+    # Nullable because not all alert types have a monetary previous value.
+    # An "out_of_stock" alert's previous_value might be a price, or NULL.
+    # NUMERIC(10,2): exact decimal for any price comparison.
+    previous_value: Mapped[float | None] = mapped_column(
+        NUMERIC(10, 2),
+        nullable=True
+    )
+
+    # The price or value AFTER the change.
+    current_value: Mapped[float | None] = mapped_column(
+        NUMERIC(10, 2),
+        nullable=True
+    )
+
+        # The percentage change that caused this alert.
+    # Can be negative (price drop = negative percentage).
+    # NUMERIC(7,2): up to -9,999.99 to 9,999.99. Covers any realistic change.
+    # 7 total digits, 2 decimal places.
+    change_pct: Mapped[float | None] = mapped_column(
+        NUMERIC(7, 2),
+        nullable=True
+    )
+
+    # The alert threshold that was crossed to generate this alert.
+    # Stored so you can explain to the user: "This fired because you set
+    # a 3% threshold and the price dropped by 5.3%."
+    # Nullable because threshold-less alert types (new_competitor, out_of_stock)
+    # do not use a threshold.
+    # NUMERIC(5,2): threshold values like 3.00, 5.50, 10.00.
+    threshold_used: Mapped[float | None] = mapped_column(
+        NUMERIC(5, 2),
+        nullable=True
     )
 
     # Alert Content

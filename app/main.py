@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
-from app.routers import auth
+from app.routers import auth,products,stores
 
 settings = get_settings()
 
@@ -43,6 +43,8 @@ app.add_middleware(
 
 
 app.include_router(auth.router)
+app.include_router(products.router,prefix="/products",tags=["Products"])
+app.include_router(stores.router,prefix="/stores",tags=["Stores"])
 
 # Root endpoint the one test point for now 
 @app.get("/")

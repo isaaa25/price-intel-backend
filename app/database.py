@@ -2,12 +2,12 @@
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
-from app.config import get_settings
+from app.config import settings
 
-settings = get_settings()
+# settings = get_settings()
 
 engine = create_async_engine(
-    settings.database_url,
+    settings.DATABASE_URL, # Connects to your database
     pool_size = 5, # Keeps 5 open connections ready
     max_overflow = 10, # Can temporarily create 10 extra connections
     pool_pre_ping = True, # PostgreSQL drops idle connections after a timeout. Without this, if your app sits idle for 10 minutes and then gets a request, SQLAlchemy might try to use a dead connection and crash. With pool_pre_ping=True, it sends a lightweight SELECT 1 before using any connection to verify it's alive.
@@ -34,3 +34,21 @@ class Base(DeclarativeBase):
     Every model that inherits from Base is part of the same "registry" - SQLAlchemy knows they all belong to the same database."""
     pass # It's an ORM base class. All our models will inherit from this
 
+
+# Add this to the bottom of app/database.py
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+# Sync engine for pipeline/loader.py and Alembic
+sync_engine = create_engine(
+    settings.SYNC_DATABASE_URL,
+    pool_size=5,
+    max_overflow=10,
+    pool_pre_ping=True,
+)
+
+SyncSessionLocal = sessionmaker(
+    bind=sync_engine,
+    autocommit=False,
+    autoflush=False,
+)

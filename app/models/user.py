@@ -7,8 +7,8 @@ from app.database import Base
 from typing import List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.models.tracked_product import TrackedProduct
     from app.models.alert import Alert
+    from app.models.user_store import UserStore
 # Since you are using DeclarativeBase in your database.py, the enterprise-standard way to write this now is using Mapped and mapped_column. 
 # This version catches typos more easily and is optimized for the Async environment.
 class User(Base):
@@ -27,10 +27,10 @@ class User(Base):
     updated_at : Mapped[datetime] = mapped_column(DateTime(timezone=True),server_default=func.now(),onupdate=func.now())
 
     # Relationship 
-
-    tracked_products: Mapped[List["TrackedProduct"]] = relationship(
-    "TrackedProduct", back_populates="user", cascade="all, delete-orphan"
-)
     alerts: Mapped[List["Alert"]] = relationship(
     "Alert", back_populates="user", cascade="all, delete-orphan"
+)
+
+    stores: Mapped[List["UserStore"]] = relationship(
+    "UserStore", back_populates="user", cascade="all, delete-orphan"
 )

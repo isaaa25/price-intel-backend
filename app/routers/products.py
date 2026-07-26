@@ -1,12 +1,25 @@
-from fastapi import APIRouter,Depends
+"""
+app/routers/products.py
 
-from sqlalchemy.orm import Session
-from app.dependencies import get_db
-from app.schemas.product import ProductCreate,ProductResponse
+FIX: same bug as stores.py — add_product must be `async def` and must
+`await` create_product, since create_product is now async (see
+product_service.py).
+"""
+
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.dependencies import get_db, get_current_user
+from app.schemas.product import ProductCreate, ProductResponse
 from app.services.product_service import create_product
 
 router = APIRouter()
 
-@router.post("/",response_model=ProductResponse)
-def add_product(product:ProductCreate,db:Session = Depends(get_db)):
-    return create_product(db,product)
+
+@router.post("/", response_model=ProductResponse)
+async def add_product(
+    product: ProductCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    return await create_product(db, current_user.id, product)
