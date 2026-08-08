@@ -35,7 +35,17 @@ app = FastAPI(
 # Browsers have a security feature that stops a website from talking to a different server 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"], # you are explicitly telling the server "Trust the frontend running on my laptop"
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176",
+        "http://localhost:5177",
+        "http://localhost:5178",
+        "http://localhost:5179",
+        "http://localhost:5180",
+    ],  # allow all Vite dev server ports
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

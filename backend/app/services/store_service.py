@@ -74,3 +74,16 @@ async def get_store_or_404(db: AsyncSession, store_id, user_id) -> UserStore:
             detail="This store is not active.",
         )
     return store
+
+
+async def get_stores(db: AsyncSession, user_id) -> list[UserStore]:
+    """
+    Returns all UserStore rows that belong to the requesting user.
+    Ordered by creation date descending (newest first).
+    """
+    result = await db.execute(
+        select(UserStore)
+        .where(UserStore.user_id == user_id)
+        .order_by(UserStore.created_at.desc())
+    )
+    return list(result.scalars().all())

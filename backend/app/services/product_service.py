@@ -13,10 +13,14 @@ Phase 1 doc documents for bcrypt hashing. Wrapped with
 run_in_threadpool for the same reason bcrypt was.
 """
 
+from typing import List
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.models.tracked_product import TrackedProduct
+from app.models.user_store import UserStore
 from app.services.store_service import get_store_or_404
 from pipeline.ai.query_generalizer import generalize_title
 
@@ -76,3 +80,18 @@ async def create_product(db: AsyncSession, user_id, product_data) -> TrackedProd
         pass
 
     return product
+
+
+async def get_products(db: AsyncSession, user_id) -> List[TrackedProduct]:
+    """
+    Returns all TrackedProduct rows that belong to the requesting user,
+    by joining through user_stores.  Scoped to user_id so a user can
+    never see another user's products.
+    """
+    result = await db.execute(
+        select(TrackedProduct)
+        .join(UserStore, TrackedProduct.store_id == UserStore.id)
+        .where(UserStore.user_id == user_id)
+        .order_by(TrackedProduct.created_at.desc())
+    )
+    return list(result.scalars().all())

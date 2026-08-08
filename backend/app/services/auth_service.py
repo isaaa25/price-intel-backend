@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt as bcrypt_lib
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException,status
@@ -14,16 +14,24 @@ from app.models.user import User
 from app.schemas.user import UserRegister
 
 settings = get_settings()
-pwd_context = CryptContext(schemes=["bcrypt"],deprecated='auto')
+# Using bcrypt directly — passlib is incompatible with bcrypt 4.x+
 
 # Job 1 is password operation  (It should be non-blocking)
-async def hash_password(plain_password:str) -> str:
+async def hash_password(plain_password: str) -> str:
     """Uses the threadpool to avoid blocking the async event loop"""
-    return await run_in_threadpool(pwd_context.hash,plain_password)
+    def _hash() -> str:
+        salt = bcrypt_lib.gensalt()
+        return bcrypt_lib.hashpw(plain_password.encode("utf-8"), salt).decode("utf-8")
+    return await run_in_threadpool(_hash)
 
-async def verify_password(plain_password:str,hashed_password:str) -> bool:
+async def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Uses a threadpool to avoid blocking the async event loop"""
-    return await run_in_threadpool(pwd_context.verify,plain_password,hashed_password)
+    def _verify() -> bool:
+        return bcrypt_lib.checkpw(
+            plain_password.encode("utf-8"),
+            hashed_password.encode("utf-8"),
+        )
+    return await run_in_threadpool(_verify)
 
 # Job 2 Database Operations 
 async def get_user_by_email(db:AsyncSession,email:str) -> User | None:

@@ -1,0 +1,426 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ─── Design Tokens ─────────────────────────────────────── */
+:root {
+  /* Core palette */
+  --bg: #FAFAFA;
+  --bg-subtle: #F4F4F5;
+  --surface: #FFFFFF;
+  --surface-2: #F8F8FA;
+  --border: #E4E4E7;
+  --border-light: #EFEFEF;
+
+  /* Text */
+  --text: #18181B;
+  --text-2: #52525B;
+  --text-3: #A1A1AA;
+
+  /* Accent — a single refined indigo */
+  --accent: #4F46E5;
+  --accent-light: #EEF2FF;
+  --accent-hover: #4338CA;
+
+  /* Semantic */
+  --success: #16A34A;
+  --success-bg: #F0FDF4;
+  --danger: #DC2626;
+  --danger-bg: #FEF2F2;
+  --warning: #D97706;
+  --warning-bg: #FFFBEB;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.10);
+
+  /* Radii */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  --r-full: 999px;
+}
+
+/* ─── Reset & Base ──────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+/* ─── Auth pages shared wrapper ────────────────────────── */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  position: relative;
+}
+
+/* Subtle grid dot background */
+.auth-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(79, 70, 229, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(79, 70, 229, 0.04) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* ─── Top-left brand mark ───────────────────────────────── */
+.brand-mark {
+  position: fixed;
+  top: 24px;
+  left: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  z-index: 10;
+}
+
+.brand-mark-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: -0.5px;
+}
+
+.brand-mark-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ─── Auth card ─────────────────────────────────────────── */
+.auth-card {
+  width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  padding: 40px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeUp 0.4s ease both;
+}
+
+.auth-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-card-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: -0.4px;
+}
+
+.auth-card-header p {
+  font-size: 13px;
+  color: var(--text-2);
+  margin: 0;
+}
+
+/* ─── Form elements ─────────────────────────────────────── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  letter-spacing: 0.2px;
+}
+
+.field input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field input::placeholder {
+  color: var(--text-3);
+}
+
+.field input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.10);
+}
+
+.field-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── Buttons ───────────────────────────────────────────── */
+.btn-primary {
+  width: 100%;
+  padding: 11px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.30);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease;
+}
+
+.btn-ghost:hover {
+  color: var(--text);
+}
+
+/* ─── Error message ─────────────────────────────────────── */
+.error-msg {
+  font-size: 12px;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border: 1px solid #FECACA;
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  margin: 0;
+}
+
+/* ─── Auth footer link ──────────────────────────────────── */
+.auth-footer {
+  font-size: 13px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+.auth-footer a,
+.auth-footer span[role="button"] {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-footer a:hover,
+.auth-footer span[role="button"]:hover {
+  text-decoration: underline;
+}
+
+/* ─── Divider ───────────────────────────────────────────── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ─── Welcome page specific ─────────────────────────────── */
+.welcome-logo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.welcome-logo-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-lg);
+  background: var(--accent-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -1px;
+}
+
+.welcome-logo-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+.welcome-logo-sub {
+  font-size: 13px;
+  color: var(--text-2);
+  text-align: center;
+  margin: 0;
+}
+
+.welcome-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-outline {
+  width: 100%;
+  padding: 11px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.btn-outline:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+/* ─── Dashboard tokens ──────────────────────────────────── */
+:root {
+  --d-bg: #F7F7F8;
+  --d-sidebar: #F0F0F5;
+  --d-surface: #FFFFFF;
+  --d-surface-2: #F7F7F8;
+  --d-border: #E4E4E7;
+  --d-text: #18181B;
+  --d-text-2: #52525B;
+  --d-text-3: #A1A1AA;
+  --d-accent: #4F46E5;
+  --d-accent-bg: #EEF2FF;
+  --d-success: #16A34A;
+  --d-success-bg: #F0FDF4;
+  --d-danger: #DC2626;
+  --d-danger-bg: #FEF2F2;
+  --d-warning: #D97706;
+  --d-warning-bg: #FFFBEB;
+}
+
+/* ─── Animations ────────────────────────────────────────── */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-in {
+  animation: fadeUp 0.35s ease both;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease both;
+}
+
+.scale-in {
+  animation: scaleIn 0.3s ease both;
+}
+
+/* ─── Utility hover ─────────────────────────────────────── */
+.hover-lift {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}

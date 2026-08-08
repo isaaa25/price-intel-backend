@@ -205,3 +205,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+#"chore: add mcp.json to gitignore"
+.mcp.json   
