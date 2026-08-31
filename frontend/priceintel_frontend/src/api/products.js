@@ -19,6 +19,16 @@ export function getProducts() {
 }
 
 /**
+ * Fetch products filtered by a specific store.
+ * Backend: GET /products/?store_id=<storeId>
+ * @param {string|number} storeId
+ * Returns: ProductResponse[]
+ */
+export function getProductsByStore(storeId) {
+  return apiRequest(`/products/?store_id=${encodeURIComponent(storeId)}`);
+}
+
+/**
  * Create a new tracked product under a store.
  * Backend: POST /products/
  * @param {{ store_id: string, title: string, own_url: string, own_cost: number, category: string|null }} payload
@@ -28,5 +38,15 @@ export function createProduct(payload) {
   return apiRequest("/products/", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Delete a tracked product by ID.
+ * Backend: DELETE /products/{productId}
+ */
+export function deleteProduct(productId) {
+  return apiRequest(`/products/${productId}`, {
+    method: "DELETE",
   });
 }

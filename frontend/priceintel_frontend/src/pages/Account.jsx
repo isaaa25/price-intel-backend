@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
 import { getStores } from "../api/products";
 import apiRequest from "../api/client";
+import { useStore } from "../context/StoreContext";
 
 const cardStyle = {
     background: "var(--d-surface)",
@@ -38,21 +39,20 @@ const COUNTRY_OPTIONS = ["UAE", "Saudi Arabia", "Pakistan"];
 
 function MarketplaceBadge({ marketplace }) {
     const colors = {
-        noon: { bg: "#FFF7ED", color: "#C2410C" },
-        daraz: { bg: "#FFF0F0", color: "#E11D48" },
-        amazon: { bg: "#FFFBEB", color: "#D97706" },
-        other: { bg: "var(--d-accent-bg)", color: "var(--d-accent)" },
+        noon: { color: "#C2410C" },
+        daraz: { color: "#E11D48" },
+        amazon: { color: "#D97706" },
+        other: { color: "var(--d-accent)" },
     };
     const c = colors[marketplace?.toLowerCase()] || colors.other;
     return (
         <span style={{
-            padding: "2px 10px",
-            borderRadius: "999px",
-            fontSize: "11px",
+            fontSize: "12px",
             fontWeight: 600,
-            background: c.bg,
             color: c.color,
             textTransform: "capitalize",
+            minWidth: "55px",
+            display: "inline-block",
         }}>
             {marketplace}
         </span>
@@ -60,6 +60,7 @@ function MarketplaceBadge({ marketplace }) {
 }
 
 function Account() {
+    const { refreshStores } = useStore();
     const [stores, setStores] = useState([]);
     const [storesLoading, setStoresLoading] = useState(true);
     const [storesError, setStoresError] = useState("");
@@ -86,13 +87,15 @@ function Account() {
 
     useEffect(() => { loadStores(); }, []);
 
+    const isFormValid = Boolean(marketplace && country && storeName.trim() && storeUrl.trim());
+
     async function handleAddStore(e) {
         e.preventDefault();
         setSubmitError("");
         setSuccessMsg("");
 
-        if (!storeName.trim() || !storeUrl.trim()) {
-            setSubmitError("Store name and URL are required.");
+        if (!marketplace || !country || !storeName.trim() || !storeUrl.trim()) {
+            setSubmitError("Please fill in all required fields (Marketplace, Country, Store Name, and Store URL).");
             return;
         }
 
@@ -113,10 +116,29 @@ function Account() {
             setStoreName(""); setStoreSlug(""); setExternalId(""); setStoreUrl("");
             setShowForm(false);
             loadStores();
+            refreshStores();
         } catch (err) {
             setSubmitError(err.message || "Something went wrong.");
         } finally {
             setSubmitting(false);
+        }
+    }
+
+    async function handleDeleteStore(store) {
+        if (!window.confirm(`Are you sure you want to delete "${store.store_name}"? This action cannot be undone.`)) {
+            return;
+        }
+        setSubmitError("");
+        setSuccessMsg("");
+        try {
+            await apiRequest(`/stores/${store.id}`, {
+                method: "DELETE",
+            });
+            setSuccessMsg(`Store "${store.store_name}" deleted successfully.`);
+            loadStores();
+            refreshStores();
+        } catch (err) {
+            setSubmitError(err.message || "Failed to delete store.");
         }
     }
 
@@ -139,7 +161,7 @@ function Account() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                     <div>
                         <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "var(--d-text)", display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span>🏪</span> Your Stores
+                            Your Stores
                         </h2>
                         <p style={{ margin: "2px 0 0", fontSize: "12px", color: "var(--d-text-3)" }}>
                             Connect your marketplace seller accounts to start tracking.
@@ -181,6 +203,7 @@ function Account() {
                             </div>
                         )}
 
+                        {/* Row 1: Marketplace* | Country* */}
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
                             <div>
                                 <label style={labelStyle}>Marketplace *</label>
@@ -200,6 +223,7 @@ function Account() {
                             </div>
                         </div>
 
+                        {/* Row 2: Store Name* | Store URL* */}
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
                             <div>
                                 <label style={labelStyle}>Store Name *</label>
@@ -211,7 +235,21 @@ function Account() {
                             </div>
                         </div>
 
-                        <button type="submit" disabled={submitting} style={{ padding: "9px 20px", background: submitting ? "var(--d-text-3)" : "var(--d-accent)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer" }}>
+                        <button
+                            type="submit"
+                            disabled={submitting || !isFormValid}
+                            style={{
+                                padding: "9px 20px",
+                                background: (!isFormValid || submitting) ? "var(--d-text-3)" : "var(--d-accent)",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "8px",
+                                fontSize: "13px",
+                                fontWeight: 600,
+                                cursor: (!isFormValid || submitting) ? "not-allowed" : "pointer",
+                                opacity: (!isFormValid || submitting) ? 0.7 : 1,
+                            }}
+                        >
                             {submitting ? "Saving..." : "Save Store"}
                         </button>
                     </form>
@@ -228,16 +266,50 @@ function Account() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                     {stores.map((s) => (
                         <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderRadius: "8px", background: "var(--d-bg)", border: "1px solid var(--d-border)" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
                                 <MarketplaceBadge marketplace={s.marketplace} />
                                 <div>
                                     <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--d-text)" }}>{s.store_name}</div>
                                     <div style={{ fontSize: "12px", color: "var(--d-text-3)" }}>{s.country}</div>
                                 </div>
                             </div>
-                            <a href={s.store_url} target="_blank" rel="noreferrer" style={{ fontSize: "12px", color: "var(--d-accent)", textDecoration: "none" }}>
-                                View Store ↗
-                            </a>
+                            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                                {s.store_url && (
+                                    <a href={s.store_url} target="_blank" rel="noreferrer" style={{ fontSize: "12px", color: "var(--d-accent)", textDecoration: "none", fontWeight: 500 }}>
+                                        View Store ↗
+                                    </a>
+                                )}
+                                <button
+                                    onClick={() => handleDeleteStore(s)}
+                                    title="Delete Store"
+                                    style={{
+                                        background: "none",
+                                        border: "1px solid #fee2e2",
+                                        color: "#ef4444",
+                                        padding: "5px 10px",
+                                        borderRadius: "6px",
+                                        fontSize: "11.5px",
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                        transition: "all 0.15s ease",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = "#fee2e2";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = "none";
+                                    }}
+                                >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="3 6 5 6 21 6" />
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                    </svg>
+                                    Delete
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>

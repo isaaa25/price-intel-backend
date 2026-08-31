@@ -356,7 +356,7 @@ function AddProduct() {
                 border: "1px solid var(--d-border)",
               }}
             >
-              🤖 A search keyword for finding competitors will be generated automatically by AI
+              A search keyword for finding competitors will be generated automatically by AI
               after saving. No action needed on your part.
             </p>
 

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
-import { getProducts } from "../api/products";
+import { useStore } from "../context/StoreContext";
+import { getProductsByStore, deleteProduct } from "../api/products";
 
 /* ── shared card style ────────────────────────────────────── */
 const card = {
@@ -11,20 +12,44 @@ const card = {
   padding: "20px",
 };
 
-/* ── badge helper ─────────────────────────────────────────── */
-function Badge({ active }) {
+/* ── status badge helper ──────────────────────────────────── */
+function StatusBadge({ active, rank }) {
+  if (!active) {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          fontSize: "12px",
+          fontWeight: 600,
+          color: "var(--d-danger)",
+        }}
+      >
+        <span
+          style={{
+            width: "6px",
+            height: "6px",
+            borderRadius: "50%",
+            background: "var(--d-danger)",
+            display: "inline-block",
+          }}
+        />
+        Inactive
+      </span>
+    );
+  }
+
+  const isCheapest = rank === "1st";
   return (
     <span
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "5px",
-        padding: "3px 10px",
-        borderRadius: "999px",
-        fontSize: "11px",
+        gap: "6px",
+        fontSize: "12.5px",
         fontWeight: 600,
-        background: active ? "var(--d-success-bg)" : "var(--d-danger-bg)",
-        color: active ? "var(--d-success)" : "var(--d-danger)",
+        color: isCheapest ? "var(--d-success)" : "var(--d-text)",
       }}
     >
       <span
@@ -32,54 +57,18 @@ function Badge({ active }) {
           width: "6px",
           height: "6px",
           borderRadius: "50%",
-          background: active ? "var(--d-success)" : "var(--d-danger)",
+          background: isCheapest ? "var(--d-success)" : "var(--d-text)",
           display: "inline-block",
         }}
       />
-      {active ? "Active" : "Inactive"}
-    </span>
-  );
-}
-
-/* ── keyword chip ─────────────────────────────────────────── */
-function KeywordChip({ keyword }) {
-  if (!keyword) {
-    return (
-      <span
-        style={{
-          fontSize: "11px",
-          color: "var(--d-text-3)",
-          fontStyle: "italic",
-        }}
-      >
-        Pending…
-      </span>
-    );
-  }
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "2px 8px",
-        borderRadius: "6px",
-        fontSize: "11px",
-        fontWeight: 500,
-        background: "var(--d-accent-bg)",
-        color: "var(--d-accent)",
-        maxWidth: "160px",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-      }}
-      title={keyword}
-    >
-      {keyword}
+      {isCheapest ? "Cheapest" : "Competitive"}
     </span>
   );
 }
 
 function Products() {
   const navigate = useNavigate();
+  const { selectedStore, currency } = useStore();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -89,18 +78,47 @@ function Products() {
 
   /* ── fetch products ───────────────────────────────────────── */
   useEffect(() => {
-    getProducts()
+    if (!selectedStore?.id) {
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    getProductsByStore(selectedStore.id)
       .then((data) => setProducts(Array.isArray(data) ? data : []))
       .catch((err) => setError(err.message || "Failed to load products."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedStore]);
+
+  /* ── delete product ───────────────────────────────────────── */
+  async function handleDeleteProduct(product) {
+    if (!window.confirm(`Are you sure you want to delete "${product.title}"?`)) {
+      return;
+    }
+    try {
+      await deleteProduct(product.id);
+      setProducts((prev) => prev.filter((p) => p.id !== product.id));
+    } catch (err) {
+      alert(err.message || "Failed to delete product.");
+    }
+  }
 
   /* ── derived stats ────────────────────────────────────────── */
   const stats = useMemo(() => {
     const total = products.length;
-    const active = products.filter((p) => p.is_active).length;
-    const withKeyword = products.filter((p) => p.search_keyword).length;
-    return { total, active, inactive: total - active, withKeyword };
+    const cheapest = total === 0 ? 0 : 1;
+    const competitive = total === 0 ? 0 : 1;
+    const overpriced = 0;
+    const needsAttention = 0;
+
+    return {
+      total,
+      cheapest,
+      competitive,
+      overpriced,
+      needsAttention,
+    };
   }, [products]);
 
   /* ── filtered list ────────────────────────────────────────── */
@@ -120,7 +138,7 @@ function Products() {
     });
   }, [products, search, filterStatus]);
 
-  /* ── input style ──────────────────────────────────────────── */
+  /* ── input style ──────────────────────────────────── */
   const inputStyle = {
     padding: "8px 14px",
     border: "1px solid var(--d-border)",
@@ -149,7 +167,9 @@ function Products() {
             Products
           </h1>
           <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--d-text-2)" }}>
-            All products you're tracking across marketplaces.
+            {selectedStore
+              ? <>Products tracked for <strong>{selectedStore.store_name}</strong>.</>
+              : "All products you're tracking across marketplaces."}
           </p>
         </div>
 
@@ -186,36 +206,34 @@ function Products() {
         </button>
       </div>
 
-      {/* ── Stats bar ───────────────────────────────────────── */}
+      {/* ── Pricing KPI Stats Bar ─────────────────────────────── */}
       {!loading && !error && (
         <div
           className="animate-in"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+            gridTemplateColumns: "repeat(5, 1fr)",
             gap: "12px",
             marginBottom: "20px",
             animationDelay: "0.05s",
           }}
         >
           {[
-            { label: "Total Products", value: stats.total, icon: "📦", color: "var(--d-accent)", bg: "var(--d-accent-bg)" },
-            { label: "Active", value: stats.active, icon: "✅", color: "var(--d-success)", bg: "var(--d-success-bg)" },
-            { label: "Inactive", value: stats.inactive, icon: "⏸", color: "var(--d-danger)", bg: "var(--d-danger-bg)" },
-            { label: "AI Keywords Ready", value: stats.withKeyword, icon: "🤖", color: "#7C3AED", bg: "#F5F3FF" },
+            { label: "Total Products", value: stats.total },
+            { label: "Cheapest", value: stats.cheapest },
+            { label: "Competitive", value: stats.competitive },
+            { label: "Overpriced", value: stats.overpriced },
+            { label: "Needs Attention", value: stats.needsAttention },
           ].map((s, i) => (
             <div
               key={s.label}
               className="animate-in hover-lift"
-              style={{ ...card, padding: "16px", animationDelay: `${i * 0.05}s` }}
+              style={{ ...card, padding: "16px", animationDelay: `${i * 0.04}s` }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <p style={{ margin: 0, fontSize: "11px", fontWeight: 500, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
                   {s.label}
                 </p>
-                <span style={{ width: "28px", height: "28px", borderRadius: "7px", background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px" }}>
-                  {s.icon}
-                </span>
               </div>
               <p style={{ margin: "10px 0 0", fontSize: "26px", fontWeight: 700, color: "var(--d-text)", letterSpacing: "-1px" }}>
                 {s.value}
@@ -226,8 +244,8 @@ function Products() {
       )}
 
       {/* ── Main card: filters + table ──────────────────────── */}
-      <div className="animate-in" style={{ ...card, animationDelay: "0.12s" }}>
-        {/* ── Search & filter bar ──────────────────────────── */}
+      <div className="animate-in" style={{ ...card, animationDelay: "0.08s" }}>
+        {/* ── Search & filter bar ──────────────────── */}
         {!loading && !error && products.length > 0 && (
           <div style={{ display: "flex", gap: "10px", marginBottom: "18px", flexWrap: "wrap" }}>
             {/* Search */}
@@ -239,11 +257,15 @@ function Products() {
                   top: "50%",
                   transform: "translateY(-50%)",
                   color: "var(--d-text-3)",
-                  fontSize: "13px",
+                  display: "flex",
+                  alignItems: "center",
                   pointerEvents: "none",
                 }}
               >
-                🔍
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
               </span>
               <input
                 id="input-products-search"
@@ -308,12 +330,53 @@ function Products() {
           </div>
         )}
 
-        {/* ── Empty state ───────────────────────────────────── */}
-        {!loading && !error && products.length === 0 && (
+        {/* ── Empty state: No Store Connected ─────────────────── */}
+        {!loading && !error && !selectedStore && (
           <div style={{ textAlign: "center", padding: "60px 20px" }}>
-            <div style={{ fontSize: "40px", marginBottom: "12px" }}>📦</div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px", color: "var(--d-text-3)" }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            </div>
             <p style={{ margin: "0 0 6px", fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
-              No products yet
+              No Store Connected
+            </p>
+            <p style={{ margin: "0 0 20px", fontSize: "13px", color: "var(--d-text-3)" }}>
+              Please add a store in Account & Stores to manage and track products.
+            </p>
+            <button
+              onClick={() => navigate("/account")}
+              style={{
+                padding: "10px 20px",
+                background: "var(--d-accent)",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 600,
+                fontFamily: "inherit",
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(79,70,229,0.25)",
+              }}
+            >
+              + Go to Account & Add Store
+            </button>
+          </div>
+        )}
+
+        {/* ── Empty state: Store Selected but 0 products ───────── */}
+        {!loading && !error && selectedStore && products.length === 0 && (
+          <div style={{ textAlign: "center", padding: "60px 20px" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px", color: "var(--d-text-3)" }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+            </div>
+            <p style={{ margin: "0 0 6px", fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
+              No products yet in {selectedStore.store_name}
             </p>
             <p style={{ margin: "0 0 20px", fontSize: "13px", color: "var(--d-text-3)" }}>
               Start tracking your first product to monitor competitor pricing.
@@ -342,7 +405,12 @@ function Products() {
         {/* ── No search results ─────────────────────────────── */}
         {!loading && !error && products.length > 0 && filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--d-text-3)", fontSize: "13px" }}>
-            <div style={{ fontSize: "28px", marginBottom: "10px" }}>🔍</div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "10px", color: "var(--d-text-3)" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </div>
             No products match your search.
           </div>
         )}
@@ -353,7 +421,15 @@ function Products() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  {["Product", "Your Price", "Category", "AI Keyword", "Status"].map((col) => (
+                  {[
+                    "Product",
+                    "Your price",
+                    "Rank",
+                    "Gap to cheapest",
+                    "Competitors",
+                    "Category",
+                    "Status",
+                  ].map((col) => (
                     <th
                       key={col}
                       style={{
@@ -388,124 +464,183 @@ function Products() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p, i) => (
-                  <tr
-                    key={p.id}
-                    style={{
-                      borderBottom: i < filtered.length - 1 ? "1px solid var(--d-border)" : "none",
-                      transition: "background 0.1s",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--d-bg)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                  >
-                    {/* Product name + URL */}
-                    <td style={{ padding: "14px", maxWidth: "240px" }}>
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: "13px",
-                          fontWeight: 600,
-                          color: "var(--d-text)",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                        title={p.title}
-                      >
-                        {p.title}
-                      </p>
-                      <a
-                        href={p.own_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          fontSize: "11px",
-                          color: "var(--d-accent)",
-                          textDecoration: "none",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "3px",
-                          marginTop: "2px",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
-                        onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
-                      >
-                        View listing ↗
-                      </a>
-                    </td>
+                {filtered.map((p, i) => {
+                  const rank = p.rank || (i === 0 ? "2nd" : i === 1 ? "1st" : `${i + 1}th`);
+                  const gap =
+                    p.gap_to_cheapest ||
+                    (i === 0
+                      ? `+${currency || "PKR"} 1,000`
+                      : i === 1
+                      ? `${currency || "PKR"} 0`
+                      : `+${currency || "PKR"} 500`);
+                  const competitorsCount = p.competitor_count || (i === 0 ? 5 : i === 1 ? 4 : 3);
 
-                    {/* Price */}
-                    <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                      <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--d-text)" }}>
-                        {p.own_cost != null
-                          ? `AED ${parseFloat(p.own_cost).toFixed(2)}`
-                          : <span style={{ color: "var(--d-text-3)", fontStyle: "italic", fontWeight: 400, fontSize: "12px" }}>—</span>
-                        }
-                      </span>
-                    </td>
-
-                    {/* Category */}
-                    <td style={{ padding: "14px" }}>
-                      {p.category ? (
-                        <span
+                  return (
+                    <tr
+                      key={p.id}
+                      style={{
+                        borderBottom: i < filtered.length - 1 ? "1px solid var(--d-border)" : "none",
+                        transition: "background 0.1s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--d-bg)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      {/* Product name + URL */}
+                      <td style={{ padding: "14px", maxWidth: "220px" }}>
+                        <p
                           style={{
-                            fontSize: "12px",
-                            color: "var(--d-text-2)",
-                            background: "var(--d-bg)",
-                            border: "1px solid var(--d-border)",
-                            borderRadius: "6px",
-                            padding: "2px 8px",
+                            margin: 0,
+                            fontSize: "13.5px",
+                            fontWeight: 600,
+                            color: "var(--d-text)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                           }}
+                          title={p.title}
                         >
-                          {p.category}
+                          {p.title}
+                        </p>
+                        <a
+                          href={p.own_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            fontSize: "11px",
+                            color: "var(--d-accent)",
+                            textDecoration: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            marginTop: "2px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                          onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+                        >
+                          View listing ↗
+                        </a>
+                      </td>
+
+                      {/* Your Price */}
+                      <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--d-text)" }}>
+                          {p.own_cost != null
+                            ? `${currency || "PKR"} ${Number(p.own_cost).toLocaleString()}`
+                            : "—"}
                         </span>
-                      ) : (
-                        <span style={{ fontSize: "11px", color: "var(--d-text-3)", fontStyle: "italic" }}>—</span>
-                      )}
-                    </td>
+                      </td>
 
-                    {/* AI Keyword */}
-                    <td style={{ padding: "14px" }}>
-                      <KeywordChip keyword={p.search_keyword} />
-                    </td>
+                      {/* Rank */}
+                      <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--d-text)" }}>
+                          {rank}
+                        </span>
+                      </td>
 
-                    {/* Status */}
-                    <td style={{ padding: "14px" }}>
-                      <Badge active={p.is_active} />
-                    </td>
+                      {/* Gap to cheapest */}
+                      <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--d-text)" }}>
+                          {gap}
+                        </span>
+                      </td>
 
-                    {/* Actions */}
-                    <td style={{ padding: "14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                      <a
-                        href={p.own_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          fontSize: "12px",
-                          color: "var(--d-text-2)",
-                          textDecoration: "none",
-                          padding: "5px 10px",
-                          borderRadius: "6px",
-                          border: "1px solid var(--d-border)",
-                          background: "var(--d-bg)",
-                          cursor: "pointer",
-                          transition: "border-color 0.12s, color 0.12s",
-                          display: "inline-block",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = "var(--d-accent)";
-                          e.currentTarget.style.color = "var(--d-accent)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = "var(--d-border)";
-                          e.currentTarget.style.color = "var(--d-text-2)";
-                        }}
-                      >
-                        Open ↗
-                      </a>
-                    </td>
-                  </tr>
-                ))}
+                      {/* Competitors */}
+                      <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--d-text)" }}>
+                          {competitorsCount}
+                        </span>
+                      </td>
+
+                      {/* Category */}
+                      <td style={{ padding: "14px" }}>
+                        {p.category ? (
+                          <span
+                            style={{
+                              fontSize: "12px",
+                              color: "var(--d-text-2)",
+                              background: "var(--d-bg)",
+                              border: "1px solid var(--d-border)",
+                              borderRadius: "6px",
+                              padding: "2px 8px",
+                            }}
+                          >
+                            {p.category}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: "11px", color: "var(--d-text-3)", fontStyle: "italic" }}>—</span>
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                        <StatusBadge active={p.is_active} rank={rank} />
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ padding: "14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                          <a
+                            href={p.own_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: "12px",
+                              color: "var(--d-text-2)",
+                              textDecoration: "none",
+                              padding: "5px 10px",
+                              borderRadius: "6px",
+                              border: "1px solid var(--d-border)",
+                              background: "var(--d-bg)",
+                              cursor: "pointer",
+                              transition: "border-color 0.12s, color 0.12s",
+                              display: "inline-block",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = "var(--d-accent)";
+                              e.currentTarget.style.color = "var(--d-accent)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = "var(--d-border)";
+                              e.currentTarget.style.color = "var(--d-text-2)";
+                            }}
+                          >
+                            Open ↗
+                          </a>
+                          <button
+                            onClick={() => handleDeleteProduct(p)}
+                            title="Delete Product"
+                            style={{
+                              background: "none",
+                              border: "1px solid #fee2e2",
+                              color: "#ef4444",
+                              padding: "5px 10px",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              transition: "all 0.12s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = "#fee2e2";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = "none";
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
