@@ -1,15 +1,19 @@
 """
 app/routers/products.py
-
-FIX: same bug as stores.py — add_product must be `async def` and must
-`await` create_product, since create_product is now async (see
-product_service.py).
 """
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+""" FIX: same bug as stores.py — add_product must be `async def` and must
+`await` create_product, since create_product is now async (see
+product_service.py). """
 
-from typing import List
+""" Added a option to show the product for particular store selected, store_id is added to show the product of that store not all products from all stores ( even if one store is selected)"""
+
+
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List, Optional
+from uuid import UUID
 
 from app.dependencies import get_db, get_current_user
 from app.schemas.product import ProductCreate, ProductResponse
@@ -20,10 +24,11 @@ router = APIRouter()
 
 @router.get("/", response_model=List[ProductResponse])
 async def list_products(
+    store_id: Optional[UUID] = Query(default=None, description="Filter products by store ID"),
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user),
 ):
-    return await get_products(db, current_user.id)
+    return await get_products(db, current_user.id, store_id=store_id)
 
 
 @router.post("/", response_model=ProductResponse)

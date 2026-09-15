@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
 from app.schemas.store import StoreCreate, StoreResponse
-from app.services.store_service import create_store, get_stores
+from app.services.store_service import create_store, get_stores, delete_store
 
 router = APIRouter()
 
@@ -34,4 +34,20 @@ async def add_store(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user),
 ):
-    return await create_store(db, current_user.id, store)
+    return await create_store(db, current_user.id, store)
+
+
+@router.delete("/{store_id}", status_code=204)
+async def remove_store(
+    store_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    import uuid
+    from fastapi import HTTPException, status
+    try:
+        store_uuid = uuid.UUID(store_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid store ID format.")
+    await delete_store(db, store_uuid, current_user.id)
+    return None

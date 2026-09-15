@@ -86,4 +86,14 @@ async def get_stores(db: AsyncSession, user_id) -> list[UserStore]:
         .where(UserStore.user_id == user_id)
         .order_by(UserStore.created_at.desc())
     )
-    return list(result.scalars().all())
+    return list(result.scalars().all())
+
+
+async def delete_store(db: AsyncSession, store_id, user_id) -> None:
+    """
+    Deletes a UserStore by id, scoped to the requesting user.
+    Cascading tracked products will automatically be handled by DB foreign key.
+    """
+    store = await get_store_or_404(db, store_id, user_id)
+    await db.delete(store)
+    await db.flush()

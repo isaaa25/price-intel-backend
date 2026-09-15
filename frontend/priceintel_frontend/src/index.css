@@ -753,8 +753,8 @@ body {
   /* Dark Slate text */
   --d-text-2: #475569;
   /* Slate 600 */
-  --d-text-3: #94a3b8;
-  /* Slate 400 */
+  --d-text-3: #374151;
+  /* Dark grey — high contrast for labels/descriptions */
   --d-accent: #3B82F6;
   /* Accent Purple */
   --d-accent-bg: rgba(124, 58, 237, 0.08);
@@ -813,7 +813,7 @@ body {
   --d-border: #2c2c2c;
   --d-text: #e8e8e8;
   --d-text-2: #999999;
-  --d-text-3: #5a5a5a;
+  --d-text-3: #c0c8d4;
   --d-accent: #4f7ef7;
   --d-accent-bg: rgba(79, 126, 247, 0.10);
   --d-success: #4ade80;

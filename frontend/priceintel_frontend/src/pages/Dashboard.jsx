@@ -556,11 +556,11 @@ export default function Dashboard() {
             marginBottom: "22px",
           }}>
             {portfolioKpis.map((kpi) => (
-              <div key={kpi.id} style={card}>
+              <div key={kpi.id} style={{ ...card, textAlign: "center" }}>
                 {/* Label row */}
                 <div style={{ marginBottom: "14px" }}>
                   <span style={{
-                    fontSize: "9.5px",
+                    fontSize: "11.5px",
                     fontWeight: 700,
                     color: "var(--d-text-3)",
                     letterSpacing: "0.7px",
@@ -886,16 +886,16 @@ export default function Dashboard() {
             <div style={{ width: "100%", height: "340px", position: "relative" }}>
 
               {/* Quadrant corner labels */}
-              <div style={{ position: "absolute", top: 8, left: "12%", fontSize: "10.5px", fontWeight: 600, color: "#ef4444", opacity: 0.55, pointerEvents: "none", zIndex: 2 }}>
+              <div style={{ position: "absolute", top: 30, left: "12%", fontSize: "12px", fontWeight: 700, color: "#d42b2b", pointerEvents: "none", zIndex: 2 }}>
                 ⚠ Risk Zone
               </div>
-              <div style={{ position: "absolute", top: 8, right: "7%", fontSize: "10.5px", fontWeight: 600, color: "#f59e0b", opacity: 0.55, pointerEvents: "none", zIndex: 2 }}>
+              <div style={{ position: "absolute", top: 30, right: "7%", fontSize: "12px", fontWeight: 700, color: "#c97d00", pointerEvents: "none", zIndex: 2 }}>
                 👁 Monitor Closely
               </div>
-              <div style={{ position: "absolute", bottom: 48, left: "12%", fontSize: "10.5px", fontWeight: 600, color: "#4f7ef7", opacity: 0.55, pointerEvents: "none", zIndex: 2 }}>
+              <div style={{ position: "absolute", bottom: 68, left: "12%", fontSize: "12px", fontWeight: 700, color: "#3b6ae8", pointerEvents: "none", zIndex: 2 }}>
                 💡 Improve Pricing
               </div>
-              <div style={{ position: "absolute", bottom: 48, right: "7%", fontSize: "10.5px", fontWeight: 600, color: "#10B981", opacity: 0.55, pointerEvents: "none", zIndex: 2 }}>
+              <div style={{ position: "absolute", bottom: 68, right: "7%", fontSize: "12px", fontWeight: 700, color: "#0a9668", pointerEvents: "none", zIndex: 2 }}>
                 ✓ Healthy Position
               </div>
 

@@ -9,7 +9,8 @@ from sqlalchemy import (
     ForeignKey,
     func,
     text,
-    UniqueConstraint
+    UniqueConstraint,
+    Text
     
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -101,7 +102,7 @@ class UserStore(Base):
     )
 
     store_url: Mapped[str] = mapped_column(
-        String(1000),
+        Text,
         nullable=False
         # Canonical URL to the marketplace store.
         #

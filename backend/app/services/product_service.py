@@ -13,7 +13,8 @@ Phase 1 doc documents for bcrypt hashing. Wrapped with
 run_in_threadpool for the same reason bcrypt was.
 """
 
-from typing import List
+from typing import List, Optional
+import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -82,16 +83,21 @@ async def create_product(db: AsyncSession, user_id, product_data) -> TrackedProd
     return product
 
 
-async def get_products(db: AsyncSession, user_id) -> List[TrackedProduct]:
+async def get_products(db: AsyncSession, user_id, store_id: Optional[uuid.UUID] = None) -> List[TrackedProduct]:
     """
-    Returns all TrackedProduct rows that belong to the requesting user,
-    by joining through user_stores.  Scoped to user_id so a user can
-    never see another user's products.
+    Returns TrackedProduct rows that belong to the requesting user,
+    optionally filtered by a specific store_id.
     """
-    result = await db.execute(
+    stmt = (
         select(TrackedProduct)
         .join(UserStore, TrackedProduct.store_id == UserStore.id)
         .where(UserStore.user_id == user_id)
-        .order_by(TrackedProduct.created_at.desc())
     )
+    if store_id is not None:
+        stmt = stmt.where(TrackedProduct.store_id == store_id)
+    stmt = stmt.order_by(TrackedProduct.created_at.desc())
+    result = await db.execute(stmt)
     return list(result.scalars().all())
+
+    """ added store_id to filter the products by store^ """
+    
