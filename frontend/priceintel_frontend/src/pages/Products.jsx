@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useStore } from "../context/StoreContext";
-import { getProductsByStore, deleteProduct } from "../api/products";
+import { getProductsByStore, deleteProduct, getProductKpis } from "../api/products";
+// CHANGED: added getProductKpis to the import above
 
 /* ── shared card style ────────────────────────────────────── */
 const card = {
@@ -13,55 +14,36 @@ const card = {
 };
 
 /* ── status badge helper ──────────────────────────────────── */
-function StatusBadge({ active, rank }) {
+function StatusBadge({ active, kpi }) {
   if (!active) {
     return (
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "6px",
-          fontSize: "12px",
-          fontWeight: 600,
-          color: "var(--d-danger)",
-        }}
-      >
-        <span
-          style={{
-            width: "6px",
-            height: "6px",
-            borderRadius: "50%",
-            background: "var(--d-danger)",
-            display: "inline-block",
-          }}
-        />
+      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: "var(--d-danger)" }}>
+        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--d-danger)", display: "inline-block" }} />
         Inactive
       </span>
     );
   }
 
-  const isCheapest = rank === "1st";
+  // No KPI data yet, or no competitor to compare against
+  if (!kpi || kpi.cheapest_competitor == null || kpi.own_price == null) {
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12.5px", fontWeight: 600, color: "var(--d-text-3)" }}>
+        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--d-text-3)", display: "inline-block" }} />
+        No data
+      </span>
+    );
+  }
+
+  const isCheapest = kpi.is_cheapest === true;
+  const isOverpriced = kpi.own_price > kpi.cheapest_competitor;
+
+  const label = isCheapest ? "Cheapest" : isOverpriced ? "Overpriced" : "Competitive";
+  const color = isCheapest ? "var(--d-success)" : isOverpriced ? "var(--d-danger)" : "var(--d-text)";
+
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "6px",
-        fontSize: "12.5px",
-        fontWeight: 600,
-        color: isCheapest ? "var(--d-success)" : "var(--d-text)",
-      }}
-    >
-      <span
-        style={{
-          width: "6px",
-          height: "6px",
-          borderRadius: "50%",
-          background: isCheapest ? "var(--d-success)" : "var(--d-text)",
-          display: "inline-block",
-        }}
-      />
-      {isCheapest ? "Cheapest" : "Competitive"}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12.5px", fontWeight: 600, color }}>
+      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: color, display: "inline-block" }} />
+      {label}
     </span>
   );
 }
@@ -71,6 +53,8 @@ function Products() {
   const { selectedStore, currency } = useStore();
 
   const [products, setProducts] = useState([]);
+  const [kpisById, setKpisById] = useState({});
+  // CHANGED: new state — holds real KPI data per product ID, e.g. { "uuid-1": {own_price, cheapest_competitor, num_competitors, is_cheapest}, ... }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -80,13 +64,31 @@ function Products() {
   useEffect(() => {
     if (!selectedStore?.id) {
       setProducts([]);
+      setKpisById({});
+      // CHANGED: also clear kpisById when there's no store
       setLoading(false);
       return;
     }
     setLoading(true);
     setError("");
     getProductsByStore(selectedStore.id)
-      .then((data) => setProducts(Array.isArray(data) ? data : []))
+      .then(async (data) => {
+        // CHANGED: this whole .then() body is new — was just
+        // `.then((data) => setProducts(Array.isArray(data) ? data : []))`
+        const list = Array.isArray(data) ? data : [];
+        setProducts(list);
+
+        // Fetch KPIs for every product in parallel — each is its own
+        // independent request, same pattern as everything else here.
+        const results = await Promise.allSettled(
+          list.map((p) => getProductKpis(p.id))
+        );
+        const map = {};
+        list.forEach((p, i) => {
+          map[p.id] = results[i].status === "fulfilled" ? results[i].value : null;
+        });
+        setKpisById(map);
+      })
       .catch((err) => setError(err.message || "Failed to load products."))
       .finally(() => setLoading(false));
   }, [selectedStore]);
@@ -106,20 +108,19 @@ function Products() {
 
   /* ── derived stats ────────────────────────────────────────── */
   const stats = useMemo(() => {
+    // CHANGED: this whole block replaces the old hardcoded
+    // cheapest/competitive/overpriced/needsAttention logic
     const total = products.length;
-    const cheapest = total === 0 ? 0 : 1;
-    const competitive = total === 0 ? 0 : 1;
-    const overpriced = 0;
-    const needsAttention = 0;
-
-    return {
-      total,
-      cheapest,
-      competitive,
-      overpriced,
-      needsAttention,
-    };
-  }, [products]);
+    let cheapest = 0, competitive = 0, overpriced = 0;
+    products.forEach((p) => {
+      const kpi = kpisById[p.id];
+      if (!kpi || kpi.cheapest_competitor == null) return;
+      if (kpi.is_cheapest) cheapest++;
+      else if (kpi.own_price != null && kpi.own_price > kpi.cheapest_competitor) overpriced++;
+      else competitive++;
+    });
+    return { total, cheapest, competitive, overpriced, needsAttention: overpriced };
+  }, [products, kpisById]);
 
   /* ── filtered list ────────────────────────────────────────── */
   const filtered = useMemo(() => {
@@ -153,7 +154,7 @@ function Products() {
   return (
     <Layout>
       {/* ── Page header ─────────────────────────────────────── */}
-      <div className="animate-in" style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div className="res-page-header animate-in">
         <div>
           <h1
             style={{
@@ -209,11 +210,8 @@ function Products() {
       {/* ── Pricing KPI Stats Bar ─────────────────────────────── */}
       {!loading && !error && (
         <div
-          className="animate-in"
+          className="animate-in res-grid-5"
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(5, 1fr)",
-            gap: "12px",
             marginBottom: "20px",
             animationDelay: "0.05s",
           }}
@@ -315,77 +313,45 @@ function Products() {
         )}
 
         {/* ── Error state ───────────────────────────────────── */}
-        {!loading && error && (
+        {error && (
           <div
             style={{
-              padding: "14px 18px",
-              borderRadius: "8px",
-              background: "var(--d-danger-bg)",
-              border: "1px solid #FECACA",
-              fontSize: "13px",
+              textAlign: "center",
+              padding: "48px 0",
               color: "var(--d-danger)",
+              fontSize: "13px",
             }}
           >
-            ⚠ {error}
+            <div style={{ fontSize: "28px", marginBottom: "12px" }}>⚠️</div>
+            {error}
           </div>
         )}
 
-        {/* ── Empty state: No Store Connected ─────────────────── */}
-        {!loading && !error && !selectedStore && (
-          <div style={{ textAlign: "center", padding: "60px 20px" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px", color: "var(--d-text-3)" }}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
+        {/* ── Empty state ───────────────────────────────────── */}
+        {!loading && !error && products.length === 0 && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "64px 0",
+              color: "var(--d-text-3)",
+            }}
+          >
+            <div style={{ fontSize: "40px", marginBottom: "16px", opacity: 0.5 }}>
+              📦
             </div>
-            <p style={{ margin: "0 0 6px", fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
-              No Store Connected
+            <p style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "var(--d-text-2)" }}>
+              No products yet
             </p>
-            <p style={{ margin: "0 0 20px", fontSize: "13px", color: "var(--d-text-3)" }}>
-              Please add a store in Account & Stores to manage and track products.
+            <p style={{ margin: "6px 0 0", fontSize: "13px" }}>
+              {selectedStore
+                ? `No products tracked for ${selectedStore.store_name}.`
+                : "Add your first product to start tracking prices."}
             </p>
             <button
-              onClick={() => navigate("/account")}
-              style={{
-                padding: "10px 20px",
-                background: "var(--d-accent)",
-                color: "#fff",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "13px",
-                fontWeight: 600,
-                fontFamily: "inherit",
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(79,70,229,0.25)",
-              }}
-            >
-              + Go to Account & Add Store
-            </button>
-          </div>
-        )}
-
-        {/* ── Empty state: Store Selected but 0 products ───────── */}
-        {!loading && !error && selectedStore && products.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 20px" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px", color: "var(--d-text-3)" }}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                <line x1="12" y1="22.08" x2="12" y2="12" />
-              </svg>
-            </div>
-            <p style={{ margin: "0 0 6px", fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
-              No products yet in {selectedStore.store_name}
-            </p>
-            <p style={{ margin: "0 0 20px", fontSize: "13px", color: "var(--d-text-3)" }}>
-              Start tracking your first product to monitor competitor pricing.
-            </p>
-            <button
-              id="btn-empty-add-product"
               onClick={() => navigate("/products/add")}
               style={{
-                padding: "10px 20px",
+                marginTop: "18px",
+                padding: "9px 20px",
                 background: "var(--d-accent)",
                 color: "#fff",
                 border: "none",
@@ -394,246 +360,221 @@ function Products() {
                 fontWeight: 600,
                 fontFamily: "inherit",
                 cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(79,70,229,0.25)",
               }}
             >
-              + Add Your First Product
+              + Add Product
             </button>
           </div>
         )}
 
         {/* ── No search results ─────────────────────────────── */}
         {!loading && !error && products.length > 0 && filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--d-text-3)", fontSize: "13px" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "10px", color: "var(--d-text-3)" }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </div>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "48px 0",
+              color: "var(--d-text-3)",
+              fontSize: "13px",
+            }}
+          >
+            <div style={{ fontSize: "28px", marginBottom: "12px", opacity: 0.5 }}>🔍</div>
             No products match your search.
           </div>
         )}
 
-        {/* ── Products table ────────────────────────────────── */}
+        {/* ── Product table ─────────────────────────────────── */}
         {!loading && !error && filtered.length > 0 && (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "13px",
+              }}
+            >
               <thead>
                 <tr>
                   {[
                     "Product",
-                    "Your price",
-                    "Rank",
-                    "Gap to cheapest",
-                    "Competitors",
                     "Category",
+                    "Own Price",
+                    "Cheapest Competitor",
+                    "Competitors",
                     "Status",
-                  ].map((col) => (
+                    "Actions",
+                  ].map((h) => (
                     <th
-                      key={col}
+                      key={h}
                       style={{
                         textAlign: "left",
-                        padding: "0 14px 12px",
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        color: "var(--d-text-3)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.5px",
+                        padding: "10px 12px",
                         borderBottom: "1px solid var(--d-border)",
+                        color: "var(--d-text-3)",
+                        fontWeight: 600,
+                        fontSize: "11px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.4px",
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {col}
+                      {h}
                     </th>
                   ))}
-                  <th
-                    style={{
-                      textAlign: "right",
-                      padding: "0 14px 12px",
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      color: "var(--d-text-3)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                      borderBottom: "1px solid var(--d-border)",
-                    }}
-                  >
-                    Actions
-                  </th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p, i) => {
-                  const rank = p.rank || (i === 0 ? "2nd" : i === 1 ? "1st" : `${i + 1}th`);
-                  const gap =
-                    p.gap_to_cheapest ||
-                    (i === 0
-                      ? `+${currency || "PKR"} 1,000`
-                      : i === 1
-                      ? `${currency || "PKR"} 0`
-                      : `+${currency || "PKR"} 500`);
-                  const competitorsCount = p.competitor_count || (i === 0 ? 5 : i === 1 ? 4 : 3);
+                {filtered.map((product) => {
+                  const kpi = kpisById[product.id];
+                  const ownPrice =
+                    kpi?.own_price != null
+                      ? `${currency} ${Number(kpi.own_price).toFixed(2)}`
+                      : product.own_cost != null
+                        ? `${currency} ${Number(product.own_cost).toFixed(2)}`
+                        : "—";
+                  const cheapestComp =
+                    kpi?.cheapest_competitor != null
+                      ? `${currency} ${Number(kpi.cheapest_competitor).toFixed(2)}`
+                      : "—";
+                  const numCompetitors =
+                    kpi?.num_competitors != null ? kpi.num_competitors : "—";
+                  const rank =
+                    kpi?.is_cheapest ? "1st" : kpi?.cheapest_competitor != null ? "2nd+" : null;
 
                   return (
                     <tr
-                      key={p.id}
+                      key={product.id}
                       style={{
-                        borderBottom: i < filtered.length - 1 ? "1px solid var(--d-border)" : "none",
+                        borderBottom: "1px solid var(--d-border)",
                         transition: "background 0.1s",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--d-bg)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background = "var(--d-surface-2, rgba(255,255,255,0.03))")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
                     >
-                      {/* Product name + URL */}
-                      <td style={{ padding: "14px", maxWidth: "220px" }}>
-                        <p
-                          style={{
-                            margin: 0,
-                            fontSize: "13.5px",
-                            fontWeight: 600,
-                            color: "var(--d-text)",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                          title={p.title}
+                      {/* Product */}
+                      <td style={{ padding: "12px 12px", maxWidth: "260px" }}>
+                        <div style={{
+                          fontWeight: 600,
+                          color: "var(--d-text)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          maxWidth: "260px",
+                        }}
+                          title={product.title}
                         >
-                          {p.title}
-                        </p>
-                        <a
-                          href={p.own_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            fontSize: "11px",
-                            color: "var(--d-accent)",
-                            textDecoration: "none",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "3px",
-                            marginTop: "2px",
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
-                          onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
-                        >
-                          View listing ↗
-                        </a>
-                      </td>
-
-                      {/* Your Price */}
-                      <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--d-text)" }}>
-                          {p.own_cost != null
-                            ? `${currency || "PKR"} ${Number(p.own_cost).toLocaleString()}`
-                            : "—"}
-                        </span>
-                      </td>
-
-                      {/* Rank */}
-                      <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--d-text)" }}>
-                          {rank}
-                        </span>
-                      </td>
-
-                      {/* Gap to cheapest */}
-                      <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--d-text)" }}>
-                          {gap}
-                        </span>
-                      </td>
-
-                      {/* Competitors */}
-                      <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                        <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--d-text)" }}>
-                          {competitorsCount}
-                        </span>
-                      </td>
-
-                      {/* Category */}
-                      <td style={{ padding: "14px" }}>
-                        {p.category ? (
-                          <span
+                          {product.title}
+                        </div>
+                        {product.search_keyword && (
+                          <div
                             style={{
-                              fontSize: "12px",
-                              color: "var(--d-text-2)",
-                              background: "var(--d-bg)",
-                              border: "1px solid var(--d-border)",
-                              borderRadius: "6px",
-                              padding: "2px 8px",
+                              fontSize: "11px",
+                              color: "var(--d-text-3)",
+                              marginTop: "2px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              maxWidth: "260px",
                             }}
                           >
-                            {p.category}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: "11px", color: "var(--d-text-3)", fontStyle: "italic" }}>—</span>
+                            🔍 {product.search_keyword}
+                          </div>
                         )}
                       </td>
 
+                      {/* Category */}
+                      <td style={{ padding: "12px 12px", color: "var(--d-text-2)" }}>
+                        {product.category || "—"}
+                      </td>
+
+                      {/* Own Price */}
+                      <td
+                        style={{
+                          padding: "12px 12px",
+                          fontWeight: 600,
+                          color: "var(--d-text)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {ownPrice}
+                      </td>
+
+                      {/* Cheapest Competitor */}
+                      <td
+                        style={{
+                          padding: "12px 12px",
+                          color:
+                            kpi?.cheapest_competitor != null &&
+                              kpi?.own_price != null &&
+                              kpi.own_price > kpi.cheapest_competitor
+                              ? "var(--d-danger)"
+                              : "var(--d-text-2)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {cheapestComp}
+                      </td>
+
+                      {/* # Competitors */}
+                      <td
+                        style={{
+                          padding: "12px 12px",
+                          color: "var(--d-text-2)",
+                          textAlign: "center",
+                        }}
+                      >
+                        {numCompetitors}
+                      </td>
+
                       {/* Status */}
-                      <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                        <StatusBadge active={p.is_active} rank={rank} />
+                      <td style={{ padding: "12px 12px" }}>
+                        <StatusBadge active={product.is_active} kpi={kpi} />
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: "14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                          <a
-                            href={p.own_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              fontSize: "12px",
-                              color: "var(--d-text-2)",
-                              textDecoration: "none",
-                              padding: "5px 10px",
-                              borderRadius: "6px",
-                              border: "1px solid var(--d-border)",
-                              background: "var(--d-bg)",
-                              cursor: "pointer",
-                              transition: "border-color 0.12s, color 0.12s",
-                              display: "inline-block",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.borderColor = "var(--d-accent)";
-                              e.currentTarget.style.color = "var(--d-accent)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.borderColor = "var(--d-border)";
-                              e.currentTarget.style.color = "var(--d-text-2)";
-                            }}
-                          >
-                            Open ↗
-                          </a>
+                      <td style={{ padding: "12px 12px" }}>
+                        <div style={{ display: "flex", gap: "8px" }}>
                           <button
-                            onClick={() => handleDeleteProduct(p)}
-                            title="Delete Product"
+                            id={`btn-view-${product.id}`}
+                            onClick={() => navigate(`/products/${product.id}`)}
                             style={{
-                              background: "none",
-                              border: "1px solid #fee2e2",
-                              color: "#ef4444",
-                              padding: "5px 10px",
+                              padding: "5px 12px",
+                              background: "var(--d-accent-bg)",
+                              color: "var(--d-accent)",
+                              border: "1px solid var(--d-accent)",
                               borderRadius: "6px",
                               fontSize: "12px",
                               fontWeight: 600,
+                              fontFamily: "inherit",
                               cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              transition: "all 0.12s",
+                              transition: "opacity 0.12s",
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#fee2e2";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = "none";
-                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.75")}
+                            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                           >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                            </svg>
+                            View
+                          </button>
+                          <button
+                            id={`btn-delete-${product.id}`}
+                            onClick={() => handleDeleteProduct(product)}
+                            style={{
+                              padding: "5px 10px",
+                              background: "transparent",
+                              color: "var(--d-danger)",
+                              border: "1px solid var(--d-danger)",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              fontFamily: "inherit",
+                              cursor: "pointer",
+                              transition: "opacity 0.12s",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+                            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                          >
                             Delete
                           </button>
                         </div>
@@ -643,11 +584,6 @@ function Products() {
                 })}
               </tbody>
             </table>
-
-            {/* Row count */}
-            <p style={{ margin: "12px 0 0", fontSize: "11px", color: "var(--d-text-3)", textAlign: "right" }}>
-              Showing {filtered.length} of {products.length} product{products.length !== 1 ? "s" : ""}
-            </p>
           </div>
         )}
       </div>

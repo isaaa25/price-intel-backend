@@ -145,7 +145,7 @@ function Account() {
     return (
         <Layout>
             {/* ── Page Header ────────────────────────────────────────── */}
-            <div className="animate-in" style={{ marginBottom: "28px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div className="res-page-header animate-in">
                 <div>
                     <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--d-text)", letterSpacing: "-0.3px" }}>
                         Account & Stores
@@ -204,7 +204,7 @@ function Account() {
                         )}
 
                         {/* Row 1: Marketplace* | Country* */}
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
+                        <div className="form-grid-2">
                             <div>
                                 <label style={labelStyle}>Marketplace *</label>
                                 <select value={marketplace} onChange={(e) => setMarketplace(e.target.value)} style={inputStyle}>
@@ -224,7 +224,7 @@ function Account() {
                         </div>
 
                         {/* Row 2: Store Name* | Store URL* */}
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
+                        <div className="form-grid-2">
                             <div>
                                 <label style={labelStyle}>Store Name *</label>
                                 <input type="text" placeholder="e.g. TechHub Store" value={storeName} onChange={(e) => setStoreName(e.target.value)} style={inputStyle} />
@@ -265,7 +265,7 @@ function Account() {
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                     {stores.map((s) => (
-                        <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderRadius: "8px", background: "var(--d-bg)", border: "1px solid var(--d-border)" }}>
+                        <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", padding: "12px 16px", borderRadius: "8px", background: "var(--d-bg)", border: "1px solid var(--d-border)" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
                                 <MarketplaceBadge marketplace={s.marketplace} />
                                 <div>

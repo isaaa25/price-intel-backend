@@ -16,7 +16,7 @@ run_in_threadpool for the same reason bcrypt was.
 from typing import List, Optional
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, text # text added
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
@@ -100,4 +100,98 @@ async def get_products(db: AsyncSession, user_id, store_id: Optional[uuid.UUID] 
     return list(result.scalars().all())
 
     """ added store_id to filter the products by store^ """
+
+    # query added for extracting products data from db
+async def get_product_kpis(db: AsyncSession, product_id) -> Optional[dict]:
+    """
+    Own price vs cheapest active competitor, using correlated
+    subqueries — verified directly against Neon before wiring in.
+    """
+    result = await db.execute(text("""
+        SELECT
+            tp.id, tp.own_cost,
+            (SELECT MIN(ps.price) FROM price_snapshots ps
+             JOIN competitor_listings cl ON cl.id = ps.competitor_listing_id
+             WHERE cl.tracked_product_id = tp.id AND cl.is_active = true) AS cheapest_competitor_price,
+            (SELECT COUNT(DISTINCT cl.id) FROM competitor_listings cl
+             WHERE cl.tracked_product_id = tp.id AND cl.is_active = true) AS num_competitors
+        FROM tracked_products tp
+        WHERE tp.id = :pid
+    """), {"pid": str(product_id)})
+    row = result.fetchone()
+    if row is None:
+        return None
+    return {
+        "own_price": row.own_cost,
+        "cheapest_competitor": row.cheapest_competitor_price,
+        "num_competitors": row.num_competitors,
+        "is_cheapest": (
+            row.own_cost is not None and row.cheapest_competitor_price is not None
+            and row.own_cost <= row.cheapest_competitor_price
+        ),
+    }   
     
+
+async def get_product_by_id(db: AsyncSession, product_id, user_id) -> TrackedProduct:
+    """
+    Returns a single TrackedProduct, verifying it belongs to the requesting user.
+    Raises 404 if not found or not owned by the user.
+    """
+    from fastapi import HTTPException
+    stmt = (
+        select(TrackedProduct)
+        .join(UserStore, TrackedProduct.store_id == UserStore.id)
+        .where(TrackedProduct.id == product_id)
+        .where(UserStore.user_id == user_id)
+    )
+    result = await db.execute(stmt)
+    product = result.scalars().first()
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product
+
+
+async def get_product_competitors(db: AsyncSession, product_id) -> list[dict]:
+    """
+    Returns all active competitor listings for a product, each with
+    the latest scraped price (from price_snapshots) and the listing URL.
+    """
+    from app.models.competitor_listing import CompetitorListing
+    result = await db.execute(text("""
+        SELECT
+            cl.id,
+            cl.url,
+            cl.platform,
+            cl.name,
+            cl.image_url,
+            cl.is_active,
+            cl.last_seen_at,
+            (SELECT ps.price
+             FROM price_snapshots ps
+             WHERE ps.competitor_listing_id = cl.id
+             ORDER BY ps.scraped_at DESC
+             LIMIT 1) AS latest_price,
+            (SELECT ps.scraped_at
+             FROM price_snapshots ps
+             WHERE ps.competitor_listing_id = cl.id
+             ORDER BY ps.scraped_at DESC
+             LIMIT 1) AS last_scraped_at
+        FROM competitor_listings cl
+        WHERE cl.tracked_product_id = :pid
+          AND cl.is_active = true
+        ORDER BY latest_price ASC NULLS LAST
+    """), {"pid": str(product_id)})
+    rows = result.fetchall()
+    return [
+        {
+            "id": str(r.id),
+            "url": r.url,
+            "platform": r.platform,
+            "name": r.name,
+            "image_url": r.image_url,
+            "is_active": r.is_active,
+            "latest_price": r.latest_price,
+            "last_scraped_at": r.last_scraped_at.isoformat() if r.last_scraped_at else None,
+        }
+        for r in rows
+    ]

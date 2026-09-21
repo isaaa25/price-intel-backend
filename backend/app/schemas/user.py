@@ -46,6 +46,12 @@ class TokenResponse(BaseModel):
     token_type : str = "bearer" # always bearer -- this is the HTTP standard
     user : UserResponse # embed the safe user object alongside the token 
 
+
+class ChangePassword(BaseModel):
+    """Shape of the data required to change password."""
+    old_password: str
+    new_password: str = Field(..., min_length=8)
+
 #     class UserBase(BaseModel):
 #     email: EmailStr
 #     full_name: str | None = None

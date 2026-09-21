@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useStore } from "../context/StoreContext";
-import { getProductsByStore } from "../api/products";
+import { getProductsByStore, getProductCompetitors } from "../api/products";
+// CHANGED: added getProductCompetitors, removed nothing else from imports
 
 const card = {
   background: "var(--d-surface)",
@@ -11,76 +12,14 @@ const card = {
   padding: "24px",
 };
 
-/* ── Competitor Dataset with Product mappings ────────────── */
-const placeholderCompetitors = [
-  {
-    id: 1,
-    name: "TechHub Store",
-    marketplace: "noon",
-    productTitle: "Galaxy A17",
-    pricePosition: "4% below you",
-    pricePositionType: "below",
-    behavior: "Aggressive undercutter",
-    behaviorColor: "#dc2626",
-    velocity: "High",
-    velocityDetail: "4.2 / day",
-    stockStatus: "In Stock",
-    stockColor: "#16a34a",
-    lastSeen: "2 min ago",
-  },
-  {
-    id: 2,
-    name: "GadgetWorld UAE",
-    marketplace: "noon",
-    productTitle: "Samsung Galaxy Buds 2 Pro",
-    pricePosition: "1% below you",
-    pricePositionType: "below",
-    behavior: "Dynamic follower",
-    behaviorColor: "#2563EB",
-    velocity: "Medium",
-    velocityDetail: "1.5 / day",
-    stockStatus: "In Stock",
-    stockColor: "#16a34a",
-    lastSeen: "15 min ago",
-  },
-  {
-    id: 3,
-    name: "MegaSeller PK",
-    marketplace: "daraz",
-    productTitle: "Galaxy Z Fold3 Cover",
-    pricePosition: "3% above you",
-    pricePositionType: "above",
-    behavior: "Premium holder",
-    behaviorColor: "#d97706",
-    velocity: "Low",
-    velocityDetail: "0.4 / day",
-    stockStatus: "In Stock",
-    stockColor: "#16a34a",
-    lastSeen: "1 hr ago",
-  },
-  {
-    id: 4,
-    name: "ElectroMart",
-    marketplace: "noon",
-    productTitle: "Galaxy A17",
-    pricePosition: "2% below you",
-    pricePositionType: "below",
-    behavior: "Aggressive undercutter",
-    behaviorColor: "#dc2626",
-    velocity: "High",
-    velocityDetail: "3.8 / day",
-    stockStatus: "Low Stock",
-    stockColor: "#ea580c",
-    lastSeen: "3 hrs ago",
-  },
-];
+// CHANGED: placeholderCompetitors array deleted entirely — was 100% fake data
 
 function MarketplaceBadge({ marketplace }) {
   const colors = {
     noon: { color: "#C2410C" },
     daraz: { color: "#E11D48" },
   };
-  const c = colors[marketplace] || { color: "var(--d-text-2)" };
+  const c = colors[(marketplace || "").toLowerCase()] || { color: "var(--d-text-2)" };
   return (
     <span
       style={{
@@ -90,19 +29,25 @@ function MarketplaceBadge({ marketplace }) {
         textTransform: "capitalize",
       }}
     >
-      {marketplace}
+      {marketplace || "—"}
     </span>
   );
 }
 
 function Competitors() {
   const navigate = useNavigate();
-  const { selectedStore } = useStore();
+  const { selectedStore, currency } = useStore();
+  // CHANGED: added currency from useStore, needed for price display
 
   const [products, setProducts] = useState([]);
+  const [competitors, setCompetitors] = useState([]);
+  // CHANGED: new state — real flattened competitor list, one row per
+  // competitor listing, each tagged with which product it belongs to
   const [selectedProductId, setSelectedProductId] = useState("all");
   const [search, setSearch] = useState("");
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadingCompetitors, setLoadingCompetitors] = useState(false);
+  // CHANGED: separate loading state for the competitors fetch step
 
   /* ── Load products strictly for the selected store ──────── */
   useEffect(() => {
@@ -111,6 +56,8 @@ function Competitors() {
 
     if (!selectedStore?.id) {
       setProducts([]);
+      setCompetitors([]);
+      // CHANGED: also clear competitors when there's no store
       return;
     }
 
@@ -124,46 +71,66 @@ function Competitors() {
       .finally(() => setLoadingProducts(false));
   }, [selectedStore]);
 
-  /* ── Filtered competitors ─────────────────────────────────── */
-  const filteredCompetitors = useMemo(() => {
-    // If the selected store has 0 products, show 0 competitors for this store
+  /* ── CHANGED: entirely new effect — fetch real competitors for
+     every product, once the product list is loaded ────────── */
+  useEffect(() => {
     if (products.length === 0) {
-      return [];
+      setCompetitors([]);
+      return;
     }
+    setLoadingCompetitors(true);
+    Promise.allSettled(products.map((p) => getProductCompetitors(p.id)))
+      .then((results) => {
+        const flattened = [];
+        products.forEach((p, i) => {
+          const list = results[i].status === "fulfilled" ? results[i].value : [];
+          (Array.isArray(list) ? list : []).forEach((c) => {
+            flattened.push({
+              ...c,
+              productId: p.id,
+              productTitle: p.title,
+              ownPrice: p.own_cost,
+            });
+          });
+        });
+        setCompetitors(flattened);
+      })
+      .finally(() => setLoadingCompetitors(false));
+  }, [products]);
 
-    return placeholderCompetitors.filter((c) => {
-      // 1. Search filter
+  /* ── Filtered competitors — CHANGED: now filters real data,
+     no more fuzzy title-matching against placeholder data ──── */
+  const filteredCompetitors = useMemo(() => {
+    return competitors.filter((c) => {
+      const q = search.toLowerCase();
       const matchesSearch =
-        !search ||
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.productTitle.toLowerCase().includes(search.toLowerCase()) ||
-        c.marketplace.toLowerCase().includes(search.toLowerCase()) ||
-        c.behavior.toLowerCase().includes(search.toLowerCase());
+        !q ||
+        (c.name || "").toLowerCase().includes(q) ||
+        (c.productTitle || "").toLowerCase().includes(q) ||
+        (c.platform || "").toLowerCase().includes(q);
 
-      // 2. Product filter
-      let matchesProduct = false;
-      if (selectedProductId === "all") {
-        matchesProduct = products.some((p) =>
-          c.productTitle.toLowerCase().includes(p.title.toLowerCase().slice(0, 7)) ||
-          p.title.toLowerCase().includes(c.productTitle.toLowerCase().slice(0, 7))
-        );
-      } else {
-        const selectedProductObj = products.find((p) => String(p.id) === String(selectedProductId));
-        if (selectedProductObj) {
-          matchesProduct =
-            c.productTitle.toLowerCase().includes(selectedProductObj.title.toLowerCase().slice(0, 7)) ||
-            selectedProductObj.title.toLowerCase().includes(c.productTitle.toLowerCase().slice(0, 7));
-        }
-      }
+      const matchesProduct =
+        selectedProductId === "all" || String(c.productId) === String(selectedProductId);
 
       return matchesSearch && matchesProduct;
     });
-  }, [search, selectedProductId, products]);
+  }, [search, selectedProductId, competitors]);
+
+  /* ── CHANGED: price position now computed from real prices,
+     not a fake canned string ────────────────────────────────── */
+  function pricePositionLabel(c) {
+    if (c.latest_price == null || c.ownPrice == null) return null;
+    const diff = c.latest_price - c.ownPrice;
+    const pct = Math.abs((diff / c.ownPrice) * 100).toFixed(1);
+    if (diff < 0) return { text: `${pct}% below you`, color: "#dc2626" };
+    if (diff > 0) return { text: `${pct}% above you`, color: "#16a34a" };
+    return { text: "Same price", color: "var(--d-text-2)" };
+  }
 
   return (
     <Layout>
       {/* ── Page header ────────────────────────────────── */}
-      <div className="animate-in" style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div className="res-page-header animate-in">
         <div>
           <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--d-text)", letterSpacing: "-0.3px" }}>
             Competitors
@@ -227,12 +194,14 @@ function Competitors() {
         </div>
       ) : (
         <>
-          {/* ── Stats row ──────────────────────────────────── */}
+          {/* ── Stats row — CHANGED: Tracked Competitors is now real;
+              Price Drops Detected and Stock-out Events left empty
+              since no backend endpoint computes them yet ────────── */}
           <div className="animate-in" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "20px", animationDelay: "0.05s" }}>
             {[
-              { label: "Tracked Competitors", value: filteredCompetitors.length },
-              { label: "Price Drops Detected", value: filteredCompetitors.length > 0 ? "14" : "0" },
-              { label: "Stock-out Events", value: filteredCompetitors.length > 0 ? "2" : "0" },
+              { label: "Tracked Competitors", value: loadingCompetitors ? "…" : filteredCompetitors.length },
+              { label: "Price Drops Detected", value: "—" },
+              { label: "Stock-out Events", value: "—" },
             ].map((s, i) => (
               <div key={s.label} className="animate-in hover-lift" style={{ ...card, padding: "16px", animationDelay: `${i * 0.05}s` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -348,13 +317,13 @@ function Competitors() {
                   {products.length === 0
                     ? `No tracked products found for ${selectedStore.store_name}`
                     : selectedProductId === "all"
-                    ? "Showing all competitor sellers across your store's catalog"
-                    : `Filtered competitors for ${products.find((p) => String(p.id) === String(selectedProductId))?.title || "selected product"}`}
+                      ? "Showing all competitor sellers across your store's catalog"
+                      : `Filtered competitors for ${products.find((p) => String(p.id) === String(selectedProductId))?.title || "selected product"}`}
                 </p>
               </div>
 
               <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-3)" }}>
-                {filteredCompetitors.length} seller{filteredCompetitors.length !== 1 ? "s" : ""} found
+                {loadingCompetitors ? "Loading…" : `${filteredCompetitors.length} seller${filteredCompetitors.length !== 1 ? "s" : ""} found`}
               </span>
             </div>
 
@@ -392,7 +361,13 @@ function Competitors() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCompetitors.length === 0 ? (
+                  {loadingCompetitors ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: "center", padding: "48px 14px", color: "var(--d-text-3)", fontSize: "13px" }}>
+                        Loading competitors…
+                      </td>
+                    </tr>
+                  ) : filteredCompetitors.length === 0 ? (
                     <tr>
                       <td colSpan={7} style={{ textAlign: "center", padding: "48px 14px", color: "var(--d-text-3)", fontSize: "13px" }}>
                         <p style={{ margin: "0 0 6px", fontSize: "14px", fontWeight: 600, color: "var(--d-text)" }}>
@@ -424,121 +399,97 @@ function Competitors() {
                       </td>
                     </tr>
                   ) : (
-                    filteredCompetitors.map((c, i) => (
-                      <tr
-                        key={c.id || c.name}
-                        style={{
-                          borderBottom: i < filteredCompetitors.length - 1 ? "1px solid var(--d-border)" : "none",
-                          transition: "background 0.1s",
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--d-bg)"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                      >
-                        {/* 1. Seller */}
-                        <td style={{ padding: "14px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            <div
-                              style={{
-                                width: "30px",
-                                height: "30px",
-                                borderRadius: "50%",
-                                background: "var(--d-bg)",
-                                border: "1px solid var(--d-border)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: "var(--d-text-2)",
-                                flexShrink: 0,
-                              }}
-                            >
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                <circle cx="12" cy="7" r="4" />
-                              </svg>
-                            </div>
-                            <div>
-                              <span style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--d-text)", display: "block" }}>
-                                {c.name}
-                              </span>
-                              {selectedProductId === "all" && (
-                                <span style={{ fontSize: "11px", color: "var(--d-text-3)" }}>
-                                  on {c.productTitle}
+                    filteredCompetitors.map((c, i) => {
+                      // CHANGED: real price position, computed per row
+                      const pos = pricePositionLabel(c);
+                      // CHANGED: real last-seen date, or "—" if never scraped
+                      const lastSeen = c.last_scraped_at
+                        ? new Date(c.last_scraped_at).toLocaleDateString()
+                        : "—";
+
+                      return (
+                        <tr
+                          key={c.id}
+                          style={{
+                            borderBottom: i < filteredCompetitors.length - 1 ? "1px solid var(--d-border)" : "none",
+                            transition: "background 0.1s",
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--d-bg)"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                        >
+                          {/* 1. Seller — CHANGED: uses real c.name (falls back to "—" if scraper hasn't captured a name yet) */}
+                          <td style={{ padding: "14px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                              <div
+                                style={{
+                                  width: "30px",
+                                  height: "30px",
+                                  borderRadius: "50%",
+                                  background: "var(--d-bg)",
+                                  border: "1px solid var(--d-border)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  color: "var(--d-text-2)",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                  <circle cx="12" cy="7" r="4" />
+                                </svg>
+                              </div>
+                              <div>
+                                <span style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--d-text)", display: "block" }}>
+                                  {c.name || "—"}
                                 </span>
-                              )}
+                                {selectedProductId === "all" && (
+                                  <span style={{ fontSize: "11px", color: "var(--d-text-3)" }}>
+                                    on {c.productTitle}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        {/* 2. Marketplace */}
-                        <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                          <MarketplaceBadge marketplace={c.marketplace} />
-                        </td>
+                          {/* 2. Marketplace — CHANGED: uses real c.platform */}
+                          <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                            <MarketplaceBadge marketplace={c.platform} />
+                          </td>
 
-                        {/* 3. Price Position vs You */}
-                        <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                          <span
-                            style={{
-                              fontSize: "12.5px",
-                              fontWeight: 600,
-                              color: c.pricePositionType === "below" ? "#dc2626" : "#16a34a",
-                            }}
-                          >
-                            {c.pricePosition}
-                          </span>
-                        </td>
+                          {/* 3. Price Position vs You — CHANGED: real computed value */}
+                          <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                            {pos ? (
+                              <span style={{ fontSize: "12.5px", fontWeight: 600, color: pos.color }}>
+                                {pos.text}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>—</span>
+                            )}
+                          </td>
 
-                        {/* 4. Behavior Type */}
-                        <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                          <span
-                            style={{
-                              fontSize: "12.5px",
-                              fontWeight: 600,
-                              color: c.behaviorColor,
-                            }}
-                          >
-                            {c.behavior}
-                          </span>
-                        </td>
+                          {/* 4. Behavior Type — CHANGED: no backend data exists for this yet, left empty */}
+                          <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>—</span>
+                          </td>
 
-                        {/* 5. Repricing Velocity */}
-                        <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--d-text)" }}>{c.velocity}</span>
-                            <span style={{ fontSize: "11.5px", color: "var(--d-text-3)" }}>({c.velocityDetail})</span>
-                          </div>
-                        </td>
+                          {/* 5. Repricing Velocity — CHANGED: no backend data exists for this yet, left empty */}
+                          <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>—</span>
+                          </td>
 
-                        {/* 6. Stock Status */}
-                        <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "6px",
-                              fontSize: "12px",
-                              fontWeight: 600,
-                              color: c.stockColor,
-                            }}
-                          >
-                            <span
-                              style={{
-                                width: "6px",
-                                height: "6px",
-                                borderRadius: "50%",
-                                background: c.stockColor,
-                                display: "inline-block",
-                              }}
-                            />
-                            {c.stockStatus}
-                          </span>
-                        </td>
+                          {/* 6. Stock Status — CHANGED: no backend data exists for this yet, left empty */}
+                          <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>—</span>
+                          </td>
 
-                        {/* 7. Last Seen */}
-                        <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                          <span style={{ fontSize: "12px", color: "var(--d-text-3)" }}>{c.lastSeen}</span>
-                        </td>
-                      </tr>
-                    ))
+                          {/* 7. Last Seen — CHANGED: real c.last_scraped_at */}
+                          <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: "12px", color: "var(--d-text-3)" }}>{lastSeen}</span>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

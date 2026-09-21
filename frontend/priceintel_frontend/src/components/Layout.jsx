@@ -131,14 +131,18 @@ function StoreSwitcher() {
           fontFamily: "inherit",
           cursor: "pointer",
           boxShadow: "var(--shadow-xs)",
+          maxWidth: "200px",
+          overflow: "hidden",
         }}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={selectedStore ? "var(--d-accent)" : "var(--d-text-3)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
-        <span>{selectedStore?.store_name || "No Stores Added"}</span>
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--d-text-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {selectedStore?.store_name || "No Stores Added"}
+        </span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--d-text-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
@@ -223,6 +227,35 @@ function StoreSwitcher() {
 
 function UserAvatar() {
   const navigate = useNavigate();
+
+  // Derive the initial from stored user info
+  const [initial, setInitial] = useState(() => {
+    const name = localStorage.getItem("user_name");
+    const email = localStorage.getItem("user_email");
+    const source = name || email || "";
+    return source.charAt(0).toUpperCase() || "?";
+  });
+
+  // Fallback: if we have a token but no stored name/email, fetch /auth/me once
+  useEffect(() => {
+    const hasInfo = localStorage.getItem("user_name") || localStorage.getItem("user_email");
+    const token = localStorage.getItem("token");
+    if (!hasInfo && token) {
+      fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((user) => {
+          if (!user) return;
+          if (user.full_name) localStorage.setItem("user_name", user.full_name);
+          if (user.email) localStorage.setItem("user_email", user.email);
+          const source = user.full_name || user.email || "";
+          setInitial(source.charAt(0).toUpperCase() || "?");
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   return (
     <div
       id="user-avatar-btn"
@@ -241,12 +274,13 @@ function UserAvatar() {
         cursor: "pointer",
         boxShadow: "0 2px 4px rgba(37,99,235,0.25)",
         transition: "transform 0.15s ease",
+        flexShrink: 0,
       }}
       onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.08)")}
       onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
       title="My Account"
     >
-      M
+      {initial}
     </div>
   );
 }
@@ -295,155 +329,192 @@ function SidebarNavItem({ item, active, onClick }) {
   );
 }
 
+// Hamburger button icon
+function HamburgerIcon({ open }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {open ? (
+        <>
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </>
+      ) : (
+        <>
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [sidebarOpen]);
 
   function handleLogout() {
     localStorage.removeItem("token");
+    localStorage.removeItem("user_name");
+    localStorage.removeItem("user_email");
     navigate("/");
   }
 
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", background: "var(--d-bg)", fontFamily: "'Inter', sans-serif" }}>
-      {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside
-        style={{
-          width: "260px",
-          flexShrink: 0,
-          background: "var(--d-surface)",
-          borderRight: "1px solid var(--d-border)",
-          boxShadow: "2px 0 8px -2px rgba(0,0,0,0.05)",
-          display: "flex",
-          flexDirection: "column",
-          padding: "22px 16px",
-          position: "sticky",
-          top: 0,
-          height: "100vh",
-          overflowY: "auto",
-          boxSizing: "border-box",
-          zIndex: 50,
-        }}
-      >
-        {/* Brand Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "4px 6px 26px" }}>
-          <div
-            style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "8px",
-              background: "var(--d-accent)",
-              color: "#ffffff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 700,
-              fontSize: "14px",
-              boxShadow: "0 2px 8px rgba(37,99,235,0.28)",
-            }}
-          >
-            PI
-          </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontWeight: 700, fontSize: "15px", color: "var(--d-text)", lineHeight: 1.2 }}>Price Intel</span>
-            <span style={{ fontSize: "11px", color: "var(--d-text-3)", fontWeight: 500 }}>Enterprise Analytics</span>
-          </div>
+  const sidebarContent = (
+    <>
+      {/* Brand Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "4px 6px 26px" }}>
+        <div
+          style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "8px",
+            background: "var(--d-accent)",
+            color: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+            fontSize: "14px",
+            boxShadow: "0 2px 8px rgba(37,99,235,0.28)",
+            flexShrink: 0,
+          }}
+        >
+          PI
         </div>
-
-        {/* Top Nav Items */}
-        <nav style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          {NAV_ITEMS.map((item) => {
-            const active =
-              location.pathname === item.path ||
-              (item.path === "/products" && location.pathname.startsWith("/products"));
-            return (
-              <SidebarNavItem
-                key={item.path}
-                item={item}
-                active={active}
-                onClick={() => navigate(item.path)}
-              />
-            );
-          })}
-        </nav>
-
-        {/* Divider between top nav and bottom nav */}
-        <div style={{ height: "1px", background: "var(--d-border)", margin: "18px 4px 14px" }} />
-
-        {/* Bottom Section */}
-        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "4px" }}>
-          {BOTTOM_NAV.map((item) => {
-            const active = location.pathname === item.path;
-            return (
-              <SidebarNavItem
-                key={item.path}
-                item={item}
-                active={active}
-                onClick={() => navigate(item.path)}
-              />
-            );
-          })}
-
-          {/* Logout Button */}
-          <div
-            onClick={handleLogout}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              padding: "10px 14px",
-              marginTop: "4px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              color: "var(--d-danger)",
-              background: "transparent",
-              border: "none",
-              fontSize: "14px",
-              fontWeight: 500,
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--d-danger-bg)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            <span>Logout</span>
-          </div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <span style={{ fontWeight: 700, fontSize: "15px", color: "var(--d-text)", lineHeight: 1.2 }}>Price Intel</span>
+          <span style={{ fontSize: "11px", color: "var(--d-text-3)", fontWeight: 500 }}>Enterprise Analytics</span>
         </div>
-      </aside>
+      </div>
 
-      {/* ── Main Layout (Top bar + Page content) ─────────────── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        {/* Top Header */}
-        <header
+      {/* Top Nav Items */}
+      <nav style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+        {NAV_ITEMS.map((item) => {
+          const active =
+            location.pathname === item.path ||
+            (item.path === "/products" && location.pathname.startsWith("/products"));
+          return (
+            <SidebarNavItem
+              key={item.path}
+              item={item}
+              active={active}
+              onClick={() => navigate(item.path)}
+            />
+          );
+        })}
+      </nav>
+
+      {/* Divider */}
+      <div style={{ height: "1px", background: "var(--d-border)", margin: "18px 4px 14px" }} />
+
+      {/* Bottom Section */}
+      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "4px" }}>
+        {BOTTOM_NAV.map((item) => {
+          const active = location.pathname === item.path;
+          return (
+            <SidebarNavItem
+              key={item.path}
+              item={item}
+              active={active}
+              onClick={() => navigate(item.path)}
+            />
+          );
+        })}
+
+        {/* Logout Button */}
+        <div
+          onClick={handleLogout}
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            padding: "14px 36px",
-            borderBottom: "1px solid var(--d-border)",
-            background: "var(--d-surface)",
-            position: "sticky",
-            top: 0,
-            zIndex: 40,
+            gap: "12px",
+            padding: "10px 14px",
+            marginTop: "4px",
+            borderRadius: "8px",
+            cursor: "pointer",
+            color: "var(--d-danger)",
+            background: "transparent",
+            border: "none",
+            fontSize: "14px",
+            fontWeight: 500,
+            transition: "all 0.15s ease",
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--d-danger-bg)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
         >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          <span>Logout</span>
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", background: "var(--d-bg)", fontFamily: "'Inter', sans-serif" }}>
+
+      {/* ── Desktop Sidebar (hidden on mobile via CSS class) ── */}
+      <aside className="layout-sidebar-desktop">
+        {sidebarContent}
+      </aside>
+
+      {/* ── Mobile Backdrop ─────────────────────────────────── */}
+      {sidebarOpen && (
+        <div
+          className="layout-sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── Mobile Sidebar Drawer ───────────────────────────── */}
+      <aside className={`layout-sidebar-mobile ${sidebarOpen ? "layout-sidebar-mobile--open" : ""}`}>
+        {sidebarContent}
+      </aside>
+
+      {/* ── Main Layout (Top bar + Page content) ─────────────── */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
+        {/* Top Header */}
+        <header className="layout-header">
+          {/* Hamburger — only visible on mobile */}
+          <button
+            id="btn-sidebar-toggle"
+            className="layout-hamburger"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle navigation"
+          >
+            <HamburgerIcon open={sidebarOpen} />
+          </button>
+
           <StoreSwitcher />
+
           {/* Right side: avatar */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "auto" }}>
             <UserAvatar />
           </div>
         </header>
 
         {/* Page Content */}
-        <main style={{ flex: 1, padding: "28px 36px", overflowY: "auto", background: "var(--d-bg)" }}>
+        <main className="layout-main">
           {children}
         </main>
       </div>

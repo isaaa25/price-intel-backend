@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 
 from app.dependencies import get_db, get_current_user
-from app.schemas.user import UserRegister,UserLogin,TokenResponse, UserResponse
+from app.schemas.user import UserRegister,UserLogin,TokenResponse, UserResponse, ChangePassword
 from app.services import auth_service
 
 # use type checking to avoid circular imports for the User Model hint
@@ -68,3 +68,18 @@ async def get_me(
     """Returns the profile of whoever is making the request.
     Token is validated automatically by the get_current_user dependency"""
     return UserResponse.model_validate(current_user)
+
+
+@router.put(
+    "/change-password",
+    summary="Change password (requires current password)",
+)
+async def change_password(
+    data: ChangePassword,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Verify old password, then update to new password."""
+    await auth_service.change_password(db, current_user, data.old_password, data.new_password)
+    await db.commit()
+    return {"detail": "Password updated successfully"}

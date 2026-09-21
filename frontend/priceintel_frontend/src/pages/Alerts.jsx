@@ -294,7 +294,7 @@ function Alerts() {
   return (
     <Layout>
       {/* ── Page header ────────────────────────────────── */}
-      <div className="animate-in" style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div className="res-page-header animate-in">
         <div>
           <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--d-text)", letterSpacing: "-0.3px" }}>
             Alerts

@@ -50,3 +50,30 @@ export function deleteProduct(productId) {
     method: "DELETE",
   });
 }
+
+/**
+ * Fetch pricing KPIs for a single product.
+ * Backend: GET /products/{productId}/kpis
+ * Returns: { own_price, cheapest_competitor, num_competitors, is_cheapest }
+ */
+export function getProductKpis(productId) {
+  return apiRequest(`/products/${productId}/kpis`);
+}
+
+/**
+ * Fetch a single product by ID.
+ * Backend: GET /products/{productId}
+ * Returns: ProductResponse
+ */
+export function getProduct(productId) {
+  return apiRequest(`/products/${productId}`);
+}
+
+/**
+ * Fetch competitor listings for a product (with latest price).
+ * Backend: GET /products/{productId}/competitors
+ * Returns: Array of { id, url, platform, name, image_url, latest_price, last_scraped_at }
+ */
+export function getProductCompetitors(productId) {
+  return apiRequest(`/products/${productId}/competitors`);
+}

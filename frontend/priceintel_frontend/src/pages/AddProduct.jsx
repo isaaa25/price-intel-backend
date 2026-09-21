@@ -343,22 +343,6 @@ function AddProduct() {
               </div>
             </div>
 
-            {/* AI keyword helper note */}
-            <p
-              style={{
-                margin: 0,
-                fontSize: "12px",
-                color: "var(--d-text-3)",
-                lineHeight: 1.6,
-                padding: "10px 14px",
-                background: "var(--d-bg)",
-                borderRadius: "8px",
-                border: "1px solid var(--d-border)",
-              }}
-            >
-              A search keyword for finding competitors will be generated automatically by AI
-              after saving. No action needed on your part.
-            </p>
 
             {/* Validation / submit error */}
             {submitError && (

@@ -1,6 +1,8 @@
 // src/pages/Settings.jsx
+import { useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
 import Layout from "../components/Layout";
+import apiRequest from "../api/client";
 
 const cardStyle = {
   background: "var(--d-surface)",
@@ -21,6 +23,7 @@ const inputStyle = {
   fontFamily: "inherit",
   outline: "none",
   boxSizing: "border-box",
+  transition: "border-color 0.15s",
 };
 
 const labelStyle = {
@@ -33,7 +36,7 @@ const labelStyle = {
 
 
 function ThemeCard() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   return (
     <div className="animate-in" style={cardStyle}>
@@ -47,7 +50,6 @@ function ThemeCard() {
             Choose how Price Intel looks for you. Saved automatically.
           </p>
         </div>
-
       </div>
 
       {/* Compact horizontal selector */}
@@ -101,6 +103,76 @@ function ThemeCard() {
 
 
 function Settings() {
+  const [email, setEmail] = useState("");
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState(null);
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showResetForm, setShowResetForm] = useState(false);
+
+  // Fetch current user email on mount
+  useEffect(() => {
+    apiRequest("/auth/me")
+      .then((user) => {
+        setEmail(user.email || "");
+      })
+      .catch(() => {
+        setEmail(localStorage.getItem("user_email") || "");
+      });
+  }, []);
+
+  async function handleChangePassword(e) {
+    e.preventDefault();
+    setMessage(null);
+
+    if (!oldPassword) {
+      setMessage({ type: "error", text: "Please enter your current password." });
+      return;
+    }
+    if (!newPassword) {
+      setMessage({ type: "error", text: "Please enter a new password." });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setMessage({ type: "error", text: "New password must be at least 8 characters." });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: "error", text: "New passwords do not match." });
+      return;
+    }
+    if (oldPassword === newPassword) {
+      setMessage({ type: "error", text: "New password must be different from current password." });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await apiRequest("/auth/change-password", {
+        method: "PUT",
+        body: JSON.stringify({
+          old_password: oldPassword,
+          new_password: newPassword,
+        }),
+      });
+      setMessage({ type: "success", text: "Password updated successfully! ✓" });
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => {
+        setShowResetForm(false);
+      }, 2000);
+    } catch (err) {
+      setMessage({ type: "error", text: err.message || "Failed to update password." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <Layout>
       {/* ── Page Header ────────────────────────────────────────── */}
@@ -116,24 +188,316 @@ function Settings() {
       {/* ── Appearance / Theme ──────────────────────────────────── */}
       <ThemeCard />
 
-      {/* ── Profile & Security ─────────────────────────────────── */}
-      <div className="animate-in" style={cardStyle}>
-        <h2 style={{ margin: "0 0 16px", fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
-          Account Credentials
-        </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-          <div>
-            <label style={labelStyle}>Email Address</label>
-            <input type="email" placeholder="user@example.com" style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>New Password</label>
-            <input type="password" placeholder="••••••••" style={inputStyle} />
-          </div>
+      {/* ── Account Credentials ─────────────────────────────────── */}
+      <div className="animate-in" style={{ ...cardStyle, animationDelay: "0.04s" }}>
+        <div style={{ marginBottom: "18px" }}>
+          <h2 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
+            Account Credentials
+          </h2>
+          <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-3)" }}>
+            {showResetForm
+              ? "To change your password, verify your identity by entering your current password first."
+              : "View your registered account email or reset your account password."}
+          </p>
         </div>
-        <button style={{ padding: "9px 20px", background: "var(--d-accent)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
-          Update Settings
-        </button>
+
+        {/* Email Address — always visible */}
+        <div style={{ marginBottom: showResetForm ? "18px" : "18px" }}>
+          <label style={labelStyle}>Email Address</label>
+          <input
+            type="email"
+            value={email}
+            readOnly
+            style={{
+              ...inputStyle,
+              opacity: 0.7,
+              cursor: "not-allowed",
+              background: "var(--d-bg)",
+            }}
+          />
+        </div>
+
+        {/* Option to Reset Password (when form is not open) */}
+        {!showResetForm ? (
+          <div>
+            <button
+              type="button"
+              id="reset-password-trigger-btn"
+              onClick={() => {
+                setShowResetForm(true);
+                setMessage(null);
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "9px 20px",
+                background: "var(--d-accent)",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 600,
+                fontFamily: "inherit",
+                cursor: "pointer",
+                transition: "background 0.15s, transform 0.1s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              Reset Password
+            </button>
+          </div>
+        ) : (
+          /* Password reset form — shown only when Reset Password is clicked */
+          <form onSubmit={handleChangePassword}>
+            <div style={{ borderTop: "1px solid var(--d-border)", paddingTop: "18px", marginTop: "18px" }}>
+              {/* Current password */}
+              <div style={{ marginBottom: "16px" }}>
+                <label style={labelStyle}>
+                  Current Password <span style={{ color: "var(--d-danger)" }}>*</span>
+                </label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showOld ? "text" : "password"}
+                    placeholder="Enter your current password"
+                    value={oldPassword}
+                    onChange={(e) => setOldPassword(e.target.value)}
+                    style={{ ...inputStyle, paddingRight: "42px" }}
+                    onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
+                    onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOld(!showOld)}
+                    tabIndex={-1}
+                    aria-label={showOld ? "Hide password" : "Show password"}
+                    style={{
+                      position: "absolute",
+                      right: "10px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      color: "var(--d-text-3)",
+                    }}
+                  >
+                    {showOld ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* New password + confirm — side by side */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
+                <div>
+                  <label style={labelStyle}>
+                    New Password <span style={{ color: "var(--d-danger)" }}>*</span>
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={showNew ? "text" : "password"}
+                      placeholder="Min. 8 characters"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      style={{ ...inputStyle, paddingRight: "42px" }}
+                      onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
+                      onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNew(!showNew)}
+                      tabIndex={-1}
+                      aria-label={showNew ? "Hide password" : "Show password"}
+                      style={{
+                        position: "absolute",
+                        right: "10px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        color: "var(--d-text-3)",
+                      }}
+                    >
+                      {showNew ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                          <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                          <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                          <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={labelStyle}>
+                    Confirm New Password <span style={{ color: "var(--d-danger)" }}>*</span>
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={showConfirm ? "text" : "password"}
+                      placeholder="Re-enter new password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      style={{ ...inputStyle, paddingRight: "42px" }}
+                      onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
+                      onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                      tabIndex={-1}
+                      aria-label={showConfirm ? "Hide password" : "Show password"}
+                      style={{
+                        position: "absolute",
+                        right: "10px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        color: "var(--d-text-3)",
+                      }}
+                    >
+                      {showConfirm ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                          <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                          <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                          <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{
+                    padding: "9px 24px",
+                    background: saving ? "var(--d-text-3)" : "var(--d-accent)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    fontFamily: "inherit",
+                    cursor: saving ? "not-allowed" : "pointer",
+                    transition: "background 0.15s, transform 0.1s",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!saving) e.currentTarget.style.transform = "translateY(-1px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                >
+                  {saving ? "Updating…" : "Update Password"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowResetForm(false);
+                    setOldPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                    setMessage(null);
+                  }}
+                  style={{
+                    padding: "9px 18px",
+                    background: "transparent",
+                    color: "var(--d-text-2)",
+                    border: "1px solid var(--d-border)",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = "var(--d-text)";
+                    e.currentTarget.style.borderColor = "var(--d-text-3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "var(--d-text-2)";
+                    e.currentTarget.style.borderColor = "var(--d-border)";
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+
+        {/* Feedback message */}
+        {message && (
+          <div
+            style={{
+              marginTop: "16px",
+              padding: "10px 14px",
+              borderRadius: "8px",
+              fontSize: "13px",
+              fontWeight: 500,
+              background:
+                message.type === "success"
+                  ? "var(--d-success-bg, rgba(34,197,94,0.1))"
+                  : "var(--d-danger-bg, rgba(239,68,68,0.1))",
+              color:
+                message.type === "success" ? "var(--d-success)" : "var(--d-danger)",
+              border: `1px solid ${
+                message.type === "success" ? "var(--d-success)" : "var(--d-danger)"
+              }`,
+            }}
+          >
+            {message.text}
+          </div>
+        )}
       </div>
     </Layout>
   );

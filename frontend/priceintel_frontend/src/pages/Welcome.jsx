@@ -274,17 +274,48 @@ function Welcome() {
             </div>
 
             {/* 5 KPI Cards (Clean, decent & minimal) */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px", marginBottom: "16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", marginBottom: "16px" }}>
               {[
-                { label: "RANK", val: "#2", color: "#0F172A" },
-                { label: "MIN GAP", val: "+PKR 15", color: "#0F172A" },
-                { label: "MAX GAP", val: "-PKR 42", color: "#0F172A" },
-                { label: "STABILITY", val: "24%", color: "#0F172A" },
-                { label: "SCORE", val: "78/100", color: "#2563EB" },
+                { label: "PORTFOLIO HEALTH", val: "78/100", color: "#2563EB" },
+                { label: "NEEDS ACTION", val: "3", color: "#0F172A" },
+                { label: "ACTIVE OPPORTUNITIES", val: "7", color: "#0F172A" },
+                { label: "ACTIVE PRICE WARS", val: "2 active", color: "#0F172A" },
+                { label: "MARKET MOVEMENT", val: "↓ 2.8%", color: "#10B981" },
               ].map((k) => (
-                <div key={k.label} style={{ background: "#FFFFFF", borderRadius: "8px", padding: "12px 10px", border: "1px solid #DCE3EC", boxShadow: "0 1px 2px rgba(0,0,0,0.03)", textAlign: "center" }}>
-                  <div style={{ fontSize: "9px", fontWeight: 700, color: "#64748B", letterSpacing: "0.4px" }}>{k.label}</div>
-                  <div style={{ fontSize: "14px", fontWeight: 800, color: k.color, marginTop: "5px" }}>{k.val}</div>
+                <div
+                  key={k.label}
+                  style={{
+                    background: "#FFFFFF",
+                    borderRadius: "8px",
+                    padding: "10px 5px",
+                    border: "1px solid #DCE3EC",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+                    textAlign: "center",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "7.5px",
+                      fontWeight: 700,
+                      color: "#64748B",
+                      letterSpacing: "0.2px",
+                      lineHeight: "1.25",
+                      minHeight: "18px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      textAlign: "center",
+                    }}
+                  >
+                    {k.label}
+                  </div>
+                  <div style={{ fontSize: "12.5px", fontWeight: 800, color: k.color, marginTop: "4px" }}>
+                    {k.val}
+                  </div>
                 </div>
               ))}
             </div>
@@ -329,11 +360,11 @@ function Welcome() {
                 <svg width="100%" height="100%" viewBox="0 0 460 120" preserveAspectRatio="none">
                   {/* Grid lines & Y-axis labels */}
                   {[
-                    { y: 15, label: "PKR 830" },
-                    { y: 38, label: "PKR 798" },
-                    { y: 62, label: "PKR 763" },
-                    { y: 86, label: "PKR 728" },
-                    { y: 108, label: "PKR 693" },
+                    { y: 15, label: "USD 830" },
+                    { y: 38, label: "USD 798" },
+                    { y: 62, label: "USD 763" },
+                    { y: 86, label: "USD 728" },
+                    { y: 108, label: "USD 693" },
                   ].map((g) => (
                     <g key={g.label}>
                       <text x="0" y={g.y + 3} fill="#94A3B8" fontSize="8" fontFamily="Inter, sans-serif">{g.label}</text>
@@ -630,7 +661,7 @@ function Welcome() {
           {/* Resources */}
           <div>
             <h4 style={{ margin: "0 0 16px", fontSize: "13px", fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.5px" }}>Resources</h4>
-            {["Documentation", "API Reference", "Changelog", "FAQ", "Status"].map((l) => (
+            {["Documentation", "FAQ"].map((l) => (
               <p key={l} style={{ margin: "5px 0", fontSize: "13px", color: "#71717A", cursor: "pointer", transition: "color 0.12s" }}
                 onMouseEnter={e => e.currentTarget.style.color = "#fff"}
                 onMouseLeave={e => e.currentTarget.style.color = "#71717A"}

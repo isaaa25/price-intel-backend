@@ -308,6 +308,9 @@ export default function Dashboard() {
     padding: "22px 24px",
     border: "1px solid var(--d-border)",
     boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+    boxSizing: "border-box",
+    minWidth: 0,
+    maxWidth: "100%",
   };
 
   const sectionTitle = {
@@ -425,7 +428,7 @@ export default function Dashboard() {
     <Layout>
 
       {/* ── Page Header ─────────────────────────────────────── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "26px" }}>
+      <div className="res-page-header" style={{ marginBottom: "26px" }}>
         <div>
           <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 3px", letterSpacing: "-0.4px" }}>
             Dashboard
@@ -448,6 +451,7 @@ export default function Dashboard() {
             cursor: "pointer",
             fontFamily: "inherit",
             boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+            whiteSpace: "nowrap",
           }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -549,14 +553,9 @@ export default function Dashboard() {
           {/* ══════════════════════════════════════════════════════
               SECTION 1 — PORTFOLIO INTELLIGENCE KPIs
           ══════════════════════════════════════════════════════ */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(5, 1fr)",
-            gap: "12px",
-            marginBottom: "22px",
-          }}>
+          <div className="res-grid-5" style={{ marginBottom: "22px" }}>
             {portfolioKpis.map((kpi) => (
-              <div key={kpi.id} style={{ ...card, textAlign: "center" }}>
+              <div key={kpi.id} style={{ ...card, textAlign: "center", padding: "18px 12px" }}>
                 {/* Label row */}
                 <div style={{ marginBottom: "14px" }}>
                   <span style={{
@@ -593,14 +592,14 @@ export default function Dashboard() {
           {/* ══════════════════════════════════════════════════════
               SECTION 2 — PRODUCT PRICE TREND ANALYSIS
           ══════════════════════════════════════════════════════ */}
-          <div style={{ ...card, marginBottom: "22px" }}>
+          <div style={{ ...card, marginBottom: "22px", overflow: "hidden", minWidth: 0 }}>
 
             {/* Header row */}
             <div style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "22px",
+              marginBottom: selectedTrendProduct !== "all" ? "10px" : "22px",
               flexWrap: "wrap",
               gap: "12px",
             }}>
@@ -629,13 +628,22 @@ export default function Dashboard() {
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "right 10px center",
-                    minWidth: "180px",
+                    minWidth: "160px",
+                    maxWidth: "240px",
+                    textOverflow: "ellipsis",
                   }}
                 >
                   <option value="all">All Tracked Products</option>
-                  {storeProducts.map((p) => (
-                    <option key={p.id} value={p.id}>{p.title}</option>
-                  ))}
+                  {storeProducts.map((p) => {
+                    const shortTitle = p.title && p.title.length > 28
+                      ? p.title.slice(0, 26).trim() + "…"
+                      : p.title;
+                    return (
+                      <option key={p.id} value={p.id} title={p.title}>
+                        {shortTitle}
+                      </option>
+                    );
+                  })}
                 </select>
 
                 {/* Timeframe buttons */}
@@ -654,9 +662,26 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Full product name on the next line when a specific product is selected */}
+            {selectedTrendProduct !== "all" && (
+              <div style={{
+                marginBottom: "16px",
+                fontSize: "12px",
+                color: "var(--d-text-2)",
+                lineHeight: 1.4,
+                wordBreak: "break-word",
+              }}>
+                <span style={{ color: "var(--d-text-3)", fontWeight: 500 }}>Active Product: </span>
+                <span style={{ color: "var(--d-text)", fontWeight: 600 }}>
+                  {storeProducts.find((p) => String(p.id) === String(selectedTrendProduct))?.title}
+                </span>
+              </div>
+            )}
+
             {/* Chart */}
-            <div style={{ width: "100%", height: "290px" }}>
-              <ResponsiveContainer width="100%" height="100%">
+            <div style={{ width: "100%", height: "290px", minWidth: 0, maxWidth: "100%", overflow: "hidden", position: "relative" }}>
+              <div style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+                <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData} margin={{ top: 8, right: 20, left: 8, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--d-border)" />
                   <XAxis
@@ -710,6 +735,7 @@ export default function Dashboard() {
                   />
                 </LineChart>
               </ResponsiveContainer>
+              </div>
             </div>
 
             {/* Trend Insight Strip */}
@@ -738,7 +764,7 @@ export default function Dashboard() {
           {/* ══════════════════════════════════════════════════════
               SECTION 3 — AI PRIORITY CENTER
           ══════════════════════════════════════════════════════ */}
-          <div style={{ ...card, marginBottom: "22px" }}>
+          <div style={{ ...card, marginBottom: "22px", overflow: "hidden", minWidth: 0 }}>
 
             {/* Header */}
             <div style={{
@@ -859,7 +885,7 @@ export default function Dashboard() {
           {/* ══════════════════════════════════════════════════════
               SECTION 4 — PRODUCT INTELLIGENCE
           ══════════════════════════════════════════════════════ */}
-          <div style={card}>
+          <div style={{ ...card, overflow: "hidden", minWidth: 0 }}>
 
             {/* Header */}
             <div style={{
@@ -883,8 +909,7 @@ export default function Dashboard() {
             </div>
 
             {/* Scatter Chart */}
-            <div style={{ width: "100%", height: "340px", position: "relative" }}>
-
+            <div style={{ width: "100%", height: "340px", position: "relative", minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
               {/* Quadrant corner labels */}
               <div style={{ position: "absolute", top: 30, left: "12%", fontSize: "12px", fontWeight: 700, color: "#d42b2b", pointerEvents: "none", zIndex: 2 }}>
                 ⚠ Risk Zone
@@ -899,68 +924,63 @@ export default function Dashboard() {
                 ✓ Healthy Position
               </div>
 
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 24, right: 34, left: 4, bottom: 28 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--d-border)" />
-                  <XAxis
-                    dataKey="x"
-                    type="number"
-                    domain={[0, 100]}
-                    name="Price Competitiveness"
-                    stroke="var(--d-text-3)"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={{ stroke: "var(--d-border)" }}
-                    label={{
-                      value: "← Overpriced    Price Competitiveness    Cheapest →",
-                      position: "insideBottom",
-                      offset: -16,
-                      style: { fontSize: "11px", fill: "var(--d-text-3)", fontWeight: 500 },
-                    }}
-                  />
-                  <YAxis
-                    dataKey="y"
-                    type="number"
-                    domain={[0, 100]}
-                    name="Market Volatility"
-                    stroke="var(--d-text-3)"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={false}
-                    width={48}
-                    label={{
-                      value: "Market Volatility ↑",
-                      angle: -90,
-                      position: "insideLeft",
-                      offset: 18,
-                      style: { fontSize: "11px", fill: "var(--d-text-3)", fontWeight: 500 },
-                    }}
-                  />
-                  <ZAxis range={[64, 64]} />
-                  <Tooltip content={<ScatterTip />} cursor={{ strokeDasharray: "3 3", stroke: "var(--d-border)" }} />
+              <div style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ScatterChart margin={{ top: 24, right: 34, left: 4, bottom: 28 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--d-border)" />
+                    <XAxis
+                      dataKey="x"
+                      type="number"
+                      domain={[0, 100]}
+                      name="Price Competitiveness"
+                      stroke="var(--d-text-3)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--d-border)" }}
+                      label={{
+                        value: "← Overpriced    Price Competitiveness    Cheapest →",
+                        position: "insideBottom",
+                        offset: -16,
+                        style: { fontSize: "11px", fill: "var(--d-text-3)", fontWeight: 500 },
+                      }}
+                    />
+                    <YAxis
+                      dataKey="y"
+                      type="number"
+                      domain={[0, 100]}
+                      name="Market Volatility"
+                      stroke="var(--d-text-3)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      width={48}
+                      label={{
+                        value: "Market Volatility ↑",
+                        angle: -90,
+                        position: "insideLeft",
+                        offset: 18,
+                        style: { fontSize: "11px", fill: "var(--d-text-3)", fontWeight: 500 },
+                      }}
+                    />
+                    <ZAxis range={[64, 64]} />
+                    <Tooltip content={<ScatterTip />} cursor={{ strokeDasharray: "3 3", stroke: "var(--d-border)" }} />
 
-                  {/* Quadrant divider lines */}
-                  <ReferenceLine x={50} stroke="var(--d-border)" strokeDasharray="5 3" strokeWidth={1.5} />
-                  <ReferenceLine y={50} stroke="var(--d-border)" strokeDasharray="5 3" strokeWidth={1.5} />
+                    {/* Quadrant divider lines */}
+                    <ReferenceLine x={50} stroke="var(--d-border)" strokeDasharray="5 3" strokeWidth={1.5} />
+                    <ReferenceLine y={50} stroke="var(--d-border)" strokeDasharray="5 3" strokeWidth={1.5} />
 
-                  <Scatter
-                    name="Products"
-                    data={scatterData}
-                    shape={<CustomScatterDot />}
-                  />
-                </ScatterChart>
-              </ResponsiveContainer>
+                    <Scatter
+                      name="Products"
+                      data={scatterData}
+                      shape={<CustomScatterDot />}
+                    />
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             {/* Legend */}
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: "8px",
-              marginTop: "18px",
-              paddingTop: "18px",
-              borderTop: "1px solid var(--d-border)",
-            }}>
+            <div className="res-grid-2" style={{ marginTop: "18px", paddingTop: "18px", borderTop: "1px solid var(--d-border)" }}>
               {[
                 { color: "#ef4444", label: "Risk Zone", desc: "High volatility · Weak position" },
                 { color: "#f59e0b", label: "Monitor Closely", desc: "High volatility · Strong position" },

@@ -17,7 +17,7 @@ from uuid import UUID
 
 from app.dependencies import get_db, get_current_user
 from app.schemas.product import ProductCreate, ProductResponse
-from app.services.product_service import create_product, get_products
+from app.services.product_service import create_product, get_products, get_product_kpis, get_product_by_id, get_product_competitors
 
 router = APIRouter()
 
@@ -38,3 +38,29 @@ async def add_product(
     current_user = Depends(get_current_user),
 ):
     return await create_product(db, current_user.id, product)
+
+@router.get("/{product_id}/kpis")
+async def product_kpis(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    return await get_product_kpis(db, product_id)
+
+
+@router.get("/{product_id}", response_model=ProductResponse)
+async def get_product(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    return await get_product_by_id(db, product_id, current_user.id)
+
+
+@router.get("/{product_id}/competitors")
+async def list_competitors(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    return await get_product_competitors(db, product_id)

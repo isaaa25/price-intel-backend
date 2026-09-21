@@ -105,3 +105,27 @@ async def authenticate_user(db:AsyncSession,email:str,password:str) -> User:
             detail="This account has been deactivated"
         )
     return user
+
+
+async def change_password(
+    db: AsyncSession, user: User, old_password: str, new_password: str
+) -> User:
+    """
+    Verify old_password against stored hash, then update to new_password.
+    Raises 400 if old password is wrong or new password is too short.
+    """
+    if not await verify_password(old_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+    if len(new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 8 characters",
+        )
+    user.password_hash = await hash_password(new_password)
+    db.add(user)
+    await db.flush()
+    await db.refresh(user)
+    return user
