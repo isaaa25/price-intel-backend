@@ -449,8 +449,14 @@ async def main(mode: str) -> None:
     logger.info(f"Price Intel (Noon) starting | mode={mode}")
 
     # ── Stealth session layer ─────────────────────────────────────────────
-    proxy_manager   = ProxyManager()
-    session_manager = SessionManager(proxy_manager)
+    # proxy_manager   = ProxyManager()
+    # session_manager = SessionManager(proxy_manager)
+    session_manager = SessionManager(
+        scrapfly_api_key=settings.SCRAPFLY_API_KEY,
+        use_proxy = getattr(settings, "USE_PROXY", False),
+        proxy_url = getattr(settings, "IPROYAL_PROXY_URL",None) if getattr(settings, "USE_PROXY", False) else None,
+        country = "ae",
+    )
 
     logger.info("Initialising Noon session...")
     await session_manager.initialise()
@@ -458,8 +464,9 @@ async def main(mode: str) -> None:
     status = session_manager.get_status()
     logger.info(
         f"Session ready | "
-        f"age={status.get('bootstrap_age_h')}h | "
-        f"jwt_ttl={status.get('jwt_expires_in_s')}s"
+        f"age={status.get('bootstrap_age_s')}s | "
+        f"requests={status.get('request_count')} | "
+        f"proxy={status.get('use_proxy')}"
     )
 
     # ── Run requested mode ────────────────────────────────────────────────
