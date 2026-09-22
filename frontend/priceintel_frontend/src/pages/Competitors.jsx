@@ -12,7 +12,7 @@ const card = {
   padding: "24px",
 };
 
-// CHANGED: placeholderCompetitors array deleted entirely — was 100% fake data
+// CHANGED: placeholderCompetitors array deleted entirely 
 
 function MarketplaceBadge({ marketplace }) {
   const colors = {

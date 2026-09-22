@@ -194,12 +194,12 @@ function ProductDetail() {
           >
             {product.category && (
               <span style={{ fontSize: "12px", color: "var(--d-text-3)" }}>
-                📁 {product.category}
+                {product.category}
               </span>
             )}
             {product.search_keyword && (
               <span style={{ fontSize: "12px", color: "var(--d-text-3)" }}>
-                🔍 {product.search_keyword}
+                {product.search_keyword}
               </span>
             )}
             <span
@@ -275,20 +275,20 @@ function ProductDetail() {
           {
             label: "Price Position",
             value: isCheapest
-              ? "🏆 Cheapest"
+              ? "Cheapest"
               : isOverpriced
-              ? "📈 Overpriced"
-              : "⚡ Competitive",
+                ? "Overpriced"
+                : "Competitive",
             sub: isCheapest
               ? "You have the lowest price"
               : isOverpriced
-              ? "Competitors are cheaper"
-              : "Within competitive range",
+                ? "Competitors are cheaper"
+                : "Within competitive range",
             color: isCheapest
               ? "var(--d-success)"
               : isOverpriced
-              ? "var(--d-danger)"
-              : "var(--d-text)",
+                ? "var(--d-danger)"
+                : "var(--d-text)",
           },
         ].map((s, i) => (
           <div
@@ -416,8 +416,8 @@ function ProductDetail() {
                       transition: "background 0.1s",
                     }}
                     onMouseEnter={(e) =>
-                      (e.currentTarget.style.background =
-                        "var(--d-surface-2, rgba(255,255,255,0.03))")
+                    (e.currentTarget.style.background =
+                      "var(--d-surface-2, rgba(255,255,255,0.03))")
                     }
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.background = "transparent")
@@ -471,8 +471,8 @@ function ProductDetail() {
                         fontWeight: 700,
                         color:
                           comp.latest_price != null &&
-                          (kpi?.own_price ?? product.own_cost) != null &&
-                          comp.latest_price < (kpi?.own_price ?? product.own_cost)
+                            (kpi?.own_price ?? product.own_cost) != null &&
+                            comp.latest_price < (kpi?.own_price ?? product.own_cost)
                             ? "var(--d-danger)"
                             : "var(--d-text)",
                         whiteSpace: "nowrap",

@@ -4,17 +4,16 @@ from app.database import AsyncSessionLocal
 
 async def main():
     async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            text("""
-                SELECT ps.price, cl.tracked_product_id
-                FROM price_snapshots ps
-                JOIN competitor_listings cl ON cl.id = ps.competitor_listing_id
-                WHERE cl.tracked_product_id = :pid AND cl.is_active = true
-                ORDER BY ps.price ASC
-            """),
-            {"pid": "e267acd8-8a30-4c88-a6c2-972241b5d2d9"}
-        )
+        result = await db.execute(text("""
+            SELECT tps.tracked_product_id, tps.price, tps.scraped_at, tps.source
+            FROM tracked_product_snapshots tps
+            JOIN tracked_products tp ON tp.id = tps.tracked_product_id
+            ORDER BY tps.scraped_at DESC
+            LIMIT 20
+        """))
         rows = result.fetchall()
+        if not rows:
+            print("No rows found in tracked_product_snapshots at all.")
         for r in rows:
             print(r)
 
