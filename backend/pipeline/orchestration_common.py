@@ -32,6 +32,8 @@ from app.models.user_store import UserStore
 from app.models.competitor_listing import CompetitorListing
 from app.models.scrape_job import ScrapeJob
 from pipeline.ai.query_generalizer import generalize_title
+from datetime import datetime, timezone
+from sqlalchemy import update
 
 logger = logging.getLogger("orchestration_common")
 
@@ -70,17 +72,33 @@ def _update_counters(counters: dict, result: dict) -> None:
 
 # ─── Load tracked products (single marketplace) ────────────────────────────
 
+
+
+async def mark_product_discovered(tracked_product_id: str) -> None:
+    """
+    Sets last_discovered_at = now() for the given product.
+    Called after a successful discovery run (even if zero competitors
+    were found) so the product is not picked up again.
+    """
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            await session.execute(
+                update(TrackedProduct)
+                .where(TrackedProduct.id == tracked_product_id)
+                .values(last_discovered_at=datetime.now(timezone.utc))
+            )
+    logger.info(
+        f"[Discovery] Marked tracked_product={tracked_product_id[:8]}... "
+        f"as discovered."
+    )
+
 async def load_tracked_products(marketplace: str) -> list[dict]:
     """
-    Loads all active TrackedProducts for ONE marketplace ("noon" or
-    "daraz"). The marketplace filter is a parameter, not a hardcoded
-    string, so this function itself stays platform-neutral — each
-    main_*.py supplies its own value.
+    Loads active TrackedProducts for ONE marketplace that still need
+    discovery (last_discovered_at IS NULL).
 
     Returns a list of dicts (not ORM objects) so they stay usable
     after the session closes.
-
-    This runs in its own session that closes immediately after the query.
     """
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -89,13 +107,13 @@ async def load_tracked_products(marketplace: str) -> list[dict]:
             .where(TrackedProduct.is_active == True)
             .where(UserStore.is_active == True)
             .where(UserStore.marketplace == marketplace)
+            .where(TrackedProduct.last_discovered_at.is_(None))   # ← only never-discovered
         )
         rows = result.all()
 
     if not rows:
-        logger.warning(
-            f"No active TrackedProducts found for marketplace={marketplace!r}. "
-            f"Add a product via the database first."
+        logger.info(
+            f"No products pending discovery for marketplace={marketplace!r}."
         )
         return []
 
@@ -112,7 +130,7 @@ async def load_tracked_products(marketplace: str) -> list[dict]:
         })
 
     logger.info(
-        f"Loaded {len(products)} active tracked product(s) for "
+        f"Loaded {len(products)} product(s) pending discovery for "
         f"marketplace={marketplace!r}."
     )
     return products

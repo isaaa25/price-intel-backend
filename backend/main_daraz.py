@@ -64,12 +64,14 @@ from pipeline.orchestration_common import (
     load_confirmed_listings,
     create_scrape_job,
     finalize_scrape_job,
+    mark_product_discovered,
 )
 
 from scraper.platforms.daraz.mtop_client import MtopClient
 from scraper.platforms.daraz.search_scraper import scrape_search
 from scraper.platforms.daraz.product_scraper import scrape_product_page
 from pipeline.orchestration_common import ensure_search_keyword
+from pipeline.ai.relevance_filter import filter_relevant_listings
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
 
@@ -238,27 +240,46 @@ async def run_discovery() -> None:
             raw_products = await scrape_search(domain=domain, keyword=search_keyword)
 
             counters["products_found"] = len(raw_products)
-            logger.info(f"  Found {len(raw_products)} listings for '{title}'.")
+            logger.info(f"  Found {len(raw_products)} listings for '{search_keyword}'.")
+
+            if not raw_products:
+                continue
+            # ── Step 1b: Relevance filter (drop accessories & noise) ──────
+            raw_products = await filter_relevant_listings(
+                search_keyword=search_keyword,
+                original_title=title,
+                raw_listings=raw_products,
+            )
+            logger.info(
+                f"  After relevance filter: {len(raw_products)} listings kept."
+            )
 
             if not raw_products:
                 continue
 
-            # ── Step 2: Clean → inject IDs → save ────────────────────────
+
+
+                        # ── Step 2: Clean → inject IDs → save ────────────────────────
             async with AsyncSessionLocal() as session:
                 async with session.begin():
                     for raw in raw_products:
                         clean = clean_daraz_hit(
                             raw,
-                            marketplace = marketplace,
-                            country     = country,
+                            marketplace=marketplace,
+                            country=country,
                         )
 
-                        clean["user_id"]            = user_id
+                        clean["user_id"] = user_id
                         clean["tracked_product_id"] = tracked_product_id
-                        clean["scrape_job_id"]      = None
+                        clean["scrape_job_id"] = None
 
                         result = await save_product(session, clean)
-                        _update_counters(counters, result)
+                        _update_counters(counters, result)   # keep this if you still use counters
+
+            # ── Step 2b: Mark as discovered ───────────────────────────────
+            # We mark even if zero relevant listings were kept.
+            # The search + filter already ran successfully.
+            await mark_product_discovered(tracked_product_id)
 
             # ── Step 3: Log ───────────────────────────────────────────────
             duration = round(time.time() - start_time, 2)
