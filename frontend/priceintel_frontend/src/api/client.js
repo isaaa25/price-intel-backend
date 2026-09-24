@@ -18,7 +18,12 @@ async function apiRequest(endpoint, options = {}) {
     throw new Error(errorData.detail || "Something went wrong");
   }
 
-  return response.json();
+  if (response.status === 204) {
+    return null;
+  }
+
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
 
 export default apiRequest;

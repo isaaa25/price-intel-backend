@@ -80,7 +80,11 @@ function Account() {
         setStoresLoading(true);
         setStoresError("");
         getStores()
-            .then((data) => setStores(Array.isArray(data) ? data : []))
+            .then((data) => {
+                const list = Array.isArray(data) ? data : [];
+                setStores(list);
+                refreshStores();
+            })
             .catch((err) => setStoresError(err.message || "Failed to load stores."))
             .finally(() => setStoresLoading(false));
     }

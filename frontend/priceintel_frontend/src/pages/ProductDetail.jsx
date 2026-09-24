@@ -252,7 +252,7 @@ function ProductDetail() {
           {
             label: "My Price",
             value: fmt(kpi?.own_price ?? product.own_cost),
-            sub: "Your current listed price",
+            sub: "",
             color: "var(--d-text)",
           },
           {

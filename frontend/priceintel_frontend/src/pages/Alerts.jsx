@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import ReactDOM from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useStore } from "../context/StoreContext";
@@ -208,6 +209,19 @@ function Alerts() {
   const [selectedProductId, setSelectedProductId] = useState("all");
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  /* ── Close dropdown on outside click ───────────────────── */
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   /* ── Load products strictly for the selected store ──────── */
   useEffect(() => {
@@ -394,38 +408,19 @@ function Alerts() {
         </div>
       ) : (
         <>
-          {/* ── Summary stats ──────────────────────────────── */}
-          <div className="animate-in" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px", marginBottom: "18px", animationDelay: "0.05s" }}>
-            {[
-              { label: "Total Alerts", value: filtered.length },
-              { label: "Flash Sales", value: filtered.filter((a) => a.type === "flash_sale").length },
-              { label: "Price Drops", value: filtered.filter((a) => a.type === "price_drop").length },
-              { label: "Undercuts", value: filtered.filter((a) => a.type === "undercut").length },
-              { label: "New Competitors", value: filtered.filter((a) => a.type === "new_competitor").length },
-            ].map((s, i) => (
-              <div key={s.label} className="animate-in" style={{ ...card, padding: "14px 16px", animationDelay: `${i * 0.04}s` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <p style={{ margin: 0, fontSize: "10.5px", fontWeight: 600, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.4px" }}>{s.label}</p>
-                </div>
-                <p style={{ margin: "8px 0 0", fontSize: "22px", fontWeight: 700, color: "var(--d-text)", letterSpacing: "-0.5px" }}>{s.value}</p>
-              </div>
-            ))}
-          </div>
-
           {/* ── Search & Product Filter Bar ─────────────────── */}
           <div
             className="animate-in"
             style={{
               display: "flex",
+              flexDirection: "column",
               gap: "12px",
               marginBottom: "16px",
-              flexWrap: "wrap",
-              alignItems: "center",
               animationDelay: "0.08s",
             }}
           >
             {/* Search Input */}
-            <div style={{ position: "relative", flex: "1", minWidth: "240px" }}>
+            <div style={{ position: "relative", width: "100%" }}>
               <span
                 style={{
                   position: "absolute",
@@ -465,44 +460,129 @@ function Alerts() {
               />
             </div>
 
-            {/* Product Dropdown Selector */}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <label style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--d-text-2)", whiteSpace: "nowrap" }}>
+            {/* Product Dropdown Selector (Custom) */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", width: "100%" }}>
+              <label style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--d-text-2)", whiteSpace: "nowrap", paddingTop: "10px" }}>
                 Product:
               </label>
-              <select
-                value={selectedProductId}
-                onChange={(e) => setSelectedProductId(e.target.value)}
-                disabled={loadingProducts || products.length === 0}
-                style={{
-                  padding: "9px 14px",
-                  borderRadius: "8px",
-                  border: "1px solid var(--d-border)",
-                  background: "var(--d-surface)",
-                  color: "var(--d-text)",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  fontFamily: "inherit",
-                  cursor: products.length > 0 ? "pointer" : "default",
-                  outline: "none",
-                  minWidth: "220px",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
-                onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
-              >
-                {products.length === 0 ? (
-                  <option value="all">No products tracked yet (0)</option>
-                ) : (
-                  <>
-                    <option value="all">All Tracked Products ({products.length})</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.title}
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
+              <div ref={dropdownRef} style={{ position: "relative", flex: 1, minWidth: 0 }}>
+                {/* Dropdown trigger button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!loadingProducts && products.length > 0) setDropdownOpen((prev) => !prev);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "9px 32px 9px 14px",
+                    borderRadius: "8px",
+                    border: `1px solid ${dropdownOpen ? "var(--d-accent)" : "var(--d-border)"}`,
+                    background: "var(--d-surface)",
+                    color: "var(--d-text)",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    fontFamily: "inherit",
+                    cursor: products.length > 0 ? "pointer" : "default",
+                    outline: "none",
+                    boxSizing: "border-box",
+                    textAlign: "left",
+                    position: "relative",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {products.length === 0
+                    ? "No products tracked yet (0)"
+                    : selectedProductId === "all"
+                      ? `All Tracked Products (${products.length})`
+                      : products.find((p) => String(p.id) === String(selectedProductId))?.title || "Select product"}
+                  {/* Chevron icon */}
+                  <span style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "50%",
+                    transform: `translateY(-50%) rotate(${dropdownOpen ? "180deg" : "0deg"})`,
+                    transition: "transform 0.15s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    color: "var(--d-text-3)",
+                    pointerEvents: "none",
+                  }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </span>
+                </button>
+
+                {/* Dropdown menu — rendered via portal to escape overflow clipping */}
+                {dropdownOpen && products.length > 0 && (() => {
+                  const rect = dropdownRef.current?.getBoundingClientRect();
+                  if (!rect) return null;
+                  return ReactDOM.createPortal(
+                    <div style={{
+                      position: "fixed",
+                      top: rect.bottom + 4,
+                      left: rect.left,
+                      width: rect.width,
+                      background: "var(--d-surface)",
+                      border: "1px solid var(--d-border)",
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+                      zIndex: 9999,
+                      maxHeight: "240px",
+                      overflowY: "auto",
+                    }}>
+                      {/* "All Tracked Products" option */}
+                      <div
+                        onClick={() => { setSelectedProductId("all"); setDropdownOpen(false); }}
+                        style={{
+                          padding: "10px 14px",
+                          fontSize: "13px",
+                          fontWeight: selectedProductId === "all" ? 700 : 500,
+                          color: selectedProductId === "all" ? "var(--d-accent)" : "var(--d-text)",
+                          background: selectedProductId === "all" ? "var(--d-accent-bg)" : "transparent",
+                          cursor: "pointer",
+                          borderBottom: "1px solid var(--d-border)",
+                          transition: "background 0.1s ease",
+                          wordBreak: "break-word",
+                        }}
+                        onMouseEnter={(e) => { if (selectedProductId !== "all") e.currentTarget.style.background = "var(--d-bg)"; }}
+                        onMouseLeave={(e) => { if (selectedProductId !== "all") e.currentTarget.style.background = "transparent"; }}
+                      >
+                        All Tracked Products ({products.length})
+                      </div>
+                      {/* Individual product options */}
+                      {products.map((p, idx) => {
+                        const isSelected = String(p.id) === String(selectedProductId);
+                        return (
+                          <div
+                            key={p.id}
+                            onClick={() => { setSelectedProductId(String(p.id)); setDropdownOpen(false); }}
+                            style={{
+                              padding: "10px 14px",
+                              fontSize: "13px",
+                              fontWeight: isSelected ? 700 : 500,
+                              color: isSelected ? "var(--d-accent)" : "var(--d-text)",
+                              background: isSelected ? "var(--d-accent-bg)" : "transparent",
+                              cursor: "pointer",
+                              borderBottom: idx < products.length - 1 ? "1px solid var(--d-border)" : "none",
+                              transition: "background 0.1s ease",
+                              wordBreak: "break-word",
+                              lineHeight: "1.45",
+                            }}
+                            onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "var(--d-bg)"; }}
+                            onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                          >
+                            {p.title}
+                          </div>
+                        );
+                      })}
+                    </div>,
+                    document.body
+                  );
+                })()}
+              </div>
             </div>
           </div>
 
@@ -576,11 +656,6 @@ function Alerts() {
                 <div style={{ textAlign: "center", padding: "48px 14px", color: "var(--d-text-3)" }}>
                   <p style={{ margin: "0 0 6px", fontSize: "14px", fontWeight: 600, color: "var(--d-text)" }}>
                     No alerts found
-                  </p>
-                  <p style={{ margin: 0, fontSize: "12.5px" }}>
-                    {products.length === 0
-                      ? `No tracked products found for ${selectedStore.store_name}. Add products in the Products page to start tracking.`
-                      : "Try changing your search query, product filter, or alert category."}
                   </p>
                   {products.length === 0 && (
                     <button

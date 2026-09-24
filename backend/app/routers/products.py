@@ -17,7 +17,8 @@ from uuid import UUID
 
 from app.dependencies import get_db, get_current_user
 from app.schemas.product import ProductCreate, ProductResponse
-from app.services.product_service import create_product, get_products, get_product_kpis, get_product_by_id, get_product_competitors
+from app.services.product_service import create_product, get_products, get_product_kpis, get_product_by_id, get_product_competitors, get_portfolio_health, delete_product
+
 
 router = APIRouter()
 
@@ -57,6 +58,16 @@ async def get_product(
     return await get_product_by_id(db, product_id, current_user.id)
 
 
+@router.delete("/{product_id}", status_code=204)
+async def remove_product(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    await delete_product(db, product_id, current_user.id)
+    return None
+
+
 @router.get("/{product_id}/competitors")
 async def list_competitors(
     product_id: UUID,
@@ -64,3 +75,12 @@ async def list_competitors(
     current_user = Depends(get_current_user),
 ):
     return await get_product_competitors(db, product_id)
+
+
+@router.get("/portfolio/health")
+async def portfolio_health(
+    store_id: Optional[UUID] = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    return await get_portfolio_health(db, current_user.id, store_id=store_id)

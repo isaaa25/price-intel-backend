@@ -15,6 +15,7 @@ TABLE OF CONTENTS
 1. PRODUCTS PAGE       — product KPIs, competitor listings
    (future sections: DASHBOARD PAGE, COMPETITORS PAGE, ALERTS PAGE,
    etc. — add a new numbered section below as each page gets built)
+2. DASHBOARD PAGE       — portfolio health, needs action
 ──────────────────────────────────────────────────────────────────
 """
 
@@ -73,3 +74,41 @@ async def fetch_product_competitors_rows(db: AsyncSession, product_id):
         WHERE cl.tracked_product_id = :pid AND cl.is_active = true
         ORDER BY latest_price ASC NULLS LAST
     """), {"pid": str(product_id)})
+
+
+# ══════════════════════════════════════════════════════════════
+# 2. DASHBOARD PAGE
+# ══════════════════════════════════════════════════════════════
+# Powers: Dashboard.jsx "Portfolio Health" and "Needs Action" cards
+
+async def fetch_portfolio_rows(db: AsyncSession, user_id, store_id=None):
+    """
+    Own price (snapshot-first, own_cost fallback) + cheapest active
+    competitor price, for every active product in a user's store(s).
+    Used by: get_portfolio_health() in services/product_service.py
+    Powers: Dashboard.jsx "Portfolio Health" and "Needs Action" cards
+    """
+    store_filter = ""
+    params = {"uid": str(user_id)}
+    if store_id is not None:
+        store_filter = "AND tp.store_id = :sid"
+        params["sid"] = str(store_id)
+
+    return await db.execute(text(f"""
+        SELECT
+            tp.id,
+            COALESCE(
+                (SELECT tps.price FROM tracked_product_snapshots tps
+                 WHERE tps.tracked_product_id = tp.id
+                 ORDER BY tps.scraped_at DESC LIMIT 1),
+                tp.own_cost
+            ) AS own_price,
+            (SELECT MIN(ps.price) FROM price_snapshots ps
+             JOIN competitor_listings cl ON cl.id = ps.competitor_listing_id
+             WHERE cl.tracked_product_id = tp.id AND cl.is_active = true) AS cheapest_competitor_price
+        FROM tracked_products tp
+        JOIN user_stores us ON us.id = tp.store_id
+        WHERE us.user_id = :uid
+          AND tp.is_active = true
+          {store_filter}
+    """), params)

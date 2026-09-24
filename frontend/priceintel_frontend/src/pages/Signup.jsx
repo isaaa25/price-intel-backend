@@ -25,6 +25,8 @@ function Signup() {
       localStorage.setItem("token", data.access_token);
       if (data.user?.email) localStorage.setItem("user_email", data.user.email);
       if (data.user?.full_name) localStorage.setItem("user_name", data.user.full_name);
+      localStorage.setItem("onboarding_completed", "false");
+      window.dispatchEvent(new Event("auth_state_changed"));
       navigate("/dashboard");
     } catch (err) {
       setError(err.message);

@@ -54,18 +54,6 @@ const PLATFORMS = [
       </svg>
     ),
   },
-  {
-    name: "Amazon",
-    desc: "Analyze international competition",
-    icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="m7.5 4.27 9 5.15" />
-        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-        <path d="m3.3 7 8.7 5 8.7-5" />
-        <path d="M12 22V12" />
-      </svg>
-    ),
-  },
 ];
 
 const PRICING_PLANS = [
@@ -174,7 +162,7 @@ function Welcome() {
         {/* Desktop nav links */}
         <div style={{ display: "flex", gap: "32px" }}>
           {NAV_LINKS.map((l) => (
-            <button key={l} onClick={() => scrollTo(NAV_IDS[l])} style={{ background: "none", border: "none", fontFamily: "inherit", fontSize: "13px", fontWeight: 500, color: "#52525B", cursor: "pointer", padding: 0, transition: "color 0.15s" }}
+            <button key={l} onClick={() => scrollTo(NAV_IDS[l])} style={{ background: "none", border: "none", fontFamily: "inherit", fontSize: "14.5px", fontWeight: 500, color: "#52525B", cursor: "pointer", padding: 0, transition: "color 0.15s" }}
               onMouseEnter={e => e.target.style.color = "#18181B"}
               onMouseLeave={e => e.target.style.color = "#52525B"}
             >{l}</button>
@@ -183,7 +171,7 @@ function Welcome() {
 
         {/* Auth buttons */}
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <button id="nav-btn-login" onClick={() => navigate("/login")} style={{ background: "none", border: "none", fontFamily: "inherit", fontSize: "13px", fontWeight: 600, color: "#52525B", cursor: "pointer", padding: "8px 14px", borderRadius: "8px", transition: "background 0.12s" }}
+          <button id="nav-btn-login" onClick={() => navigate("/login")} style={{ background: "none", border: "none", fontFamily: "inherit", fontSize: "14.5px", fontWeight: 600, color: "#52525B", cursor: "pointer", padding: "8px 14px", borderRadius: "8px", transition: "background 0.12s" }}
             onMouseEnter={e => e.currentTarget.style.background = "#F4F4F5"}
             onMouseLeave={e => e.currentTarget.style.background = "none"}
           >Log In</button>
@@ -220,7 +208,7 @@ function Welcome() {
           </h1>
 
           <p style={{ margin: "0 0 36px", fontSize: "17px", color: "#52525B", lineHeight: 1.7, maxWidth: "480px" }}>
-            Price Intel tracks your competitors across Noon, Daraz and Amazon — giving you real-time alerts, AI-powered insights, and a clear edge over every rival seller.
+            Price Intel tracks your competitors across Noon and Daraz — giving you real-time alerts, AI-powered insights, and a clear edge over every rival seller.
           </p>
 
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
@@ -249,174 +237,370 @@ function Welcome() {
           </div>
         </div>
 
-        {/* Right: Dashboard mockup */}
-        <div style={{ flex: 1, maxWidth: "680px", zIndex: 1, transform: "translateX(8px)" }}>
-          <div style={{
-            background: "#E9EEF4",
-            borderRadius: "16px",
-            border: "1px solid #CBD5E1",
-            boxShadow: "0 24px 80px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)",
-            overflow: "hidden",
-            padding: "22px",
+        {/* Right: Hero Mockup Composition */}
+        <div className="hero-composition">
+
+          {/* ── LEFT SUPPORTING: Product Details Card (behind main) ── */}
+          <div className="hero-support-card" style={{
+            left: "-30px",
+            top: "20px",
+            width: "370px",
+            zIndex: 1,
+            transform: "rotate(-2deg)",
           }}>
-            {/* Dashboard Title Row */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#2563EB" }} />
-                <span style={{ fontSize: "16px", fontWeight: 700, color: "#0F172A", letterSpacing: "-0.2px" }}>Dashboard</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "5px", background: "#FFFFFF", border: "1px solid #CBD5E1", padding: "5px 12px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 600, color: "#475569" }}>
-                  <span>Last 30 Days</span>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+            <div style={{
+              background: "#FFFFFF",
+              borderRadius: "14px",
+              border: "1px solid #DCE3EC",
+              boxShadow: "0 16px 48px rgba(0,0,0,0.09), 0 0 0 1px rgba(0,0,0,0.02)",
+              overflow: "hidden",
+              maxHeight: "400px",
+            }}>
+              {/* Header */}
+              <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid #F1F5F9" }}>
+                <div style={{ fontSize: "9px", color: "#94A3B8", marginBottom: "6px", display: "flex", alignItems: "center", gap: "3px" }}>
+                  <span>←</span> Back to Products
+                </div>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", marginBottom: "5px", letterSpacing: "-0.2px" }}>Redmi Note 15 Pro</div>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  <span style={{ fontSize: "8.5px", background: "#F1F5F9", padding: "2px 7px", borderRadius: "4px", color: "#475569", fontWeight: 500 }}>Electronics</span>
+                  <span style={{ fontSize: "8.5px", background: "#F1F5F9", padding: "2px 7px", borderRadius: "4px", color: "#475569", fontWeight: 500 }}>Redmi Note 15 Pro</span>
+                  <span style={{ fontSize: "8.5px", color: "#10B981", fontWeight: 600 }}>● Active</span>
                 </div>
               </div>
-            </div>
 
-            {/* 5 KPI Cards (Clean, decent & minimal) */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", marginBottom: "16px" }}>
-              {[
-                { label: "PORTFOLIO HEALTH", val: "78/100", color: "#2563EB" },
-                { label: "NEEDS ACTION", val: "3", color: "#0F172A" },
-                { label: "ACTIVE OPPORTUNITIES", val: "7", color: "#0F172A" },
-                { label: "ACTIVE PRICE WARS", val: "2 active", color: "#0F172A" },
-                { label: "MARKET MOVEMENT", val: "↓ 2.8%", color: "#10B981" },
-              ].map((k) => (
-                <div
-                  key={k.label}
-                  style={{
-                    background: "#FFFFFF",
-                    borderRadius: "8px",
-                    padding: "10px 5px",
-                    border: "1px solid #DCE3EC",
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
-                    textAlign: "center",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
-                >
+              {/* KPI Cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "6px", padding: "10px 12px" }}>
+                {[
+                  { label: "MY PRICE", value: "PKR 109,999", sub: "", color: "#0F172A" },
+                  { label: "CHEAPEST COMPETITOR", value: "PKR 94,999", sub: "", color: "#EF4444" },
+                  { label: "ACTIVE COMPETITORS", value: "7", sub: "Listings tracked", color: "#0F172A" },
+                  { label: "PRICE POSITION", value: "Overpriced", sub: "Competitors are cheaper", color: "#EF4444" },
+                ].map((k) => (
                   <div
+                    key={k.label}
                     style={{
-                      fontSize: "7.5px",
-                      fontWeight: 700,
-                      color: "#64748B",
-                      letterSpacing: "0.2px",
-                      lineHeight: "1.25",
-                      minHeight: "18px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      textAlign: "center",
+                      background: "#F8FAFC",
+                      borderRadius: "6px",
+                      padding: "8px 6px",
+                      border: "1px solid #E2E8F0",
+                      boxSizing: "border-box",
+                      ...(k.label === "MY PRICE"
+                        ? {
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "center",
+                          }
+                        : {}),
                     }}
                   >
-                    {k.label}
+                    <div style={{ fontSize: "6px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.2px", lineHeight: 1.3 }}>{k.label}</div>
+                    <div style={{ fontSize: "10px", fontWeight: 700, color: k.color, marginTop: "3px" }}>{k.value}</div>
+                    {k.sub ? <div style={{ fontSize: "6px", color: "#94A3B8", marginTop: "2px" }}>{k.sub}</div> : null}
                   </div>
-                  <div style={{ fontSize: "12.5px", fontWeight: 800, color: k.color, marginTop: "4px" }}>
-                    {k.val}
-                  </div>
+                ))}
+              </div>
+
+              {/* Competitor Listings heading */}
+              <div style={{ padding: "6px 12px 5px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ fontSize: "11px", fontWeight: 700, color: "#0F172A" }}>Competitor Listings</span>
+                <span style={{ fontSize: "8px", background: "#F1F5F9", padding: "1px 6px", borderRadius: "4px", color: "#475569", fontWeight: 600 }}>7</span>
+              </div>
+
+              {/* Table header */}
+              <div style={{ display: "grid", gridTemplateColumns: "52px 1fr 72px 68px", padding: "6px 12px", background: "#F8FAFC", borderTop: "1px solid #F1F5F9", gap: "6px" }}>
+                {["PLATFORM", "PRODUCT NAME", "THEIR PRICE", "VS YOUR PRICE"].map((h) => (
+                  <span key={h} style={{ fontSize: "6px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.2px" }}>{h}</span>
+                ))}
+              </div>
+
+              {/* Table rows */}
+              {[
+                { platform: "Daraz", name: "Redmi Note 15 Pro 4G - 8GB...", price: "PKR 94,999", vs: "▼ 13.8% cheaper", vsColor: "#EF4444" },
+                { platform: "Daraz", name: "Redmi Note 15 Pro || 8GB R...", price: "PKR 97,999", vs: "▼ 10.9% cheaper", vsColor: "#EF4444" },
+                { platform: "Daraz", name: "Redmi Note 15 Pro - AMOL...", price: "PKR 101,499", vs: "▼ 7.7% cheaper", vsColor: "#EF4444" },
+              ].map((row, i) => (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "52px 1fr 72px 68px", padding: "7px 12px", borderTop: "1px solid #F1F5F9", gap: "6px", alignItems: "center" }}>
+                  <span style={{ fontSize: "8px", fontWeight: 600, color: "#0F172A" }}>{row.platform}</span>
+                  <span style={{ fontSize: "7.5px", color: "#475569", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</span>
+                  <span style={{ fontSize: "8px", fontWeight: 600, color: "#10B981" }}>{row.price}</span>
+                  <span style={{ fontSize: "7px", fontWeight: 600, color: row.vsColor }}>{row.vs}</span>
                 </div>
               ))}
             </div>
+          </div>
 
-            {/* Price History & Trend Analysis Card */}
-            <div style={{ background: "#FFFFFF", borderRadius: "10px", border: "1px solid #DCE3EC", padding: "16px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-              {/* Header */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: "14px" }}>
+
+          {/* ── MAIN: Dashboard (center, front) ────────────────── */}
+          <div style={{ position: "relative", zIndex: 3, width: "100%", maxWidth: "500px" }}>
+            <div style={{
+              background: "#E9EEF4",
+              borderRadius: "16px",
+              border: "1px solid #CBD5E1",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.04)",
+              overflow: "hidden",
+              padding: "22px",
+            }}>
+              {/* Dashboard Title Row */}
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "16px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A" }}>Price Trend</span>
-                  <span style={{ fontSize: "10px", fontWeight: 600, color: "#10B981", background: "#DCFCE7", padding: "2px 7px", borderRadius: "4px" }}>▼ 3.4%</span>
+                  <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#2563EB" }} />
+                  <span style={{ fontSize: "16px", fontWeight: 700, color: "#0F172A", letterSpacing: "-0.2px" }}>Dashboard</span>
                 </div>
+              </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px", background: "#F8FAFC", border: "1px solid #E2E8F0", padding: "4px 9px", borderRadius: "5px", fontSize: "10.5px", fontWeight: 600, color: "#334155" }}>
-                    <span>Galaxy Z Fold3</span>
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+              {/* 5 KPI Cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", marginBottom: "16px" }}>
+                {[
+                  { label: "PORTFOLIO HEALTH", val: "78/100", color: "#2563EB" },
+                  { label: "NEEDS ACTION", val: "3", color: "#0F172A" },
+                  { label: "ACTIVE OPPORTUNITIES", val: "7", color: "#0F172A" },
+                  { label: "ACTIVE PRICE WARS", val: "2 active", color: "#0F172A" },
+                  { label: "MARKET MOVEMENT", val: "↓ 2.8%", color: "#10B981" },
+                ].map((k) => (
+                  <div
+                    key={k.label}
+                    style={{
+                      background: "#FFFFFF",
+                      borderRadius: "8px",
+                      padding: "10px 5px",
+                      border: "1px solid #DCE3EC",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+                      textAlign: "center",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "7.5px",
+                        fontWeight: 700,
+                        color: "#64748B",
+                        letterSpacing: "0.2px",
+                        lineHeight: "1.25",
+                        minHeight: "18px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        textAlign: "center",
+                      }}
+                    >
+                      {k.label}
+                    </div>
+                    <div style={{ fontSize: "12.5px", fontWeight: 800, color: k.color, marginTop: "4px" }}>
+                      {k.val}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Price History & Trend Analysis Card */}
+              <div style={{ background: "#FFFFFF", borderRadius: "10px", border: "1px solid #DCE3EC", padding: "16px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                {/* Header */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: "14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A" }}>Price Trend</span>
+                    <span style={{ fontSize: "10px", fontWeight: 600, color: "#10B981", background: "#DCFCE7", padding: "2px 7px", borderRadius: "4px" }}>▼ 3.4%</span>
                   </div>
 
-                  <div style={{ display: "flex", background: "#F1F5F9", padding: "2px", borderRadius: "5px", border: "1px solid #E2E8F0" }}>
-                    {["24h", "7d", "1m"].map((tf) => (
-                      <span key={tf} style={{ padding: "3px 8px", fontSize: "9.5px", fontWeight: tf === "7d" ? 700 : 500, color: tf === "7d" ? "#2563EB" : "#64748B", background: tf === "7d" ? "#FFFFFF" : "transparent", borderRadius: "4px" }}>
-                        {tf}
-                      </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", background: "#F8FAFC", border: "1px solid #E2E8F0", padding: "4px 9px", borderRadius: "5px", fontSize: "10.5px", fontWeight: 600, color: "#334155" }}>
+                      <span>Galaxy Z Fold3</span>
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+                    </div>
+
+                    <div style={{ display: "flex", background: "#F1F5F9", padding: "2px", borderRadius: "5px", border: "1px solid #E2E8F0" }}>
+                      {["24h", "7d", "1m"].map((tf) => (
+                        <span key={tf} style={{ padding: "3px 8px", fontSize: "9.5px", fontWeight: tf === "7d" ? 700 : 500, color: tf === "7d" ? "#2563EB" : "#64748B", background: tf === "7d" ? "#FFFFFF" : "transparent", borderRadius: "4px" }}>
+                          {tf}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "14px", marginBottom: "10px", fontSize: "10px" }}>
+                  <span style={{ color: "#94A3B8", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span style={{ display: "inline-block", width: "14px", height: "0px", borderTop: "2px dashed #94A3B8" }} /> Competitor Avg
+                  </span>
+                  <span style={{ color: "#2563EB", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span style={{ display: "inline-block", width: "14px", height: "2.5px", background: "#2563EB" }} /> Your Price
+                  </span>
+                </div>
+
+                {/* High-Fidelity Trend Chart SVG */}
+                <div style={{ width: "100%", height: "155px" }}>
+                  <svg width="100%" height="100%" viewBox="0 0 460 120" preserveAspectRatio="none">
+                    {/* Grid lines & Y-axis labels */}
+                    {[
+                      { y: 15, label: "USD 830" },
+                      { y: 38, label: "USD 798" },
+                      { y: 62, label: "USD 763" },
+                      { y: 86, label: "USD 728" },
+                      { y: 108, label: "USD 693" },
+                    ].map((g) => (
+                      <g key={g.label}>
+                        <text x="0" y={g.y + 3} fill="#94A3B8" fontSize="8" fontFamily="Inter, sans-serif">{g.label}</text>
+                        <line x1="42" y1={g.y} x2="455" y2={g.y} stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
+                      </g>
                     ))}
-                  </div>
+
+                    {/* Competitor Avg Line (Dashed grey with dots) */}
+                    <path
+                      d="M 55 42 C 90 44, 120 54, 155 70 C 190 85, 220 100, 255 102 C 290 102, 320 78, 355 64 C 390 52, 420 50, 450 56"
+                      fill="none"
+                      stroke="#94A3B8"
+                      strokeWidth="1.8"
+                      strokeDasharray="4 4"
+                    />
+                    {[
+                      [55, 42], [120, 54], [185, 84], [255, 102], [320, 78], [385, 52], [450, 56]
+                    ].map(([cx, cy], i) => (
+                      <circle key={i} cx={cx} cy={cy} r="2.5" fill="#94A3B8" />
+                    ))}
+
+                    {/* Your Price Line (Solid blue with white-centered dots) */}
+                    <path
+                      d="M 55 58 C 90 59, 120 62, 155 73 C 190 83, 220 90, 255 92 C 290 92, 320 86, 355 80 C 390 72, 420 74, 450 78"
+                      fill="none"
+                      stroke="#2563EB"
+                      strokeWidth="2.5"
+                    />
+                    {[
+                      [55, 58], [120, 62], [185, 80], [255, 92], [320, 86], [385, 73], [450, 78]
+                    ].map(([cx, cy], i) => (
+                      <g key={i}>
+                        <circle cx={cx} cy={cy} r="3.5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="1.5" />
+                      </g>
+                    ))}
+
+                    {/* X-axis labels */}
+                    {[
+                      { x: 55, text: "Mon" },
+                      { x: 120, text: "Tue" },
+                      { x: 185, text: "Wed" },
+                      { x: 255, text: "Thu" },
+                      { x: 320, text: "Fri" },
+                      { x: 385, text: "Sat" },
+                      { x: 450, text: "Sun" },
+                    ].map((xl) => (
+                      <text key={xl.text} x={xl.x} y="119" textAnchor="middle" fill="#94A3B8" fontSize="8" fontFamily="Inter, sans-serif">{xl.text}</text>
+                    ))}
+                  </svg>
                 </div>
-              </div>
-
-              {/* Legend */}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "14px", marginBottom: "10px", fontSize: "10px" }}>
-                <span style={{ color: "#94A3B8", display: "flex", alignItems: "center", gap: "4px" }}>
-                  <span style={{ display: "inline-block", width: "14px", height: "0px", borderTop: "2px dashed #94A3B8" }} /> Competitor Avg
-                </span>
-                <span style={{ color: "#2563EB", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
-                  <span style={{ display: "inline-block", width: "14px", height: "2.5px", background: "#2563EB" }} /> Your Price
-                </span>
-              </div>
-
-              {/* High-Fidelity Trend Chart SVG */}
-              <div style={{ width: "100%", height: "155px" }}>
-                <svg width="100%" height="100%" viewBox="0 0 460 120" preserveAspectRatio="none">
-                  {/* Grid lines & Y-axis labels */}
-                  {[
-                    { y: 15, label: "USD 830" },
-                    { y: 38, label: "USD 798" },
-                    { y: 62, label: "USD 763" },
-                    { y: 86, label: "USD 728" },
-                    { y: 108, label: "USD 693" },
-                  ].map((g) => (
-                    <g key={g.label}>
-                      <text x="0" y={g.y + 3} fill="#94A3B8" fontSize="8" fontFamily="Inter, sans-serif">{g.label}</text>
-                      <line x1="42" y1={g.y} x2="455" y2={g.y} stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-                    </g>
-                  ))}
-
-                  {/* Competitor Avg Line (Dashed grey with dots) */}
-                  <path
-                    d="M 55 42 C 90 44, 120 54, 155 70 C 190 85, 220 100, 255 102 C 290 102, 320 78, 355 64 C 390 52, 420 50, 450 56"
-                    fill="none"
-                    stroke="#94A3B8"
-                    strokeWidth="1.8"
-                    strokeDasharray="4 4"
-                  />
-                  {[
-                    [55, 42], [120, 54], [185, 84], [255, 102], [320, 78], [385, 52], [450, 56]
-                  ].map(([cx, cy], i) => (
-                    <circle key={i} cx={cx} cy={cy} r="2.5" fill="#94A3B8" />
-                  ))}
-
-                  {/* Your Price Line (Solid blue with white-centered dots) */}
-                  <path
-                    d="M 55 58 C 90 59, 120 62, 155 73 C 190 83, 220 90, 255 92 C 290 92, 320 86, 355 80 C 390 72, 420 74, 450 78"
-                    fill="none"
-                    stroke="#2563EB"
-                    strokeWidth="2.5"
-                  />
-                  {[
-                    [55, 58], [120, 62], [185, 80], [255, 92], [320, 86], [385, 73], [450, 78]
-                  ].map(([cx, cy], i) => (
-                    <g key={i}>
-                      <circle cx={cx} cy={cy} r="3.5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="1.5" />
-                    </g>
-                  ))}
-
-                  {/* X-axis labels */}
-                  {[
-                    { x: 55, text: "Mon" },
-                    { x: 120, text: "Tue" },
-                    { x: 185, text: "Wed" },
-                    { x: 255, text: "Thu" },
-                    { x: 320, text: "Fri" },
-                    { x: 385, text: "Sat" },
-                    { x: 450, text: "Sun" },
-                  ].map((xl) => (
-                    <text key={xl.text} x={xl.x} y="119" textAnchor="middle" fill="#94A3B8" fontSize="8" fontFamily="Inter, sans-serif">{xl.text}</text>
-                  ))}
-                </svg>
               </div>
             </div>
           </div>
+
+
+          {/* ── RIGHT SUPPORTING: Competitors Card (behind main) ── */}
+          <div className="hero-support-card" style={{
+            right: "-30px",
+            top: "25px",
+            width: "370px",
+            zIndex: 2,
+            transform: "rotate(1.5deg)",
+          }}>
+            <div style={{
+              background: "#FFFFFF",
+              borderRadius: "14px",
+              border: "1px solid #DCE3EC",
+              boxShadow: "0 16px 48px rgba(0,0,0,0.09), 0 0 0 1px rgba(0,0,0,0.02)",
+              overflow: "hidden",
+              maxHeight: "380px",
+              display: "flex",
+            }}>
+              {/* Mini Sidebar */}
+              <div style={{
+                width: "44px",
+                background: "#FAFBFC",
+                borderRight: "1px solid #E4E4E7",
+                padding: "10px 0",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "10px",
+                flexShrink: 0,
+              }}>
+                <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: "7px" }}>PI</div>
+                {/* Nav items */}
+                {["Dashboard", "Products", "Competitors", "Alerts", "Reports"].map((item, i) => (
+                  <div key={item} title={item} style={{
+                    width: "22px",
+                    height: "22px",
+                    borderRadius: "6px",
+                    background: i === 2 ? "#EFF6FF" : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    <div style={{
+                      width: i === 2 ? "12px" : "10px",
+                      height: i === 2 ? "12px" : "10px",
+                      borderRadius: "3px",
+                      background: i === 2 ? "#2563EB" : "#CBD5E1",
+                      opacity: i === 2 ? 1 : 0.5,
+                    }} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Content Area */}
+              <div style={{ flex: 1, padding: "14px 14px 10px", minWidth: 0 }}>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", marginBottom: "3px", letterSpacing: "-0.2px" }}>Competitors</div>
+                <div style={{ fontSize: "9px", color: "#64748B", marginBottom: "10px" }}>Sellers competing against your products across marketplaces.</div>
+
+                {/* KPI cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px", marginBottom: "10px" }}>
+                  {[
+                    { label: "TRACKED COMPETITORS", value: "15" },
+                    { label: "PRICE DROPS DETECTED", value: "—" },
+                    { label: "STOCK-OUT EVENTS", value: "—" },
+                  ].map((k) => (
+                    <div key={k.label} style={{ background: "#F8FAFC", borderRadius: "6px", padding: "8px 6px", border: "1px solid #E2E8F0" }}>
+                      <div style={{ fontSize: "6px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.2px", lineHeight: 1.3 }}>{k.label}</div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A", marginTop: "4px" }}>{k.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Search */}
+                <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "6px", padding: "6px 10px", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                  <span style={{ fontSize: "9px", color: "#94A3B8" }}>Search competitors...</span>
+                </div>
+
+                {/* Detected Sellers heading */}
+                <div style={{ marginBottom: "6px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#0F172A" }}>Detected Sellers</span>
+                  <span style={{ fontSize: "8px", color: "#2563EB", fontWeight: 600, marginLeft: "8px" }}>15 sellers found</span>
+                </div>
+
+                {/* Table header */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 52px 68px", padding: "5px 0", borderBottom: "1px solid #F1F5F9", gap: "4px" }}>
+                  {["SELLER", "MARKETPLACE", "PRICE VS YOU"].map((h) => (
+                    <span key={h} style={{ fontSize: "6px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.2px" }}>{h}</span>
+                  ))}
+                </div>
+
+                {/* Table rows */}
+                {[
+                  { seller: "Google Pixel 7 Official PTA...", market: "Daraz", vs: "13.1% below you", vsColor: "#EF4444" },
+                  { seller: "Google Pixel 7 Pro – 6.7\"...", market: "Daraz", vs: "—", vsColor: "#94A3B8" },
+                ].map((row, i) => (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 52px 68px", padding: "7px 0", borderBottom: "1px solid #F1F5F9", gap: "4px", alignItems: "center" }}>
+                    <span style={{ fontSize: "8px", fontWeight: 600, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.seller}</span>
+                    <span style={{ fontSize: "8px", color: "#2563EB", fontWeight: 500 }}>{row.market}</span>
+                    <span style={{ fontSize: "7.5px", fontWeight: 600, color: row.vsColor }}>{row.vs}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -599,7 +783,7 @@ function Welcome() {
         <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.05) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(255,255,255,0.04) 0%, transparent 50%)", pointerEvents: "none" }} />
         <div style={{ position: "relative", zIndex: 1 }}>
           <h2 style={{ margin: "0 0 14px", fontSize: "40px", fontWeight: 800, color: "#fff", letterSpacing: "-1px" }}>
-            Ready to outsmart your competition?
+            Know the Market Before it Moves
           </h2>
           <p style={{ margin: "0 auto 40px", maxWidth: "480px", fontSize: "16px", color: "rgba(255,255,255,0.75)", lineHeight: 1.7 }}>
             Join sellers already using Price Intel to protect margins and react to market changes before they lose the sale.
@@ -635,16 +819,9 @@ function Welcome() {
               <span style={{ fontWeight: 700, fontSize: "15px", color: "#fff" }}>Price Intel</span>
             </div>
             <p style={{ margin: "0 0 20px", fontSize: "13px", color: "#71717A", lineHeight: 1.7, maxWidth: "240px" }}>
-              AI-powered price intelligence for e-commerce sellers competing on Noon, Daraz, and Amazon.
+              AI-powered price intelligence for e-commerce sellers competing on Noon and Daraz.
             </p>
-            <div style={{ display: "flex", gap: "10px" }}>
-              {["𝕏", "in", "gh"].map((icon) => (
-                <div key={icon} style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#1C1C1C", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700, color: "#71717A", cursor: "pointer", transition: "background 0.12s, color 0.12s" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#2563EB"; e.currentTarget.style.color = "#fff"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "#1C1C1C"; e.currentTarget.style.color = "#71717A"; }}
-                >{icon}</div>
-              ))}
-            </div>
+
           </div>
 
           {/* Quick Links */}

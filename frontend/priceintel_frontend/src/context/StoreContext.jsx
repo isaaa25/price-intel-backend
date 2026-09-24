@@ -9,6 +9,14 @@ export function StoreProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const fetchStores = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setStores([]);
+      setSelectedStore(null);
+      setLoading(false);
+      return [];
+    }
+
     setLoading(true);
     try {
       const data = await getStores();
@@ -24,9 +32,11 @@ export function StoreProvider({ children }) {
         setSelectedStore(null);
         localStorage.removeItem("selected_store_id");
       }
+      return storeList;
     } catch {
       setStores([]);
       setSelectedStore(null);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -34,6 +44,21 @@ export function StoreProvider({ children }) {
 
   useEffect(() => {
     fetchStores();
+
+    // Re-check whenever window regains focus or storage changes (e.g. login)
+    const handleSync = () => {
+      fetchStores();
+    };
+
+    window.addEventListener("focus", handleSync);
+    window.addEventListener("storage", handleSync);
+    window.addEventListener("auth_state_changed", handleSync);
+
+    return () => {
+      window.removeEventListener("focus", handleSync);
+      window.removeEventListener("storage", handleSync);
+      window.removeEventListener("auth_state_changed", handleSync);
+    };
   }, [fetchStores]);
 
   const handleSelectStore = (store) => {

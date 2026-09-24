@@ -13,3 +13,13 @@ export function loginUser(email, password) {
     body: JSON.stringify({ email, password }),
   });
 }
+
+export function completeOnboarding() {
+  return apiRequest("/auth/complete-onboarding", {
+    method: "POST",
+  });
+}
+
+export function getMe() {
+  return apiRequest("/auth/me");
+}

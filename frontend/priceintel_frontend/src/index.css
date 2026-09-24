@@ -1207,4 +1207,50 @@ body {
   body {
     font-size: 13px;
   }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   HERO MOCKUP COMPOSITION (Welcome / Landing page)
+   ══════════════════════════════════════════════════════════ */
+.hero-composition {
+  position: relative;
+  flex: 1;
+  max-width: 720px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-support-card {
+  position: absolute;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+/* ── Tablet: shrink supporting cards ───────────────────────── */
+@media (max-width: 1200px) {
+  .hero-composition {
+    max-width: 580px;
+  }
+  .hero-support-card {
+    opacity: 0.85;
+  }
+}
+
+/* ── Small tablet: hide supporting cards ──────────────────── */
+@media (max-width: 960px) {
+  .hero-support-card {
+    display: none !important;
+  }
+  .hero-composition {
+    max-width: 480px;
+  }
+}
+
+/* ── Mobile: compact main dashboard ──────────────────────── */
+@media (max-width: 768px) {
+  .hero-composition {
+    max-width: 100%;
+  }
 }

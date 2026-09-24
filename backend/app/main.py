@@ -14,6 +14,16 @@ async def lifespan(app:FastAPI):
     print(f"Environment: {settings.env}")
     print(f"Debug Mode: {settings.debug}")
 
+    try:
+        from app.database import engine
+        from sqlalchemy import text
+        async with engine.begin() as conn:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE;"))
+            await conn.execute(text("UPDATE users SET onboarding_completed = TRUE WHERE id IN (SELECT DISTINCT user_id FROM user_stores);"))
+        print("Onboarding schema checked/updated successfully.")
+    except Exception as e:
+        print(f"Onboarding schema check note: {e}")
+
     yield
 
     # everthing after yield runs on shutdown 

@@ -17,7 +17,7 @@ import {
 } from "recharts";
 import Layout from "../components/Layout";
 import { useStore } from "../context/StoreContext";
-import { getProductsByStore } from "../api/products";
+import { getProductsByStore, getPortfolioHealth } from "../api/products";
 
 /* ─────────────────────────────────────────────────────────────
    PORTFOLIO TREND DATA — 3 lines, 3 timeframes
@@ -247,6 +247,7 @@ export default function Dashboard() {
   const location = useLocation();
   const { selectedStore, currency, refreshStores } = useStore();
   const [storeProducts, setStoreProducts] = useState([]);
+  const [portfolio, setPortfolio] = useState(null);
   const [loading, setLoading] = useState(true);
   const [trendTimeframe, setTrendTimeframe] = useState("1d");
   const [selectedTrendProduct, setSelectedTrendProduct] = useState("all");
@@ -256,18 +257,28 @@ export default function Dashboard() {
     refreshStores();
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ── Fetch products whenever store changes or user navigates ── */
+  /* ── Fetch products + portfolio health whenever store changes or user navigates ── */
   useEffect(() => {
     if (!selectedStore?.id) {
       setStoreProducts([]);
+      setPortfolio(null);
       setLoading(false);
       return;
     }
     setLoading(true);
     setSelectedTrendProduct("all"); // reset product selection on store change
-    getProductsByStore(selectedStore.id)
-      .then((data) => setStoreProducts(Array.isArray(data) ? data : []))
-      .catch(() => setStoreProducts([]))
+    Promise.all([
+      getProductsByStore(selectedStore.id),
+      getPortfolioHealth(selectedStore.id).catch(() => null),
+    ])
+      .then(([products, health]) => {
+        setStoreProducts(Array.isArray(products) ? products : []);
+        setPortfolio(health);
+      })
+      .catch(() => {
+        setStoreProducts([]);
+        setPortfolio(null);
+      })
       .finally(() => setLoading(false));
   }, [selectedStore, location.pathname]);
 
@@ -278,13 +289,6 @@ export default function Dashboard() {
 
   const trendData = getPortfolioTrendData(trendTimeframe);
   const trendInsight = TREND_INSIGHTS[trendTimeframe];
-
-  const productsNeedingAction = storeProducts.length > 0
-    ? Math.max(1, Math.round(storeProducts.length * 0.25))
-    : 3;
-  const activeOpportunities = storeProducts.length > 0
-    ? Math.max(1, Math.round(storeProducts.length * 0.33))
-    : 4;
 
   // Inject real product names into AI Priority items when available
   const priorityItems = BASE_PRIORITY_ITEMS.map((item, i) => ({
@@ -357,8 +361,10 @@ export default function Dashboard() {
     {
       id: "health",
       label: "PORTFOLIO HEALTH",
-      value: "78 / 100",
-      sub: "Healthy competitive position",
+      value: portfolio?.portfolio_health_pct != null ? `${portfolio.portfolio_health_pct} / 100` : "—",
+      sub: portfolio?.portfolio_health_pct != null
+        ? (portfolio.portfolio_health_pct >= 70 ? "Healthy competitive position" : "Needs attention")
+        : "Not enough data yet",
       accent: "#4f7ef7",
       iconStroke: "#4f7ef7",
       icon: (
@@ -370,7 +376,7 @@ export default function Dashboard() {
     {
       id: "action",
       label: "NEEDS ACTION",
-      value: `${productsNeedingAction} Products`,
+      value: portfolio?.needs_action != null ? `${portfolio.needs_action} Products` : "—",
       sub: "Require pricing review",
       accent: "#ef4444",
       icon: (
@@ -384,8 +390,8 @@ export default function Dashboard() {
     {
       id: "opp",
       label: "ACTIVE OPPORTUNITIES",
-      value: `${activeOpportunities} Opportunities`,
-      sub: "Potential margin or sales gains",
+      value: "—",
+      sub: "Coming soon",
       accent: "#10B981",
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -397,8 +403,8 @@ export default function Dashboard() {
     {
       id: "wars",
       label: "ACTIVE PRICE WARS",
-      value: "2 Active",
-      sub: "Aggressive repricing detected",
+      value: "—",
+      sub: "Coming soon",
       accent: "#f59e0b",
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -409,8 +415,8 @@ export default function Dashboard() {
     {
       id: "market",
       label: "MARKET MOVEMENT",
-      value: "↓ 2.8%",
-      sub: "Market prices decreased today",
+      value: "—",
+      sub: "Coming soon",
       accent: "#10B981",
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -682,59 +688,59 @@ export default function Dashboard() {
             <div style={{ width: "100%", height: "290px", minWidth: 0, maxWidth: "100%", overflow: "hidden", position: "relative" }}>
               <div style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData} margin={{ top: 8, right: 20, left: 8, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--d-border)" />
-                  <XAxis
-                    dataKey="time"
-                    stroke="var(--d-text-3)"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={{ stroke: "var(--d-border)" }}
-                  />
-                  <YAxis
-                    stroke="var(--d-text-3)"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={false}
-                    width={88}
-                    domain={["dataMin - 400", "dataMax + 400"]}
-                    tickFormatter={(v) => `${curr} ${Number(v).toLocaleString()}`}
-                  />
-                  <Tooltip content={<LineTip currency={curr} />} />
-                  <Legend
-                    verticalAlign="top"
-                    align="right"
-                    wrapperStyle={{ paddingBottom: "12px", fontSize: "11.5px", fontWeight: 600 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="yourAvg"
-                    name="Your Avg Price"
-                    stroke="var(--d-accent)"
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: "var(--d-accent)", stroke: "var(--d-surface)", strokeWidth: 2 }}
-                    activeDot={{ r: 6 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="marketAvg"
-                    name="Market Average"
-                    stroke="#94a3b8"
-                    strokeWidth={1.8}
-                    strokeDasharray="5 4"
-                    dot={{ r: 3, fill: "#94a3b8" }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="cheapest"
-                    name="Cheapest in Market"
-                    stroke="#10B981"
-                    strokeWidth={1.8}
-                    strokeDasharray="3 3"
-                    dot={{ r: 3, fill: "#10B981" }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+                  <LineChart data={trendData} margin={{ top: 8, right: 20, left: 8, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--d-border)" />
+                    <XAxis
+                      dataKey="time"
+                      stroke="var(--d-text-3)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--d-border)" }}
+                    />
+                    <YAxis
+                      stroke="var(--d-text-3)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      width={88}
+                      domain={["dataMin - 400", "dataMax + 400"]}
+                      tickFormatter={(v) => `${curr} ${Number(v).toLocaleString()}`}
+                    />
+                    <Tooltip content={<LineTip currency={curr} />} />
+                    <Legend
+                      verticalAlign="top"
+                      align="right"
+                      wrapperStyle={{ paddingBottom: "12px", fontSize: "11.5px", fontWeight: 600 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="yourAvg"
+                      name="Your Avg Price"
+                      stroke="var(--d-accent)"
+                      strokeWidth={2.5}
+                      dot={{ r: 4, fill: "var(--d-accent)", stroke: "var(--d-surface)", strokeWidth: 2 }}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="marketAvg"
+                      name="Market Average"
+                      stroke="#94a3b8"
+                      strokeWidth={1.8}
+                      strokeDasharray="5 4"
+                      dot={{ r: 3, fill: "#94a3b8" }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="cheapest"
+                      name="Cheapest in Market"
+                      stroke="#10B981"
+                      strokeWidth={1.8}
+                      strokeDasharray="3 3"
+                      dot={{ r: 3, fill: "#10B981" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </div>
 

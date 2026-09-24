@@ -21,6 +21,7 @@ class User(Base):
     full_name : Mapped[str | None] = mapped_column(String(255),nullable=True)
     plan : Mapped[str] = mapped_column(String(50),server_default='free',nullable=False)
     is_active : Mapped[bool] = mapped_column(server_default=text("true"),nullable=False)
+    onboarding_completed : Mapped[bool] = mapped_column(Boolean, server_default=text("false"), default=False, nullable=False)
 
     # let's create the timestamp data
     created_at : Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

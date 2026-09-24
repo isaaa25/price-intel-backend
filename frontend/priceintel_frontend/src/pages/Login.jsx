@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginUser } from "../api/auth";
+import { loginUser, completeOnboarding } from "../api/auth";
+import { getStores } from "../api/products";
 import AuthBackground from "../components/AuthBackground";
 
 function Login() {
@@ -25,6 +26,15 @@ function Login() {
       localStorage.setItem("token", data.access_token);
       if (data.user?.email) localStorage.setItem("user_email", data.user.email);
       if (data.user?.full_name) localStorage.setItem("user_name", data.user.full_name);
+
+      // Set onboarding state directly from login user response — no blocking API waterfall
+      if (data.user?.onboarding_completed) {
+        localStorage.setItem("onboarding_completed", "true");
+      } else {
+        localStorage.setItem("onboarding_completed", "false");
+      }
+
+      window.dispatchEvent(new Event("auth_state_changed"));
       navigate("/dashboard");
     } catch (err) {
       setError(err.message);

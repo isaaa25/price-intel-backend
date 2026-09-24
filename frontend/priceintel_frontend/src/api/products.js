@@ -77,3 +77,13 @@ export function getProduct(productId) {
 export function getProductCompetitors(productId) {
   return apiRequest(`/products/${productId}/competitors`);
 }
+
+/**
+ * Fetch portfolio health for a specific store.
+ * Backend: GET /products/portfolio/health?store_id=<storeId>
+ * @param {string|number} storeId
+ * Returns: PortfolioHealthResponsex
+ */
+export function getPortfolioHealth(storeId) {
+  return apiRequest(`/products/portfolio/health?store_id=${encodeURIComponent(storeId)}`);
+}

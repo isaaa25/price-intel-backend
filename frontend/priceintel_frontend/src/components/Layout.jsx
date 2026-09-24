@@ -1,7 +1,10 @@
-// src/components/Layout.jsx
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useStore } from "../context/StoreContext";
+import WebsiteTour from "./WebsiteTour";
+import OnboardingModal from "./OnboardingModal";
+import { getMe, completeOnboarding } from "../api/auth";
+import { getStores } from "../api/products";
 
 const NAV_ITEMS = [
   {
@@ -290,6 +293,7 @@ function SidebarNavItem({ item, active, onClick }) {
 
   return (
     <div
+      id={`sidebar-nav-${item.label.toLowerCase()}`}
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -352,7 +356,73 @@ function HamburgerIcon({ open }) {
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [tourActive, setTourActive] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(() => {
+    // Show modal immediately on first render if user is flagged as needing onboarding (0ms delay)
+    const status = localStorage.getItem("onboarding_completed");
+    return status === "false" && (location.pathname === "/dashboard" || window.location.pathname === "/dashboard");
+  });
+  const { stores, selectedStore, refreshStores } = useStore();
+
+  useEffect(() => {
+    if (searchParams.get("tour") === "true") {
+      setTourActive(true);
+    }
+  }, [searchParams]);
+
+  // Parallel background verification of onboarding status on Dashboard
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    // Only display onboarding on the Dashboard route
+    if (location.pathname !== "/dashboard") {
+      setOnboardingOpen(false);
+      return;
+    }
+
+    // Parallel fetch: check user onboarding flag and store existence concurrently
+    Promise.all([
+      getMe().catch(() => null),
+      getStores().catch(() => null),
+    ]).then(([user, storeList]) => {
+      if (!user) return;
+
+      const hasStores = Array.isArray(storeList) && storeList.length > 0;
+
+      if (user.onboarding_completed) {
+        localStorage.setItem("onboarding_completed", "true");
+        setOnboardingOpen(false);
+      } else if (hasStores) {
+        // Store already created, but tour not completed
+        localStorage.setItem("onboarding_completed", "false");
+        setOnboardingOpen(false);
+        setTourActive(true);
+      } else {
+        // Incomplete and no stores: ensure modal is open
+        localStorage.setItem("onboarding_completed", "false");
+        setOnboardingOpen(true);
+      }
+    });
+  }, [location.pathname]);
+
+  const handleStoreConnected = () => {
+    setOnboardingOpen(false);
+    // Start live Dashboard tour immediately
+    setTourActive(true);
+  };
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login");
+    } else if (stores.length === 0) {
+      refreshStores();
+    }
+  }, [navigate, stores.length, refreshStores]);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -373,6 +443,7 @@ export default function Layout({ children }) {
     localStorage.removeItem("token");
     localStorage.removeItem("user_name");
     localStorage.removeItem("user_email");
+    localStorage.removeItem("onboarding_completed");
     navigate("/");
   }
 
@@ -518,6 +589,15 @@ export default function Layout({ children }) {
           {children}
         </main>
       </div>
+
+      {/* Onboarding Centered Modal over the live Dashboard */}
+      <OnboardingModal
+        open={onboardingOpen}
+        onStoreConnected={handleStoreConnected}
+      />
+
+      {/* Interactive Website Tour for onboarding */}
+      <WebsiteTour active={tourActive} onDismiss={() => setTourActive(false)} />
     </div>
   );
 }

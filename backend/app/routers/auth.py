@@ -83,3 +83,21 @@ async def change_password(
     await auth_service.change_password(db, current_user, data.old_password, data.new_password)
     await db.commit()
     return {"detail": "Password updated successfully"}
+
+
+@router.post(
+    "/complete-onboarding",
+    summary="Mark onboarding as completed for current user",
+)
+async def complete_onboarding(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    current_user.onboarding_completed = True
+    await db.commit()
+    await db.refresh(current_user)
+    return {
+        "detail": "Onboarding completed successfully",
+        "onboarding_completed": True,
+        "user": UserResponse.model_validate(current_user),
+    }

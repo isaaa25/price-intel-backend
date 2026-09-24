@@ -19,7 +19,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
-from app.queries import fetch_product_kpi_row, fetch_product_competitors_rows # import added for queries from queries.py file. 
+from app.queries import fetch_product_kpi_row, fetch_product_competitors_rows, fetch_portfolio_rows #query import added
 
 from app.models.tracked_product import TrackedProduct
 from app.models.user_store import UserStore
@@ -140,6 +140,16 @@ async def get_product_by_id(db: AsyncSession, product_id, user_id) -> TrackedPro
     return product
 
 
+async def delete_product(db: AsyncSession, product_id, user_id) -> None:
+    """
+    Deletes a TrackedProduct by id, scoped to the requesting user.
+    Cascading competitor listings and snapshots are deleted automatically.
+    """
+    product = await get_product_by_id(db, product_id, user_id)
+    await db.delete(product)
+    await db.flush()
+
+
 async def get_product_competitors(db: AsyncSession, product_id) -> list[dict]:
     result = await fetch_product_competitors_rows(db, product_id)
     rows = result.fetchall()
@@ -152,3 +162,27 @@ async def get_product_competitors(db: AsyncSession, product_id) -> list[dict]:
         }
         for r in rows
     ]
+
+
+async def get_portfolio_health(db: AsyncSession, user_id, store_id=None) -> dict:
+    """
+    Portfolio-wide health: % of active products that are NOT
+    overpriced vs their cheapest active competitor, plus a raw count
+    of how many need attention.
+    """
+    result = await fetch_portfolio_rows(db, user_id, store_id=store_id)
+    rows = result.fetchall()
+
+    total = len(rows)
+    needs_action = sum(
+        1 for r in rows
+        if r.own_price is not None and r.cheapest_competitor_price is not None
+        and r.own_price > r.cheapest_competitor_price
+    )
+    health_pct = round((total - needs_action) / total * 100) if total > 0 else None
+
+    return {
+        "total_products": total,
+        "needs_action": needs_action,
+        "portfolio_health_pct": health_pct,
+    }

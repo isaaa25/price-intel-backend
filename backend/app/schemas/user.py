@@ -37,6 +37,7 @@ class UserResponse(BaseModel):
     full_name : str | None
     plan : str
     is_active : bool
+    onboarding_completed : bool = False
     created_at : datetime
     updated_at : datetime
 
