@@ -17,7 +17,13 @@ import {
 } from "recharts";
 import Layout from "../components/Layout";
 import { useStore } from "../context/StoreContext";
-import { getProductsByStore, getPortfolioHealth } from "../api/products";
+import {
+  getProductsByStore,
+  getPortfolioHealth,
+  getActiveOpportunities,
+  getActivePriceWars,
+  getMarketMovement,
+} from "../api/products";
 
 /* ─────────────────────────────────────────────────────────────
    PORTFOLIO TREND DATA — 3 lines, 3 timeframes
@@ -44,7 +50,6 @@ function getPortfolioTrendData(timeframe) {
       { time: "Sun", yourAvg: 11850, marketAvg: 12350, cheapest: 10650 },
     ];
   }
-  // 30d
   return [
     { time: "Week 1", yourAvg: 13200, marketAvg: 14000, cheapest: 12000 },
     { time: "Week 2", yourAvg: 12900, marketAvg: 13700, cheapest: 11700 },
@@ -159,10 +164,10 @@ const SCATTER_FALLBACK = [
    QUADRANT HELPERS
    ───────────────────────────────────────────────────────────── */
 function quadrantColor(x, y) {
-  if (y >= 50 && x < 50) return "#ef4444";   // Risk
-  if (y >= 50 && x >= 50) return "#f59e0b";  // Monitor
-  if (y < 50 && x < 50) return "#4f7ef7";   // Opportunity
-  return "#10B981";                          // Healthy
+  if (y >= 50 && x < 50) return "#ef4444";
+  if (y >= 50 && x >= 50) return "#f59e0b";
+  if (y < 50 && x < 50) return "#4f7ef7";
+  return "#10B981";
 }
 
 function CustomScatterDot(props) {
@@ -248,6 +253,9 @@ export default function Dashboard() {
   const { selectedStore, currency, refreshStores } = useStore();
   const [storeProducts, setStoreProducts] = useState([]);
   const [portfolio, setPortfolio] = useState(null);
+  const [opportunities, setOpportunities] = useState(null);
+  const [priceWars, setPriceWars] = useState(null);
+  const [marketMovement, setMarketMovement] = useState(null);
   const [loading, setLoading] = useState(true);
   const [trendTimeframe, setTrendTimeframe] = useState("1d");
   const [selectedTrendProduct, setSelectedTrendProduct] = useState("all");
@@ -257,27 +265,39 @@ export default function Dashboard() {
     refreshStores();
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ── Fetch products + portfolio health whenever store changes or user navigates ── */
+  /* ── Fetch all dashboard data whenever store changes ── */
   useEffect(() => {
     if (!selectedStore?.id) {
       setStoreProducts([]);
       setPortfolio(null);
+      setOpportunities(null);
+      setPriceWars(null);
+      setMarketMovement(null);
       setLoading(false);
       return;
     }
     setLoading(true);
-    setSelectedTrendProduct("all"); // reset product selection on store change
+    setSelectedTrendProduct("all");
     Promise.all([
       getProductsByStore(selectedStore.id),
       getPortfolioHealth(selectedStore.id).catch(() => null),
+      getActiveOpportunities(selectedStore.id).catch(() => null),
+      getActivePriceWars(selectedStore.id).catch(() => null),
+      getMarketMovement(selectedStore.id).catch(() => null),
     ])
-      .then(([products, health]) => {
+      .then(([products, health, opps, wars, movement]) => {
         setStoreProducts(Array.isArray(products) ? products : []);
         setPortfolio(health);
+        setOpportunities(opps);
+        setPriceWars(wars);
+        setMarketMovement(movement);
       })
       .catch(() => {
         setStoreProducts([]);
         setPortfolio(null);
+        setOpportunities(null);
+        setPriceWars(null);
+        setMarketMovement(null);
       })
       .finally(() => setLoading(false));
   }, [selectedStore, location.pathname]);
@@ -290,16 +310,14 @@ export default function Dashboard() {
   const trendData = getPortfolioTrendData(trendTimeframe);
   const trendInsight = TREND_INSIGHTS[trendTimeframe];
 
-  // Inject real product names into AI Priority items when available
   const priorityItems = BASE_PRIORITY_ITEMS.map((item, i) => ({
     ...item,
-    productName: storeProducts[i]?.title || item.defaultName,
+    productName: (storeProducts[i]?.search_keyword || storeProducts[i]?.title) || item.defaultName,
   }));
 
-  // Use real product positions on scatter if enough products exist
   const scatterData = storeProducts.length >= 3
     ? storeProducts.slice(0, 9).map((p, i) => ({
-      name: p.title,
+      name: p.search_keyword || p.title,
       x: Math.round(((i * 37 + 23) % 78) + 10),
       y: Math.round(((i * 53 + 41) % 72) + 12),
     }))
@@ -356,17 +374,28 @@ export default function Dashboard() {
     );
   }
 
-  /* ── Portfolio KPI cards data ────────────────────────────────── */
+  /* ── Market movement display helpers ───────────────────────── */
+  const marketValue = marketMovement?.pct_change != null
+    ? `${marketMovement.direction === "down" ? "↓" : "↑"} ${Math.abs(marketMovement.pct_change)}%`
+    : "—";
+  const marketSub = marketMovement?.pct_change != null
+    ? marketMovement.direction === "down"
+      ? "Market prices decreased today"
+      : "Market prices increased today"
+    : "Not enough history yet";
+
+  /* ── Portfolio KPI cards ────────────────────────────────────── */
   const portfolioKpis = [
     {
       id: "health",
       label: "PORTFOLIO HEALTH",
-      value: portfolio?.portfolio_health_pct != null ? `${portfolio.portfolio_health_pct} / 100` : "—",
+      value: portfolio?.portfolio_health_pct != null
+        ? `${portfolio.portfolio_health_pct} / 100`
+        : "—",
       sub: portfolio?.portfolio_health_pct != null
         ? (portfolio.portfolio_health_pct >= 70 ? "Healthy competitive position" : "Needs attention")
         : "Not enough data yet",
       accent: "#4f7ef7",
-      iconStroke: "#4f7ef7",
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f7ef7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
@@ -390,8 +419,14 @@ export default function Dashboard() {
     {
       id: "opp",
       label: "ACTIVE OPPORTUNITIES",
-      value: "—",
-      sub: "Coming soon",
+      value: opportunities?.active_opportunities != null
+        ? `${opportunities.active_opportunities} Opportunities`
+        : "—",
+      sub: opportunities?.active_opportunities != null
+        ? opportunities.active_opportunities > 0
+          ? "Competitors out of stock"
+          : "No out-of-stock competitors"
+        : "Not enough data yet",
       accent: "#10B981",
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -403,8 +438,14 @@ export default function Dashboard() {
     {
       id: "wars",
       label: "ACTIVE PRICE WARS",
-      value: "—",
-      sub: "Coming soon",
+      value: priceWars?.active_price_wars != null
+        ? `${priceWars.active_price_wars} Active`
+        : "—",
+      sub: priceWars?.active_price_wars != null
+        ? priceWars.active_price_wars > 0
+          ? "Aggressive repricing detected"
+          : "No aggressive repricing"
+        : "Not enough history yet",
       accent: "#f59e0b",
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -415,8 +456,8 @@ export default function Dashboard() {
     {
       id: "market",
       label: "MARKET MOVEMENT",
-      value: "—",
-      sub: "Coming soon",
+      value: marketValue,
+      sub: marketSub,
       accent: "#10B981",
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -443,7 +484,6 @@ export default function Dashboard() {
             Portfolio intelligence &amp; actionable pricing decisions
           </p>
         </div>
-
         <button
           onClick={() => navigate("/alerts")}
           style={{
@@ -476,118 +516,55 @@ export default function Dashboard() {
         </div>
 
       ) : !selectedStore ? (
-
-        /* ── No Store Connected ─────────────────────────────── */
         <div style={{ ...card, textAlign: "center", padding: "80px 20px" }}>
-          <div style={{
-            width: "64px", height: "64px", borderRadius: "50%",
-            background: "var(--d-surface-2)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 18px",
-          }}>
+          <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "var(--d-surface-2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--d-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
           </div>
-          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>
-            No Store Connected
-          </h2>
+          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>No Store Connected</h2>
           <p style={{ fontSize: "13.5px", color: "var(--d-text-2)", maxWidth: "380px", margin: "0 auto 22px", lineHeight: 1.65 }}>
             Connect your marketplace store in Account &amp; Stores to view live price intelligence, portfolio analytics, and competitor insights.
           </p>
-          <button
-            onClick={() => navigate("/account")}
-            style={{
-              padding: "10px 24px",
-              background: "var(--d-accent)",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "13.5px",
-              fontWeight: 600,
-              cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(79,126,247,0.25)",
-            }}
-          >
+          <button onClick={() => navigate("/account")} style={{ padding: "10px 24px", background: "var(--d-accent)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13.5px", fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 8px rgba(79,126,247,0.25)" }}>
             + Go to Account &amp; Add Store
           </button>
         </div>
 
       ) : storeProducts.length === 0 ? (
-
-        /* ── No Products ────────────────────────────────────── */
         <div style={{ ...card, textAlign: "center", padding: "80px 20px" }}>
-          <div style={{
-            width: "64px", height: "64px", borderRadius: "50%",
-            background: "var(--d-surface-2)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 18px",
-          }}>
+          <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "var(--d-surface-2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--d-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
               <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
             </svg>
           </div>
-          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>
-            No Tracked Products in {selectedStore.store_name}
-          </h2>
+          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>No Tracked Products in {selectedStore.store_name}</h2>
           <p style={{ fontSize: "13.5px", color: "var(--d-text-2)", maxWidth: "380px", margin: "0 auto 22px", lineHeight: 1.65 }}>
             Add products to start monitoring competitor prices and receive portfolio-level intelligence.
           </p>
-          <button
-            onClick={() => navigate("/products/add")}
-            style={{
-              padding: "10px 24px",
-              background: "var(--d-accent)",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "13.5px",
-              fontWeight: 600,
-              cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(79,126,247,0.25)",
-            }}
-          >
+          <button onClick={() => navigate("/products/add")} style={{ padding: "10px 24px", background: "var(--d-accent)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13.5px", fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 8px rgba(79,126,247,0.25)" }}>
             + Add Products
           </button>
         </div>
 
       ) : (
         <>
-
           {/* ══════════════════════════════════════════════════════
               SECTION 1 — PORTFOLIO INTELLIGENCE KPIs
           ══════════════════════════════════════════════════════ */}
           <div className="res-grid-5" style={{ marginBottom: "22px" }}>
             {portfolioKpis.map((kpi) => (
               <div key={kpi.id} style={{ ...card, textAlign: "center", padding: "18px 12px" }}>
-                {/* Label row */}
                 <div style={{ marginBottom: "14px" }}>
-                  <span style={{
-                    fontSize: "11.5px",
-                    fontWeight: 700,
-                    color: "var(--d-text-3)",
-                    letterSpacing: "0.7px",
-                    textTransform: "uppercase",
-                  }}>
+                  <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--d-text-3)", letterSpacing: "0.7px", textTransform: "uppercase" }}>
                     {kpi.label}
                   </span>
                 </div>
-
-                {/* Value */}
-                <div style={{
-                  fontSize: "16px",
-                  fontWeight: 800,
-                  color: "var(--d-text)",
-                  marginBottom: "5px",
-                  letterSpacing: "-0.3px",
-                  lineHeight: 1.2,
-                }}>
+                <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--d-text)", marginBottom: "5px", letterSpacing: "-0.3px", lineHeight: 1.2 }}>
                   {kpi.value}
                 </div>
-
-                {/* Sub-label */}
                 <div style={{ fontSize: "11px", color: "var(--d-text-3)", lineHeight: 1.45 }}>
                   {kpi.sub}
                 </div>
@@ -599,68 +576,22 @@ export default function Dashboard() {
               SECTION 2 — PRODUCT PRICE TREND ANALYSIS
           ══════════════════════════════════════════════════════ */}
           <div style={{ ...card, marginBottom: "22px", overflow: "hidden", minWidth: 0 }}>
-
-            {/* Header row */}
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: selectedTrendProduct !== "all" ? "10px" : "22px",
-              flexWrap: "wrap",
-              gap: "12px",
-            }}>
-              {/* Title — left side */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: selectedTrendProduct !== "all" ? "10px" : "22px", flexWrap: "wrap", gap: "12px" }}>
               <h2 style={sectionTitle}>Product Price Trend Analysis</h2>
-
-              {/* Right side — product dropdown + timeframe buttons */}
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-
-                {/* Product dropdown */}
                 <select
                   value={selectedTrendProduct}
                   onChange={(e) => setSelectedTrendProduct(e.target.value)}
-                  style={{
-                    padding: "5px 32px 5px 12px",
-                    borderRadius: "7px",
-                    border: "1px solid var(--d-border)",
-                    background: "var(--d-surface-2)",
-                    color: "var(--d-text)",
-                    fontSize: "12.5px",
-                    fontWeight: 500,
-                    fontFamily: "inherit",
-                    cursor: "pointer",
-                    outline: "none",
-                    appearance: "none",
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "right 10px center",
-                    minWidth: "160px",
-                    maxWidth: "240px",
-                    textOverflow: "ellipsis",
-                  }}
+                  style={{ padding: "5px 32px 5px 12px", borderRadius: "7px", border: "1px solid var(--d-border)", background: "var(--d-surface-2)", color: "var(--d-text)", fontSize: "12.5px", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", outline: "none", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", minWidth: "160px", maxWidth: "240px", textOverflow: "ellipsis" }}
                 >
                   <option value="all">All Tracked Products</option>
                   {storeProducts.map((p) => {
-                    const shortTitle = p.title && p.title.length > 28
-                      ? p.title.slice(0, 26).trim() + "…"
-                      : p.title;
-                    return (
-                      <option key={p.id} value={p.id} title={p.title}>
-                        {shortTitle}
-                      </option>
-                    );
+                    const dispName = p.search_keyword || p.title;
+                    const shortTitle = dispName && dispName.length > 28 ? dispName.slice(0, 26).trim() + "…" : dispName;
+                    return <option key={p.id} value={p.id} title={dispName}>{shortTitle}</option>;
                   })}
                 </select>
-
-                {/* Timeframe buttons */}
-                <div style={{
-                  display: "flex",
-                  background: "var(--d-surface-2)",
-                  padding: "3px",
-                  borderRadius: "8px",
-                  border: "1px solid var(--d-border)",
-                  gap: "2px",
-                }}>
+                <div style={{ display: "flex", background: "var(--d-surface-2)", padding: "3px", borderRadius: "8px", border: "1px solid var(--d-border)", gap: "2px" }}>
                   <TfBtn value="1d" label="1 Day" />
                   <TfBtn value="7d" label="7 Days" />
                   <TfBtn value="30d" label="30 Days" />
@@ -668,15 +599,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Full product name on the next line when a specific product is selected */}
             {selectedTrendProduct !== "all" && (
-              <div style={{
-                marginBottom: "16px",
-                fontSize: "12px",
-                color: "var(--d-text-2)",
-                lineHeight: 1.4,
-                wordBreak: "break-word",
-              }}>
+              <div style={{ marginBottom: "16px", fontSize: "12px", color: "var(--d-text-2)", lineHeight: 1.4, wordBreak: "break-word" }}>
                 <span style={{ color: "var(--d-text-3)", fontWeight: 500 }}>Active Product: </span>
                 <span style={{ color: "var(--d-text)", fontWeight: 600 }}>
                   {storeProducts.find((p) => String(p.id) === String(selectedTrendProduct))?.title}
@@ -684,77 +608,24 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Chart */}
             <div style={{ width: "100%", height: "290px", minWidth: 0, maxWidth: "100%", overflow: "hidden", position: "relative" }}>
               <div style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trendData} margin={{ top: 8, right: 20, left: 8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--d-border)" />
-                    <XAxis
-                      dataKey="time"
-                      stroke="var(--d-text-3)"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={{ stroke: "var(--d-border)" }}
-                    />
-                    <YAxis
-                      stroke="var(--d-text-3)"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      width={88}
-                      domain={["dataMin - 400", "dataMax + 400"]}
-                      tickFormatter={(v) => `${curr} ${Number(v).toLocaleString()}`}
-                    />
+                    <XAxis dataKey="time" stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={{ stroke: "var(--d-border)" }} />
+                    <YAxis stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={false} width={88} domain={["dataMin - 400", "dataMax + 400"]} tickFormatter={(v) => `${curr} ${Number(v).toLocaleString()}`} />
                     <Tooltip content={<LineTip currency={curr} />} />
-                    <Legend
-                      verticalAlign="top"
-                      align="right"
-                      wrapperStyle={{ paddingBottom: "12px", fontSize: "11.5px", fontWeight: 600 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="yourAvg"
-                      name="Your Avg Price"
-                      stroke="var(--d-accent)"
-                      strokeWidth={2.5}
-                      dot={{ r: 4, fill: "var(--d-accent)", stroke: "var(--d-surface)", strokeWidth: 2 }}
-                      activeDot={{ r: 6 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="marketAvg"
-                      name="Market Average"
-                      stroke="#94a3b8"
-                      strokeWidth={1.8}
-                      strokeDasharray="5 4"
-                      dot={{ r: 3, fill: "#94a3b8" }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="cheapest"
-                      name="Cheapest in Market"
-                      stroke="#10B981"
-                      strokeWidth={1.8}
-                      strokeDasharray="3 3"
-                      dot={{ r: 3, fill: "#10B981" }}
-                    />
+                    <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: "12px", fontSize: "11.5px", fontWeight: 600 }} />
+                    <Line type="monotone" dataKey="yourAvg" name="Your Avg Price" stroke="var(--d-accent)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--d-accent)", stroke: "var(--d-surface)", strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="marketAvg" name="Market Average" stroke="#94a3b8" strokeWidth={1.8} strokeDasharray="5 4" dot={{ r: 3, fill: "#94a3b8" }} />
+                    <Line type="monotone" dataKey="cheapest" name="Cheapest in Market" stroke="#10B981" strokeWidth={1.8} strokeDasharray="3 3" dot={{ r: 3, fill: "#10B981" }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Trend Insight Strip */}
-            <div style={{
-              marginTop: "18px",
-              padding: "11px 16px",
-              borderRadius: "8px",
-              background: "rgba(79,126,247,0.06)",
-              border: "1px solid rgba(79,126,247,0.15)",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-            }}>
+            <div style={{ marginTop: "18px", padding: "11px 16px", borderRadius: "8px", background: "rgba(79,126,247,0.06)", border: "1px solid rgba(79,126,247,0.15)", display: "flex", alignItems: "center", gap: "10px" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--d-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
@@ -771,115 +642,37 @@ export default function Dashboard() {
               SECTION 3 — AI PRIORITY CENTER
           ══════════════════════════════════════════════════════ */}
           <div style={{ ...card, marginBottom: "22px", overflow: "hidden", minWidth: 0 }}>
-
-            {/* Header */}
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: "20px",
-            }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "9px", marginBottom: "3px" }}>
                   <h2 style={{ ...sectionTitle, margin: 0 }}>What Needs Your Attention</h2>
                 </div>
               </div>
-
-              <span
-                onClick={() => navigate("/alerts")}
-                style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-accent)", cursor: "pointer", flexShrink: 0 }}
-              >
+              <span onClick={() => navigate("/alerts")} style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-accent)", cursor: "pointer", flexShrink: 0 }}>
                 View all alerts →
               </span>
             </div>
 
-            {/* Priority Items */}
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {priorityItems.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "14px",
-                    padding: "14px 16px",
-                    borderRadius: "10px",
-                    background: "var(--d-surface-2)",
-                    border: "1px solid var(--d-border)",
-                    transition: "opacity 0.15s ease",
-                  }}
-                >
-                  {/* Priority icon bubble */}
-                  <div style={{
-                    width: "34px",
-                    height: "34px",
-                    borderRadius: "9px",
-                    background: "var(--d-surface)",
-                    border: "1px solid var(--d-border)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--icon-color)",
-                    flexShrink: 0,
-                  }}>
+                <div key={item.id} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 16px", borderRadius: "10px", background: "var(--d-surface-2)", border: "1px solid var(--d-border)", transition: "opacity 0.15s ease" }}>
+                  <div style={{ width: "34px", height: "34px", borderRadius: "9px", background: "var(--d-surface)", border: "1px solid var(--d-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     {item.icon}
                   </div>
-
-                  {/* Text content */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px", flexWrap: "wrap" }}>
-                      {/* Priority badge */}
-                      <span style={{
-                        fontSize: "9.5px",
-                        fontWeight: 700,
-                        color: item.levelColor,
-                        background: "var(--d-surface)",
-                        border: "1px solid var(--d-border)",
-                        padding: "1.5px 7px",
-                        borderRadius: "4px",
-                        letterSpacing: "0.5px",
-                        textTransform: "uppercase",
-                        flexShrink: 0,
-                      }}>
+                      <span style={{ fontSize: "9.5px", fontWeight: 700, color: item.levelColor, background: "var(--d-surface)", border: "1px solid var(--d-border)", padding: "1.5px 7px", borderRadius: "4px", letterSpacing: "0.5px", textTransform: "uppercase", flexShrink: 0 }}>
                         {item.levelLabel}
                       </span>
-                      {/* Product name */}
-                      <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--d-text)" }}>
-                        {item.productName}
-                      </span>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--d-text)" }}>{item.productName}</span>
                     </div>
-                    <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-2)", lineHeight: 1.55 }}>
-                      {item.explanation}
-                    </p>
+                    <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-2)", lineHeight: 1.55 }}>{item.explanation}</p>
                   </div>
-
-                  {/* Action button */}
                   <button
                     onClick={() => navigate(item.actionNav)}
-                    style={{
-                      padding: "7px 15px",
-                      background: "var(--d-surface)",
-                      border: "1px solid var(--d-border)",
-                      borderRadius: "7px",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: "var(--d-text)",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      flexShrink: 0,
-                      whiteSpace: "nowrap",
-                      transition: "all 0.15s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = item.levelColor;
-                      e.currentTarget.style.color = item.levelColor;
-                      e.currentTarget.style.background = item.levelBg;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = "var(--d-border)";
-                      e.currentTarget.style.color = "var(--d-text)";
-                      e.currentTarget.style.background = "var(--d-surface)";
-                    }}
+                    style={{ padding: "7px 15px", background: "var(--d-surface)", border: "1px solid var(--d-border)", borderRadius: "7px", fontSize: "12px", fontWeight: 600, color: "var(--d-text)", cursor: "pointer", fontFamily: "inherit", flexShrink: 0, whiteSpace: "nowrap", transition: "all 0.15s ease" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = item.levelColor; e.currentTarget.style.color = item.levelColor; e.currentTarget.style.background = item.levelBg; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--d-border)"; e.currentTarget.style.color = "var(--d-text)"; e.currentTarget.style.background = "var(--d-surface)"; }}
                   >
                     {item.action} →
                   </button>
@@ -892,100 +685,36 @@ export default function Dashboard() {
               SECTION 4 — PRODUCT INTELLIGENCE
           ══════════════════════════════════════════════════════ */}
           <div style={{ ...card, overflow: "hidden", minWidth: 0 }}>
-
-            {/* Header */}
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: "20px",
-            }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
               <div>
                 <h2 style={sectionTitle}>Product Insights</h2>
-                <p style={sectionSub}>
-                  Price competitiveness vs market volatility — each point represents one tracked product
-                </p>
+                <p style={sectionSub}>Price competitiveness vs market volatility — each point represents one tracked product</p>
               </div>
-              <span
-                onClick={() => navigate("/products")}
-                style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-accent)", cursor: "pointer", flexShrink: 0 }}
-              >
-                View products →
-              </span>
+              <span onClick={() => navigate("/products")} style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-accent)", cursor: "pointer", flexShrink: 0 }}>View products →</span>
             </div>
 
-            {/* Scatter Chart */}
             <div style={{ width: "100%", height: "340px", position: "relative", minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
-              {/* Quadrant corner labels */}
-              <div style={{ position: "absolute", top: 30, left: "12%", fontSize: "12px", fontWeight: 700, color: "#d42b2b", pointerEvents: "none", zIndex: 2 }}>
-                ⚠ Risk Zone
-              </div>
-              <div style={{ position: "absolute", top: 30, right: "7%", fontSize: "12px", fontWeight: 700, color: "#c97d00", pointerEvents: "none", zIndex: 2 }}>
-                👁 Monitor Closely
-              </div>
-              <div style={{ position: "absolute", bottom: 68, left: "12%", fontSize: "12px", fontWeight: 700, color: "#3b6ae8", pointerEvents: "none", zIndex: 2 }}>
-                💡 Improve Pricing
-              </div>
-              <div style={{ position: "absolute", bottom: 68, right: "7%", fontSize: "12px", fontWeight: 700, color: "#0a9668", pointerEvents: "none", zIndex: 2 }}>
-                ✓ Healthy Position
-              </div>
+              <div style={{ position: "absolute", top: 30, left: "12%", fontSize: "12px", fontWeight: 700, color: "#d42b2b", pointerEvents: "none", zIndex: 2 }}>⚠ Risk Zone</div>
+              <div style={{ position: "absolute", top: 30, right: "7%", fontSize: "12px", fontWeight: 700, color: "#c97d00", pointerEvents: "none", zIndex: 2 }}>👁 Monitor Closely</div>
+              <div style={{ position: "absolute", bottom: 68, left: "12%", fontSize: "12px", fontWeight: 700, color: "#3b6ae8", pointerEvents: "none", zIndex: 2 }}>💡 Improve Pricing</div>
+              <div style={{ position: "absolute", bottom: 68, right: "7%", fontSize: "12px", fontWeight: 700, color: "#0a9668", pointerEvents: "none", zIndex: 2 }}>✓ Healthy Position</div>
 
               <div style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ScatterChart margin={{ top: 24, right: 34, left: 4, bottom: 28 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--d-border)" />
-                    <XAxis
-                      dataKey="x"
-                      type="number"
-                      domain={[0, 100]}
-                      name="Price Competitiveness"
-                      stroke="var(--d-text-3)"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={{ stroke: "var(--d-border)" }}
-                      label={{
-                        value: "← Overpriced    Price Competitiveness    Cheapest →",
-                        position: "insideBottom",
-                        offset: -16,
-                        style: { fontSize: "11px", fill: "var(--d-text-3)", fontWeight: 500 },
-                      }}
-                    />
-                    <YAxis
-                      dataKey="y"
-                      type="number"
-                      domain={[0, 100]}
-                      name="Market Volatility"
-                      stroke="var(--d-text-3)"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      width={48}
-                      label={{
-                        value: "Market Volatility ↑",
-                        angle: -90,
-                        position: "insideLeft",
-                        offset: 18,
-                        style: { fontSize: "11px", fill: "var(--d-text-3)", fontWeight: 500 },
-                      }}
-                    />
+                    <XAxis dataKey="x" type="number" domain={[0, 100]} name="Price Competitiveness" stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={{ stroke: "var(--d-border)" }} label={{ value: "← Overpriced    Price Competitiveness    Cheapest →", position: "insideBottom", offset: -16, style: { fontSize: "11px", fill: "var(--d-text-3)", fontWeight: 500 } }} />
+                    <YAxis dataKey="y" type="number" domain={[0, 100]} name="Market Volatility" stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={false} width={48} label={{ value: "Market Volatility ↑", angle: -90, position: "insideLeft", offset: 18, style: { fontSize: "11px", fill: "var(--d-text-3)", fontWeight: 500 } }} />
                     <ZAxis range={[64, 64]} />
                     <Tooltip content={<ScatterTip />} cursor={{ strokeDasharray: "3 3", stroke: "var(--d-border)" }} />
-
-                    {/* Quadrant divider lines */}
                     <ReferenceLine x={50} stroke="var(--d-border)" strokeDasharray="5 3" strokeWidth={1.5} />
                     <ReferenceLine y={50} stroke="var(--d-border)" strokeDasharray="5 3" strokeWidth={1.5} />
-
-                    <Scatter
-                      name="Products"
-                      data={scatterData}
-                      shape={<CustomScatterDot />}
-                    />
+                    <Scatter name="Products" data={scatterData} shape={<CustomScatterDot />} />
                   </ScatterChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Legend */}
             <div className="res-grid-2" style={{ marginTop: "18px", paddingTop: "18px", borderTop: "1px solid var(--d-border)" }}>
               {[
                 { color: "#ef4444", label: "Risk Zone", desc: "High volatility · Weak position" },
@@ -993,32 +722,16 @@ export default function Dashboard() {
                 { color: "#4f7ef7", label: "Improve Pricing", desc: "Low volatility · Weak position" },
                 { color: "#10B981", label: "Healthy Position", desc: "Low volatility · Strong position" },
               ].map((l) => (
-                <div
-                  key={l.label}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "8px",
-                    padding: "10px 12px",
-                    borderRadius: "8px",
-                    background: `${l.color}08`,
-                    border: `1px solid ${l.color}1a`,
-                  }}
-                >
+                <div key={l.label} style={{ display: "flex", alignItems: "flex-start", gap: "8px", padding: "10px 12px", borderRadius: "8px", background: `${l.color}08`, border: `1px solid ${l.color}1a` }}>
                   <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: l.color, flexShrink: 0, marginTop: "3px" }} />
                   <div>
-                    <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--d-text)", marginBottom: "2px" }}>
-                      {l.label}
-                    </div>
-                    <div style={{ fontSize: "11px", color: "var(--d-text-3)", lineHeight: 1.4 }}>
-                      {l.desc}
-                    </div>
+                    <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--d-text)", marginBottom: "2px" }}>{l.label}</div>
+                    <div style={{ fontSize: "11px", color: "var(--d-text-3)", lineHeight: 1.4 }}>{l.desc}</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-
         </>
       )}
     </Layout>

@@ -498,7 +498,9 @@ export default function Layout({ children }) {
       {/* Bottom Section */}
       <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "4px" }}>
         {BOTTOM_NAV.map((item) => {
-          const active = location.pathname === item.path;
+          const active =
+            location.pathname === item.path ||
+            (item.path === "/settings" && location.pathname.startsWith("/settings"));
           return (
             <SidebarNavItem
               key={item.path}

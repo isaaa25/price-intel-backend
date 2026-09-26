@@ -95,7 +95,7 @@ function Products() {
 
   /* ── delete product ───────────────────────────────────────── */
   async function handleDeleteProduct(product) {
-    if (!window.confirm(`Are you sure you want to delete "${product.title}"?`)) {
+    if (!window.confirm(`Are you sure you want to delete "${product.search_keyword || product.title}"?`)) {
       return;
     }
     try {
@@ -466,9 +466,9 @@ function Products() {
                         }}
                           title={product.title}
                         >
-                          {product.title}
+                          {product.search_keyword || product.title}
                         </div>
-                        {product.search_keyword && (
+                        {product.search_keyword && product.search_keyword !== product.title && (
                           <div
                             style={{
                               fontSize: "11px",
@@ -479,8 +479,9 @@ function Products() {
                               whiteSpace: "nowrap",
                               maxWidth: "260px",
                             }}
+                            title={product.title}
                           >
-                            🔍 {product.search_keyword}
+                            {product.title}
                           </div>
                         )}
                       </td>

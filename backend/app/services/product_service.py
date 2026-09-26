@@ -19,9 +19,14 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
-from app.queries import fetch_product_kpi_row, fetch_product_competitors_rows, fetch_portfolio_rows #query import added
+from app.queries import (
+    fetch_product_kpi_row, fetch_product_competitors_rows, fetch_portfolio_rows,
+    fetch_opportunities_rows, fetch_price_wars_rows, fetch_market_movement_rows,
+    fetch_competitor_candidates_rows,
+)
 
 from app.models.tracked_product import TrackedProduct
+from app.models.competitor_listing import CompetitorListing
 from app.models.user_store import UserStore
 from app.services.store_service import get_store_or_404
 from pipeline.ai.query_generalizer import generalize_title
@@ -164,6 +169,103 @@ async def get_product_competitors(db: AsyncSession, product_id) -> list[dict]:
     ]
 
 
+async def get_competitor_candidates(db: AsyncSession, product_id) -> list[dict]:
+    """
+    Returns unconfirmed (pending review) competitor listings for a product.
+    Powers the 'Pending Review' section on Competitors.jsx.
+    """
+    result = await fetch_competitor_candidates_rows(db, product_id)
+    rows = result.fetchall()
+    return [
+        {
+            "id": str(r.id), "url": r.url, "platform": r.platform, "name": r.name,
+            "image_url": r.image_url, "is_active": r.is_active,
+            "discovered_by": r.discovered_by, "confirmed_by_user": r.confirmed_by_user,
+            "latest_price": r.latest_price,
+            "last_scraped_at": r.last_scraped_at.isoformat() if r.last_scraped_at else None,
+        }
+        for r in rows
+    ]
+
+
+async def confirm_competitor(db: AsyncSession, competitor_id, user_id) -> None:
+    """
+    Sets confirmed_by_user=True on a CompetitorListing.
+    Verifies the listing's product belongs to the requesting user.
+    Raises 404 if not found or not owned.
+    """
+    from fastapi import HTTPException
+    from sqlalchemy import update
+    stmt = (
+        select(CompetitorListing)
+        .join(TrackedProduct, CompetitorListing.tracked_product_id == TrackedProduct.id)
+        .join(UserStore, TrackedProduct.store_id == UserStore.id)
+        .where(CompetitorListing.id == competitor_id)
+        .where(UserStore.user_id == user_id)
+    )
+    result = await db.execute(stmt)
+    listing = result.scalars().first()
+    if listing is None:
+        raise HTTPException(status_code=404, detail="Competitor listing not found")
+    listing.confirmed_by_user = True
+    db.add(listing)
+    await db.flush()
+
+
+async def reject_competitor(db: AsyncSession, competitor_id, user_id) -> None:
+    """
+    Sets is_active=False on an unconfirmed CompetitorListing (soft-delete / reject).
+    Verifies the listing's product belongs to the requesting user.
+    Raises 404 if not found or not owned.
+    """
+    from fastapi import HTTPException
+    stmt = (
+        select(CompetitorListing)
+        .join(TrackedProduct, CompetitorListing.tracked_product_id == TrackedProduct.id)
+        .join(UserStore, TrackedProduct.store_id == UserStore.id)
+        .where(CompetitorListing.id == competitor_id)
+        .where(UserStore.user_id == user_id)
+    )
+    result = await db.execute(stmt)
+    listing = result.scalars().first()
+    if listing is None:
+        raise HTTPException(status_code=404, detail="Competitor listing not found")
+    listing.is_active = False
+    db.add(listing)
+    await db.flush()
+
+
+async def add_competitor_manual(
+    db: AsyncSession, product_id, user_id, url: str, platform: str, name: str | None
+) -> dict:
+    """
+    Manually adds a CompetitorListing for a product with confirmed_by_user=True
+    (user explicitly added it, so no review step needed).
+    Verifies the product belongs to the requesting user.
+    """
+    product = await get_product_by_id(db, product_id, user_id)
+    listing = CompetitorListing(
+        tracked_product_id=product.id,
+        url=url,
+        platform=platform or "unknown",
+        name=name or None,
+        discovered_by="manual",
+        confirmed_by_user=True,
+        is_active=True,
+    )
+    db.add(listing)
+    await db.flush()
+    await db.refresh(listing)
+    return {
+        "id": str(listing.id),
+        "url": listing.url,
+        "platform": listing.platform,
+        "name": listing.name,
+        "confirmed_by_user": listing.confirmed_by_user,
+        "is_active": listing.is_active,
+    }
+
+#Dashboard KPi's
 async def get_portfolio_health(db: AsyncSession, user_id, store_id=None) -> dict:
     """
     Portfolio-wide health: % of active products that are NOT
@@ -186,3 +288,32 @@ async def get_portfolio_health(db: AsyncSession, user_id, store_id=None) -> dict
         "needs_action": needs_action,
         "portfolio_health_pct": health_pct,
     }
+
+
+async def get_active_opportunities(db: AsyncSession, user_id, store_id=None) -> Optional[int]:
+    """Returns None if no stock_status data exists yet (honest gap),
+    otherwise the count of products with an out-of-stock competitor."""
+    result = await fetch_opportunities_rows(db, user_id, store_id=store_id)
+    rows = result.fetchall()
+    return len(rows)
+
+
+async def get_active_price_wars(db: AsyncSession, user_id, store_id=None) -> int:
+    """Count of products with 2+ distinct competitor prices in the
+    last 48h. Naturally returns 0 until enough snapshot history exists."""
+    result = await fetch_price_wars_rows(db, user_id, store_id=store_id)
+    rows = result.fetchall()
+    return len(rows)
+
+
+async def get_market_movement(db: AsyncSession, user_id, store_id=None) -> Optional[dict]:
+    """Returns None if either window has no data yet (can't compute a
+    trend from nothing), otherwise the % change in average competitor
+    price between the two windows."""
+    recent, prior = await fetch_market_movement_rows(db, user_id, store_id=store_id)
+    if recent is None or prior is None or recent.avg_price is None or prior.avg_price is None:
+        return None
+    if prior.avg_price == 0:
+        return None
+    pct_change = round(float((recent.avg_price - prior.avg_price) / prior.avg_price) * 100, 1)
+    return {"pct_change": pct_change, "direction": "down" if pct_change < 0 else "up"}

@@ -574,7 +574,7 @@ function Alerts() {
                             onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "var(--d-bg)"; }}
                             onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
                           >
-                            {p.title}
+                            {p.search_keyword || p.title}
                           </div>
                         );
                       })}

@@ -36,6 +36,7 @@ function App() {
             <Route path="/reports" element={<Reports />} />
             <Route path="/account" element={<Account />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/billing" element={<Settings initialTab="billing" />} />
             <Route path="/help" element={<Help />} />
           </Routes>
         </BrowserRouter>

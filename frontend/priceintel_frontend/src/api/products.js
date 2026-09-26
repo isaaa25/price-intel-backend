@@ -87,3 +87,58 @@ export function getProductCompetitors(productId) {
 export function getPortfolioHealth(storeId) {
   return apiRequest(`/products/portfolio/health?store_id=${encodeURIComponent(storeId)}`);
 }
+
+/**
+ * Fetch unconfirmed (pending review) competitor listings for a product.
+ * Backend: GET /products/{productId}/competitors/candidates
+ * Returns: Array of { id, url, platform, name, discovered_by, confirmed_by_user, latest_price, last_scraped_at }
+ */
+export function getCompetitorCandidates(productId) {
+  return apiRequest(`/products/${productId}/competitors/candidates`);
+}
+
+/**
+ * Confirm (accept) an unconfirmed competitor listing.
+ * Backend: PATCH /products/competitors/{competitorId}/confirm
+ */
+export function confirmCompetitor(competitorId) {
+  return apiRequest(`/products/competitors/${competitorId}/confirm`, {
+    method: "PATCH",
+  });
+}
+
+/**
+ * Reject (soft-delete) an unconfirmed competitor listing.
+ * Backend: PATCH /products/competitors/{competitorId}/reject
+ */
+export function rejectCompetitor(competitorId) {
+  return apiRequest(`/products/competitors/${competitorId}/reject`, {
+    method: "PATCH",
+  });
+}
+
+/**
+ * Manually add a competitor listing for a product.
+ * Backend: POST /products/{productId}/competitors/manual
+ * @param {string} productId
+ * @param {{ url: string, platform: string, name: string|null }} payload
+ */
+export function addCompetitorManual(productId, payload) {
+  return apiRequest(`/products/${productId}/competitors/manual`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+
+export function getActiveOpportunities(storeId) {
+  return apiRequest(`/products/portfolio/opportunities?store_id=${encodeURIComponent(storeId)}`);
+}
+
+export function getActivePriceWars(storeId) {
+  return apiRequest(`/products/portfolio/price-wars?store_id=${encodeURIComponent(storeId)}`);
+}
+
+export function getMarketMovement(storeId) {
+  return apiRequest(`/products/portfolio/market-movement?store_id=${encodeURIComponent(storeId)}`);
+}

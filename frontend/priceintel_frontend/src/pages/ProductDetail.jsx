@@ -181,7 +181,7 @@ function ProductDetail() {
               maxWidth: "700px",
             }}
           >
-            {product.title}
+            {product.search_keyword || product.title}
           </h1>
           <div
             style={{
@@ -197,9 +197,9 @@ function ProductDetail() {
                 {product.category}
               </span>
             )}
-            {product.search_keyword && (
-              <span style={{ fontSize: "12px", color: "var(--d-text-3)" }}>
-                {product.search_keyword}
+            {product.search_keyword && product.search_keyword !== product.title && (
+              <span style={{ fontSize: "12px", color: "var(--d-text-3)" }} title={product.title}>
+                {product.title}
               </span>
             )}
             <span
