@@ -42,6 +42,15 @@ class ProductCreate(BaseModel):
     category: Optional[str] = None
 
 
+class ProductUpdate(BaseModel):
+    title: Optional[str] = None
+    own_url: Optional[str] = None
+    own_cost: Optional[float] = None
+    category: Optional[str] = None
+    search_keyword: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
 class ProductResponse(BaseModel):
     id: uuid.UUID
     store_id: uuid.UUID

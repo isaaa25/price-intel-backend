@@ -22,7 +22,7 @@ from starlette.concurrency import run_in_threadpool
 from app.queries import (
     fetch_product_kpi_row, fetch_product_competitors_rows, fetch_portfolio_rows,
     fetch_opportunities_rows, fetch_price_wars_rows, fetch_market_movement_rows,
-    fetch_competitor_candidates_rows,
+    fetch_competitor_candidates_rows,fetch_attention_items
 )
 from fastapi import HTTPException
 
@@ -158,6 +158,48 @@ async def get_product_by_id(db: AsyncSession, product_id, user_id) -> TrackedPro
     return product
 
 
+async def update_product(db: AsyncSession, product_id, user_id, update_data) -> TrackedProduct:
+    """
+    Updates a TrackedProduct's details (title, own_cost, category, own_url, search_keyword, is_active).
+    Verifies that the product belongs to the requesting user.
+    If title is changed and no new search_keyword is provided, regenerates search_keyword.
+    """
+    product = await get_product_by_id(db, product_id, user_id)
+
+    title_changed = (
+        update_data.title is not None and update_data.title.strip() != "" and update_data.title != product.title
+    )
+
+    if update_data.title is not None and update_data.title.strip() != "":
+        product.title = update_data.title.strip()
+    if update_data.own_cost is not None:
+        product.own_cost = update_data.own_cost
+    if update_data.category is not None:
+        product.category = update_data.category.strip() or None
+    if update_data.own_url is not None and update_data.own_url.strip() != "":
+        product.own_url = update_data.own_url.strip()
+    if update_data.search_keyword is not None:
+        product.search_keyword = update_data.search_keyword.strip() or None
+    if update_data.is_active is not None:
+        product.is_active = update_data.is_active
+
+    db.add(product)
+    await db.flush()
+    await db.refresh(product)
+
+    if title_changed and update_data.search_keyword is None:
+        try:
+            keyword = await run_in_threadpool(generalize_title, product.title)
+            product.search_keyword = keyword
+            db.add(product)
+            await db.flush()
+            await db.refresh(product)
+        except Exception:
+            pass
+
+    return product
+
+
 async def delete_product(db: AsyncSession, product_id, user_id) -> None:
     """
     Deletes a TrackedProduct by id, scoped to the requesting user.
@@ -173,10 +215,15 @@ async def get_product_competitors(db: AsyncSession, product_id) -> list[dict]:
     rows = result.fetchall()
     return [
         {
-            "id": str(r.id), "url": r.url, "platform": r.platform, "name": r.name,
-            "image_url": r.image_url, "is_active": r.is_active,
+            "id": str(r.id),
+            "url": r.url,
+            "platform": r.platform,
+            "name": r.name,
+            "image_url": r.image_url,
+            "is_active": r.is_active,
             "latest_price": r.latest_price,
             "last_scraped_at": r.last_scraped_at.isoformat() if r.last_scraped_at else None,
+            "stock_status": r.stock_status,  # ADDED
         }
         for r in rows
     ]
@@ -330,3 +377,77 @@ async def get_market_movement(db: AsyncSession, user_id, store_id=None) -> Optio
         return None
     pct_change = round(float((recent.avg_price - prior.avg_price) / prior.avg_price) * 100, 1)
     return {"pct_change": pct_change, "direction": "down" if pct_change < 0 else "up"}
+
+
+# get attention items for dashboard
+async def get_attention_items(db: AsyncSession, user_id, store_id=None) -> list[dict]:
+    """
+    Classifies each product into a priority level based on real data,
+    and generates a human-readable explanation for the dashboard card.
+    """
+    result = await fetch_attention_items(db, user_id, store_id=store_id)
+    rows = result.fetchall()
+    items = []
+
+    for r in rows:
+        own = float(r.own_price) if r.own_price is not None else None
+        cheapest = float(r.cheapest_competitor_price) if r.cheapest_competitor_price is not None else None
+        oos = int(r.oos_competitors) if r.oos_competitors else 0
+        num_competitors = int(r.num_competitors) if r.num_competitors else 0
+
+        # Classify priority
+        if own is None or cheapest is None:
+            if num_competitors == 0:
+                level = "NO_DATA"
+                explanation = "No competitor data available yet for this product."
+                action = "View Product"
+                action_nav = "/products"
+            else:
+                level = "WATCH"
+                explanation = f"Has {num_competitors} tracked competitor(s) but pricing data is incomplete."
+                action = "Monitor"
+                action_nav = "/competitors"
+        elif oos > 0:
+            level = "OPPORTUNITY"
+            explanation = f"{oos} competitor{'s are' if oos > 1 else ' is'} out of stock. Maintain your current price to capture improved margin."
+            action = "View Opportunity"
+            action_nav = "/alerts"
+        elif own > cheapest:
+            gap = round(own - cheapest)
+            pct = round((own - cheapest) / cheapest * 100, 1)
+            if pct > 50:
+                level = "HIGH"
+                explanation = f"You are {gap:,} above the cheapest competitor ({pct}% gap). High risk of losing sales."
+                action = "Review Price"
+                action_nav = "/products"
+            elif pct > 5:
+                level = "HIGH"
+                explanation = f"You are {gap:,} above the cheapest competitor. Risk of losing sales to lower-priced rivals."
+                action = "Review Price"
+                action_nav = "/products"
+            else:
+                level = "WATCH"
+                explanation = f"You are only {gap:,} above the cheapest competitor ({pct}% gap). Monitor before adjusting."
+                action = "Monitor"
+                action_nav = "/competitors"
+        else:
+            level = "HEALTHY"
+            explanation = "Your price is competitive or below the cheapest competitor."
+            action = "View Product"
+            action_nav = "/products"
+
+        items.append({
+            "id": str(r.id),
+            "title": r.title,
+            "own_url": r.own_url,
+            "own_price": own,
+            "cheapest_competitor": cheapest,
+            "num_competitors": num_competitors,
+            "oos_competitors": oos,
+            "level": level,
+            "explanation": explanation,
+            "action": action,
+            "action_nav": action_nav,
+        })
+
+    return items

@@ -54,11 +54,11 @@ async def fetch_product_kpi_row(db: AsyncSession, product_id):
 
 async def fetch_product_competitors_rows(db: AsyncSession, product_id):
     """
-    All CONFIRMED (confirmed_by_user=True), active competitor listings for one
-    product, with latest scraped price and timestamp.
+    All active competitor listings for one product, with latest
+    scraped price, stock status and timestamp.
     Used by: get_product_competitors() in services/product_service.py
     Powers: ProductDetail.jsx "Competitor Listings" table,
-            Competitors.jsx confirmed sellers table
+            Competitors.jsx (fetched per-product across the page)
     """
     return await db.execute(text("""
         SELECT
@@ -69,11 +69,12 @@ async def fetch_product_competitors_rows(db: AsyncSession, product_id):
              ORDER BY ps.scraped_at DESC LIMIT 1) AS latest_price,
             (SELECT ps.scraped_at FROM price_snapshots ps
              WHERE ps.competitor_listing_id = cl.id
-             ORDER BY ps.scraped_at DESC LIMIT 1) AS last_scraped_at
+             ORDER BY ps.scraped_at DESC LIMIT 1) AS last_scraped_at,
+            (SELECT ps.stock_status FROM price_snapshots ps
+             WHERE ps.competitor_listing_id = cl.id
+             ORDER BY ps.scraped_at DESC LIMIT 1) AS stock_status
         FROM competitor_listings cl
-        WHERE cl.tracked_product_id = :pid
-          AND cl.is_active = true
-          AND cl.confirmed_by_user = true
+        WHERE cl.tracked_product_id = :pid AND cl.is_active = true
         ORDER BY latest_price ASC NULLS LAST
     """), {"pid": str(product_id)})
 
@@ -239,3 +240,75 @@ async def fetch_market_movement_rows(db: AsyncSession, user_id, store_id=None, h
     """), params)
 
     return recent.fetchone(), prior.fetchone()
+
+
+#needs attention
+async def fetch_attention_items(db: AsyncSession, user_id, store_id=None):
+    """
+    Per-product actionable signals for the "What Needs Your Attention"
+    dashboard section. Returns one row per active product with enough
+    data to classify it as: overpriced, opportunity (competitor OOS),
+    watch (small gap), or no data.
+    Used by: get_attention_items() in services/product_service.py
+    Powers: Dashboard.jsx "What Needs Your Attention" section
+    """
+    store_filter = ""
+    params = {"uid": str(user_id)}
+    if store_id is not None:
+        store_filter = "AND tp.store_id = :sid"
+        params["sid"] = str(store_id)
+
+    return await db.execute(text(f"""
+        SELECT
+            tp.id,
+            tp.title,
+            tp.own_url,
+            COALESCE(
+                (SELECT tps.price FROM tracked_product_snapshots tps
+                 WHERE tps.tracked_product_id = tp.id
+                 ORDER BY tps.scraped_at DESC LIMIT 1),
+                tp.own_cost
+            ) AS own_price,
+            (SELECT MIN(ps.price)
+             FROM price_snapshots ps
+             JOIN competitor_listings cl ON cl.id = ps.competitor_listing_id
+             WHERE cl.tracked_product_id = tp.id AND cl.is_active = true
+            ) AS cheapest_competitor_price,
+            (SELECT COUNT(DISTINCT cl.id)
+             FROM competitor_listings cl
+             WHERE cl.tracked_product_id = tp.id AND cl.is_active = true
+            ) AS num_competitors,
+            (SELECT COUNT(*)
+             FROM price_snapshots ps
+             JOIN competitor_listings cl ON cl.id = ps.competitor_listing_id
+             WHERE cl.tracked_product_id = tp.id
+               AND ps.stock_status IN ('out_of_stock', 'unavailable', 'sold_out')
+               AND ps.scraped_at = (
+                   SELECT MAX(ps2.scraped_at)
+                   FROM price_snapshots ps2
+                   WHERE ps2.competitor_listing_id = ps.competitor_listing_id
+               )
+            ) AS oos_competitors
+        FROM tracked_products tp
+        JOIN user_stores us ON us.id = tp.store_id
+        WHERE us.user_id = :uid
+          AND tp.is_active = true
+          {store_filter}
+        ORDER BY
+            CASE
+                WHEN own_cost IS NULL THEN 99
+                WHEN (SELECT MIN(ps.price) FROM price_snapshots ps
+                      JOIN competitor_listings cl ON cl.id = ps.competitor_listing_id
+                      WHERE cl.tracked_product_id = tp.id AND cl.is_active = true) IS NULL THEN 50
+                ELSE 1
+            END ASC,
+            (COALESCE(
+                (SELECT tps.price FROM tracked_product_snapshots tps
+                 WHERE tps.tracked_product_id = tp.id
+                 ORDER BY tps.scraped_at DESC LIMIT 1),
+                tp.own_cost
+            ) - (SELECT MIN(ps.price) FROM price_snapshots ps
+                 JOIN competitor_listings cl ON cl.id = ps.competitor_listing_id
+                 WHERE cl.tracked_product_id = tp.id AND cl.is_active = true)) DESC NULLS LAST
+        LIMIT 6
+    """), params)

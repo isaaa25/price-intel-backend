@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
+import ConfirmModal from "../components/ConfirmModal";
 import { useStore } from "../context/StoreContext";
 import { getProductsByStore, deleteProduct, getProductKpis } from "../api/products";
 // CHANGED: added getProductKpis to the import above
@@ -93,16 +94,34 @@ function Products() {
       .finally(() => setLoading(false));
   }, [selectedStore]);
 
-  /* ── delete product ───────────────────────────────────────── */
-  async function handleDeleteProduct(product) {
-    if (!window.confirm(`Are you sure you want to delete "${product.search_keyword || product.title}"?`)) {
-      return;
-    }
+  /* ── custom delete confirmation modal state ─────────────── */
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  function openDeleteModal(product) {
+    setProductToDelete(product);
+    setDeleteError("");
+  }
+
+  function closeDeleteModal() {
+    if (deleting) return;
+    setProductToDelete(null);
+    setDeleteError("");
+  }
+
+  async function handleConfirmDelete() {
+    if (!productToDelete) return;
+    setDeleting(true);
+    setDeleteError("");
     try {
-      await deleteProduct(product.id);
-      setProducts((prev) => prev.filter((p) => p.id !== product.id));
+      await deleteProduct(productToDelete.id);
+      setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
+      setProductToDelete(null);
     } catch (err) {
-      alert(err.message || "Failed to delete product.");
+      setDeleteError(err.message || "Failed to delete product.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -560,7 +579,7 @@ function Products() {
                           </button>
                           <button
                             id={`btn-delete-${product.id}`}
-                            onClick={() => handleDeleteProduct(product)}
+                            onClick={() => openDeleteModal(product)}
                             style={{
                               padding: "5px 10px",
                               background: "transparent",
@@ -588,6 +607,20 @@ function Products() {
           </div>
         )}
       </div>
+
+      {/* ── Custom Delete Confirmation Modal ─────────────────── */}
+      <ConfirmModal
+        isOpen={Boolean(productToDelete)}
+        title="Delete Product?"
+        productName={productToDelete?.search_keyword || productToDelete?.title}
+        confirmText="Delete"
+        cancelText="Cancel"
+        loading={deleting}
+        error={deleteError}
+        onConfirm={handleConfirmDelete}
+        onCancel={closeDeleteModal}
+        isDestructive={true}
+      />
     </Layout>
   );
 }

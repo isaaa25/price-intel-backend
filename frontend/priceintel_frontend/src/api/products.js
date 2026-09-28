@@ -70,6 +70,20 @@ export function getProduct(productId) {
 }
 
 /**
+ * Update a tracked product by ID.
+ * Backend: PATCH /products/{productId}
+ * @param {string} productId
+ * @param {{ title?: string, own_cost?: number, category?: string, own_url?: string, search_keyword?: string, is_active?: boolean }} payload
+ * Returns: ProductResponse
+ */
+export function updateProduct(productId, payload) {
+  return apiRequest(`/products/${productId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
  * Fetch competitor listings for a product (with latest price).
  * Backend: GET /products/{productId}/competitors
  * Returns: Array of { id, url, platform, name, image_url, latest_price, last_scraped_at }
@@ -78,15 +92,6 @@ export function getProductCompetitors(productId) {
   return apiRequest(`/products/${productId}/competitors`);
 }
 
-/**
- * Fetch portfolio health for a specific store.
- * Backend: GET /products/portfolio/health?store_id=<storeId>
- * @param {string|number} storeId
- * Returns: PortfolioHealthResponsex
- */
-export function getPortfolioHealth(storeId) {
-  return apiRequest(`/products/portfolio/health?store_id=${encodeURIComponent(storeId)}`);
-}
 
 
 /**
@@ -143,6 +148,16 @@ export function addCompetitorManual(productId, payload) {
   });
 }
 
+/* Dashboard 
+/**
+ * Fetch portfolio health for a specific store.
+ * Backend: GET /products/portfolio/health?store_id=<storeId>
+ * @param {string|number} storeId
+ * Returns: PortfolioHealthResponsex
+ */
+export function getPortfolioHealth(storeId) {
+  return apiRequest(`/products/portfolio/health?store_id=${encodeURIComponent(storeId)}`);
+}
 
 export function getActiveOpportunities(storeId) {
   return apiRequest(`/products/portfolio/opportunities?store_id=${encodeURIComponent(storeId)}`);
@@ -154,4 +169,8 @@ export function getActivePriceWars(storeId) {
 
 export function getMarketMovement(storeId) {
   return apiRequest(`/products/portfolio/market-movement?store_id=${encodeURIComponent(storeId)}`);
+}
+
+export function getAttentionItems(storeId) {
+  return apiRequest(`/products/portfolio/attention?store_id=${encodeURIComponent(storeId)}`);
 }

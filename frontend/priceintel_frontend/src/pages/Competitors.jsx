@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
+import ConfirmModal from "../components/ConfirmModal";
 import { useStore } from "../context/StoreContext";
 import {
   getProductsByStore,
@@ -62,7 +63,7 @@ function Competitors() {
   const [loadingDiscovery, setLoadingDiscovery] = useState(false);
 
   // Manual-add form state
-  const [addForm, setAddForm] = useState({ productId: "", url: "", platform: "noon", name: "" });
+  const [addForm, setAddForm] = useState({ url: "", platform: "noon", name: "" });
   const [addingManual, setAddingManual] = useState(false);
   const [addError, setAddError] = useState("");
   const [addSuccess, setAddSuccess] = useState("");
@@ -72,6 +73,9 @@ function Competitors() {
 
   // Controls whether the discovered candidate list is expanded or collapsed
   const [candidatesVisible, setCandidatesVisible] = useState(true);
+
+  // Controls modal for clearing/dismissing the current pending discovered list
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
 
   /* ── Load products strictly for the selected store ──────── */
   useEffect(() => {
@@ -206,6 +210,14 @@ function Competitors() {
     return candidates.filter((c) => String(c.productId) === String(selectedProductId));
   }, [candidates, selectedProductId]);
 
+  /* ── Active selected product for manual adding & filtering ── */
+  const selectedProduct = useMemo(() => {
+    if (selectedProductId !== "all") {
+      return products.find((p) => String(p.id) === String(selectedProductId)) || null;
+    }
+    return products.length === 1 ? products[0] : null;
+  }, [selectedProductId, products]);
+
   /* ── Price position ──────────────────────────────────────── */
   function pricePositionLabel(c) {
     if (c.latest_price == null || c.ownPrice == null) return null;
@@ -258,33 +270,49 @@ function Competitors() {
     }
   }
 
+  /* ── Dismiss/Clear current pending discovered results from view ── */
+  function handleConfirmClear() {
+    if (selectedProductId === "all") {
+      setCandidates([]);
+    } else {
+      setCandidates((prev) => prev.filter((c) => String(c.productId) !== String(selectedProductId)));
+    }
+    setIsClearModalOpen(false);
+  }
+
   /* ── Add manual competitor ───────────────────────────────── */
   async function handleAddManual(e) {
     e.preventDefault();
     setAddError("");
     setAddSuccess("");
-    if (!addForm.productId) { setAddError("Please select a product."); return; }
-    if (!addForm.url.trim()) { setAddError("URL is required."); return; }
+
+    if (!selectedProduct) {
+      setAddError("Please select a specific product in the Product filter above before adding a competitor.");
+      return;
+    }
+    if (!addForm.url.trim()) {
+      setAddError("URL is required.");
+      return;
+    }
 
     setAddingManual(true);
     try {
-      await addCompetitorManual(addForm.productId, {
+      await addCompetitorManual(selectedProduct.id, {
         url: addForm.url.trim(),
         platform: addForm.platform || "unknown",
         name: addForm.name.trim() || null,
       });
-      setAddSuccess("Competitor added and confirmed!");
+      setAddSuccess(`Competitor added and confirmed for ${displayName(selectedProduct)}!`);
       setAddForm((prev) => ({ ...prev, url: "", name: "" }));
       // Refresh confirmed competitors for that product
-      const updated = await getProductCompetitors(addForm.productId);
-      const product = products.find((p) => String(p.id) === String(addForm.productId));
+      const updated = await getProductCompetitors(selectedProduct.id);
       setCompetitors((prev) => {
-        const others = prev.filter((c) => String(c.productId) !== String(addForm.productId));
+        const others = prev.filter((c) => String(c.productId) !== String(selectedProduct.id));
         const newOnes = (Array.isArray(updated) ? updated : []).map((c) => ({
           ...c,
-          productId: addForm.productId,
-          productName: product ? displayName(product) : "—",
-          ownPrice: product?.own_cost,
+          productId: selectedProduct.id,
+          productName: displayName(selectedProduct),
+          ownPrice: selectedProduct.own_cost,
         }));
         return [...others, ...newOnes];
       });
@@ -308,18 +336,18 @@ function Competitors() {
       variant === "primary"
         ? "var(--d-accent)"
         : variant === "success"
-        ? "rgba(22,163,74,0.12)"
-        : variant === "danger"
-        ? "rgba(220,38,38,0.1)"
-        : "var(--d-bg)",
+          ? "rgba(22,163,74,0.12)"
+          : variant === "danger"
+            ? "rgba(220,38,38,0.1)"
+            : "var(--d-bg)",
     color:
       variant === "primary"
         ? "#fff"
         : variant === "success"
-        ? "#16a34a"
-        : variant === "danger"
-        ? "#dc2626"
-        : "var(--d-text-2)",
+          ? "#16a34a"
+          : variant === "danger"
+            ? "#dc2626"
+            : "var(--d-text-2)",
   });
 
   return (
@@ -457,31 +485,19 @@ function Competitors() {
                 Add Competitor Manually
               </h2>
               <p style={{ margin: "0 0 16px", fontSize: "12px", color: "var(--d-text-3)" }}>
-                Paste a competitor product URL — it will be immediately confirmed and tracked.
+                {selectedProduct ? (
+                  <>
+                    Adding competitor for: <strong style={{ color: "var(--d-accent)" }}>{displayName(selectedProduct)}</strong>. It will be immediately confirmed and tracked.
+                  </>
+                ) : (
+                  <>
+                    Paste a competitor product URL — <span style={{ color: "var(--d-text-2)", fontWeight: 500 }}>select a specific product from the Product filter above to track.</span>
+                  </>
+                )}
               </p>
               <form onSubmit={handleAddManual} style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
-                {/* Product selector */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                  <label style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.4px" }}>Product</label>
-                  <select
-                    value={addForm.productId}
-                    onChange={(e) => setAddForm((f) => ({ ...f, productId: e.target.value }))}
-                    required
-                    style={{
-                      padding: "8px 12px", borderRadius: "7px", border: "1px solid var(--d-border)",
-                      background: "var(--d-surface)", color: "var(--d-text)", fontSize: "13px",
-                      fontFamily: "inherit", outline: "none", minWidth: "180px",
-                    }}
-                  >
-                    <option value="">Select product…</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>{displayName(p)}</option>
-                    ))}
-                  </select>
-                </div>
-
                 {/* URL */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "5px", flex: 1, minWidth: "200px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "5px", flex: 1, minWidth: "240px" }}>
                   <label style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.4px" }}>Competitor URL</label>
                   <input
                     type="url"
@@ -615,19 +631,19 @@ function Competitors() {
           {discoverySearched && (
             <div className="animate-in" style={{ marginBottom: "16px", animationDelay: "0s" }}>
               {filteredCandidates.length === 0 ? (
-                /* Empty state after search */
+                /* Empty state after search / clear */
                 <div style={{ ...card, textAlign: "center", padding: "32px 24px", borderColor: "var(--d-border)" }}>
-                  <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--d-text)" }}>No new competitors found</p>
+                  <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--d-text)" }}>
+                    No pending competitors
+                  </p>
                   <p style={{ margin: "6px 0 0", fontSize: "12.5px", color: "var(--d-text-3)" }}>
-                    No unconfirmed competitor candidates were found for your{" "}
-                    {selectedProductId === "all" ? "products" : "selected product"}.
-                    Try adding competitors manually above.
+                    No discovered competitors are currently waiting for review.
                   </p>
                 </div>
               ) : (
                 /* Candidates list */
                 <div style={{ ...card, borderColor: "rgba(245,158,11,0.35)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
                     <div>
                       <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "var(--d-text)", display: "flex", alignItems: "center", gap: "8px" }}>
                         <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />
@@ -637,92 +653,125 @@ function Competitors() {
                         Price Intel discovered these competitors — review and accept or reject them.
                       </p>
                     </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={{ fontSize: "12px", fontWeight: 600, color: "#f59e0b" }}>
-                      {filteredCandidates.length} waiting
-                    </span>
-                    <button
-                      onClick={() => setCandidatesVisible((v) => !v)}
-                      style={{
-                        padding: "4px 10px",
-                        border: "1px solid var(--d-border)",
-                        borderRadius: "6px",
-                        background: "var(--d-surface)",
-                        color: "var(--d-text-2)",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        fontFamily: "inherit",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {candidatesVisible ? "Hide list" : "Show list"}
-                    </button>
-                  </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 600, color: "#f59e0b" }}>
+                        {filteredCandidates.length} waiting
+                      </span>
+                      <button
+                        onClick={() => setCandidatesVisible((v) => !v)}
+                        style={{
+                          padding: "4px 10px",
+                          border: "1px solid var(--d-border)",
+                          borderRadius: "6px",
+                          background: "var(--d-surface)",
+                          color: "var(--d-text-2)",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          fontFamily: "inherit",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {candidatesVisible ? "Hide list" : "Show list"}
+                      </button>
+                      <button
+                        onClick={() => setIsClearModalOpen(true)}
+                        style={{
+                          padding: "4px 10px",
+                          border: "1px solid var(--d-border)",
+                          borderRadius: "6px",
+                          background: "var(--d-surface)",
+                          color: "var(--d-text-2)",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          fontFamily: "inherit",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          transition: "all 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = "var(--d-danger)";
+                          e.currentTarget.style.color = "var(--d-danger)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "var(--d-border)";
+                          e.currentTarget.style.color = "var(--d-text-2)";
+                        }}
+                        title="Dismiss current discovered list from view"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                        Clear List
+                      </button>
+                    </div>
                   </div>
 
                   {candidatesVisible && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                    {filteredCandidates.map((c) => {
-                      const busy = actionLoading[c.id];
-                      return (
-                        <div
-                          key={c.id}
-                          style={{
-                            display: "flex", alignItems: "center", gap: "14px",
-                            padding: "12px 14px", borderRadius: "9px",
-                            background: "var(--d-bg)", border: "1px solid var(--d-border)",
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          {/* Info */}
-                          <div style={{ flex: 1, minWidth: "200px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                              <span style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--d-text)" }}>
-                                {c.name || c.url}
-                              </span>
-                              <MarketplaceBadge marketplace={c.platform} />
-                            </div>
-                            <div style={{ marginTop: "3px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                              <span style={{ fontSize: "11px", color: "var(--d-text-3)" }}>
-                                {c.productName}
-                              </span>
-                              {c.latest_price != null && (
-                                <span style={{ fontSize: "11px", color: "var(--d-text-3)" }}>
-                                  {currency} {Number(c.latest_price).toFixed(2)}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {filteredCandidates.map((c) => {
+                        const busy = actionLoading[c.id];
+                        return (
+                          <div
+                            key={c.id}
+                            style={{
+                              display: "flex", alignItems: "center", gap: "14px",
+                              padding: "12px 14px", borderRadius: "9px",
+                              background: "var(--d-bg)", border: "1px solid var(--d-border)",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            {/* Info */}
+                            <div style={{ flex: 1, minWidth: "200px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                <span style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--d-text)" }}>
+                                  {c.name || c.url}
                                 </span>
-                              )}
-                              <a
-                                href={c.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ fontSize: "11px", color: "var(--d-accent)", textDecoration: "none" }}
+                                <MarketplaceBadge marketplace={c.platform} />
+                              </div>
+                              <div style={{ marginTop: "3px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                                <span style={{ fontSize: "11px", color: "var(--d-text-3)" }}>
+                                  {c.productName}
+                                </span>
+                                {c.latest_price != null && (
+                                  <span style={{ fontSize: "11px", color: "var(--d-text-3)" }}>
+                                    {currency} {Number(c.latest_price).toFixed(2)}
+                                  </span>
+                                )}
+                                <a
+                                  href={c.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ fontSize: "11px", color: "var(--d-accent)", textDecoration: "none" }}
+                                >
+                                  View listing ↗
+                                </a>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div style={{ display: "flex", gap: "8px" }}>
+                              <button
+                                disabled={!!busy}
+                                onClick={() => handleConfirm(c.id)}
+                                style={{ ...btnStyle("success"), opacity: busy ? 0.5 : 1 }}
                               >
-                                View listing ↗
-                              </a>
+                                {busy === "confirming" ? "…" : "✓ Accept"}
+                              </button>
+                              <button
+                                disabled={!!busy}
+                                onClick={() => handleReject(c.id)}
+                                style={{ ...btnStyle("danger"), opacity: busy ? 0.5 : 1 }}
+                              >
+                                {busy === "rejecting" ? "…" : "✕ Reject"}
+                              </button>
                             </div>
                           </div>
-
-                          {/* Actions */}
-                          <div style={{ display: "flex", gap: "8px" }}>
-                            <button
-                              disabled={!!busy}
-                              onClick={() => handleConfirm(c.id)}
-                              style={{ ...btnStyle("success"), opacity: busy ? 0.5 : 1 }}
-                            >
-                              {busy === "confirming" ? "…" : "✓ Accept"}
-                            </button>
-                            <button
-                              disabled={!!busy}
-                              onClick={() => handleReject(c.id)}
-                              style={{ ...btnStyle("danger"), opacity: busy ? 0.5 : 1 }}
-                            >
-                              {busy === "rejecting" ? "…" : "✕ Reject"}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               )}
@@ -856,12 +905,36 @@ function Competitors() {
                             )}
                           </td>
 
-                          {/* 4-6. Pending data */}
-                          {["—", "—", "—"].map((val, idx) => (
-                            <td key={idx} style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                              <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>{val}</span>
-                            </td>
-                          ))}
+                          {/* 4. Behavior Type (query not implemented yet) */}
+                          <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>—</span>
+                          </td>
+
+                          {/* 5. Repricing Velocity (query not implemented yet) */}
+                          <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>—</span>
+                          </td>
+
+                          {/* 6. Stock Status — now real from price_snapshots.stock_status */}
+                          <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                            {c.stock_status && c.stock_status !== "unknown" ? (
+                              <span style={{
+                                fontSize: "12px",
+                                fontWeight: 600,
+                                color: c.stock_status === "in_stock" ? "var(--d-success)" : "#ef4444",
+                                background: c.stock_status === "in_stock" ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)",
+                                padding: "2px 8px",
+                                borderRadius: "5px",
+                              }}>
+                                {c.stock_status === "in_stock" ? "In Stock" :
+                                  c.stock_status === "out_of_stock" ? "Out of Stock" :
+                                    c.stock_status === "sold_out" ? "Sold Out" :
+                                      c.stock_status}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>—</span>
+                            )}
+                          </td>
 
                           {/* 7. Last Seen */}
                           <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
@@ -877,6 +950,18 @@ function Competitors() {
           </div>
         </>
       )}
+
+      {/* ── Clear Pending Review Confirmation Modal ─────────── */}
+      <ConfirmModal
+        isOpen={isClearModalOpen}
+        title="Clear Pending Results?"
+        message="Are you sure you want to remove these discovered competitors from the pending review list?"
+        confirmText="Clear List"
+        cancelText="Cancel"
+        onConfirm={handleConfirmClear}
+        onCancel={() => setIsClearModalOpen(false)}
+        isDestructive={true}
+      />
     </Layout>
   );
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useStore } from "../context/StoreContext";
-import { getProduct, getProductKpis, getProductCompetitors } from "../api/products";
+import { getProduct, getProductKpis, getProductCompetitors, updateProduct } from "../api/products";
 
 /* ── card style ─────────────────────────────────────────────── */
 const card = {
@@ -64,6 +64,75 @@ function ProductDetail() {
   const [competitors, setCompetitors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  /* ── edit modal state ─────────────────────────────────────── */
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    own_cost: "",
+    category: "",
+    own_url: "",
+    search_keyword: "",
+    is_active: true,
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editSuccess, setEditSuccess] = useState("");
+
+  function openEditModal() {
+    if (!product) return;
+    setEditForm({
+      title: product.title || "",
+      own_cost: product.own_cost != null ? String(product.own_cost) : "",
+      category: product.category || "",
+      own_url: product.own_url || "",
+      search_keyword: product.search_keyword || "",
+      is_active: product.is_active ?? true,
+    });
+    setEditError("");
+    setEditSuccess("");
+    setIsEditModalOpen(true);
+  }
+
+  async function handleSaveEdit(e) {
+    e.preventDefault();
+    setEditError("");
+    setEditSuccess("");
+
+    if (!editForm.title.trim()) {
+      setEditError("Product name/title is required.");
+      return;
+    }
+    const numericCost = parseFloat(editForm.own_cost);
+    if (isNaN(numericCost) || numericCost < 0) {
+      setEditError("Please enter a valid price.");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const updated = await updateProduct(id, {
+        title: editForm.title.trim(),
+        own_cost: numericCost,
+        category: editForm.category.trim() || null,
+        own_url: editForm.own_url.trim(),
+        search_keyword: editForm.search_keyword.trim() || null,
+        is_active: editForm.is_active,
+      });
+      setProduct(updated);
+      const newKpi = await getProductKpis(id).catch(() => null);
+      if (newKpi) setKpi(newKpi);
+      setEditSuccess("Product updated successfully!");
+      setTimeout(() => {
+        setIsEditModalOpen(false);
+        setEditSuccess("");
+      }, 700);
+    } catch (err) {
+      setEditError(err.message || "Failed to update product.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -214,33 +283,65 @@ function ProductDetail() {
           </div>
         </div>
 
-        {/* Open your own listing */}
-        {product.own_url && (
-          <a
-            href={product.own_url}
-            target="_blank"
-            rel="noopener noreferrer"
+        {/* Action Buttons: Edit Product & View Listing */}
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            onClick={openEditModal}
             style={{
-              padding: "9px 18px",
-              background: "var(--d-accent)",
-              color: "#fff",
-              border: "none",
+              padding: "9px 16px",
+              background: "var(--d-surface)",
+              color: "var(--d-text)",
+              border: "1px solid var(--d-border)",
               borderRadius: "8px",
               fontSize: "13px",
               fontWeight: 600,
               fontFamily: "inherit",
               cursor: "pointer",
-              textDecoration: "none",
               display: "inline-flex",
               alignItems: "center",
               gap: "6px",
-              boxShadow: "0 2px 8px rgba(79,70,229,0.25)",
               whiteSpace: "nowrap",
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "var(--d-accent)";
+              e.currentTarget.style.color = "var(--d-accent)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--d-border)";
+              e.currentTarget.style.color = "var(--d-text)";
             }}
           >
-            🔗 View My Listing
-          </a>
-        )}
+            ✏️ Edit Product
+          </button>
+
+          {product.own_url && (
+            <a
+              href={product.own_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: "9px 18px",
+                background: "var(--d-accent)",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 600,
+                fontFamily: "inherit",
+                cursor: "pointer",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: "0 2px 8px rgba(79,70,229,0.25)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              🔗 View My Listing
+            </a>
+          )}
+        </div>
       </div>
 
       {/* ── KPI cards ────────────────────────────────────────── */}
@@ -538,6 +639,319 @@ function ProductDetail() {
           </div>
         )}
       </div>
+
+      {/* ── Edit Product Modal ───────────────────────────────── */}
+      {isEditModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !savingEdit) {
+              setIsEditModalOpen(false);
+            }
+          }}
+        >
+          <div
+            style={{
+              background: "var(--d-surface)",
+              border: "1px solid var(--d-border)",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "520px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+              overflow: "hidden",
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "18px 24px",
+                borderBottom: "1px solid var(--d-border)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--d-text)" }}>
+                  ✏️ Edit Product
+                </h2>
+                <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--d-text-3)" }}>
+                  Update name, price, URL, category, or discovery search keyword.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !savingEdit && setIsEditModalOpen(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--d-text-3)",
+                  cursor: "pointer",
+                  fontSize: "18px",
+                  padding: "4px",
+                  lineHeight: 1,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveEdit} style={{ padding: "20px 24px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                {/* Product Name */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                  <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-2)" }}>
+                    Product Name / Title <span style={{ color: "var(--d-danger)" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                    placeholder="e.g. Smart Watch Series 9"
+                    required
+                    style={{
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--d-border)",
+                      background: "var(--d-bg)",
+                      color: "var(--d-text)",
+                      fontSize: "13px",
+                      fontFamily: "inherit",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
+                    onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
+                  />
+                </div>
+
+                {/* My Price + Currency */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                  <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-2)" }}>
+                    My Price ({currency || "Cost"}) <span style={{ color: "var(--d-danger)" }}>*</span>
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: "12px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        color: "var(--d-text-3)",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {currency}
+                    </span>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={editForm.own_cost}
+                      onChange={(e) => setEditForm((f) => ({ ...f, own_cost: e.target.value }))}
+                      placeholder="2500.00"
+                      required
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        padding: `9px 12px 9px ${currency ? currency.length * 9 + 20 : 36}px`,
+                        borderRadius: "8px",
+                        border: "1px solid var(--d-border)",
+                        background: "var(--d-bg)",
+                        color: "var(--d-text)",
+                        fontSize: "13px",
+                        fontFamily: "inherit",
+                        outline: "none",
+                      }}
+                      onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
+                      onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
+                    />
+                  </div>
+                </div>
+
+                {/* Category & Status Row */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: "12px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                    <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-2)" }}>
+                      Category (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.category}
+                      onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
+                      placeholder="e.g. Electronics"
+                      style={{
+                        padding: "9px 12px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--d-border)",
+                        background: "var(--d-bg)",
+                        color: "var(--d-text)",
+                        fontSize: "13px",
+                        fontFamily: "inherit",
+                        outline: "none",
+                      }}
+                      onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
+                      onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                    <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-2)" }}>
+                      Status
+                    </label>
+                    <select
+                      value={editForm.is_active ? "true" : "false"}
+                      onChange={(e) => setEditForm((f) => ({ ...f, is_active: e.target.value === "true" }))}
+                      style={{
+                        padding: "9px 12px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--d-border)",
+                        background: "var(--d-bg)",
+                        color: "var(--d-text)",
+                        fontSize: "13px",
+                        fontFamily: "inherit",
+                        outline: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <option value="true">● Active</option>
+                      <option value="false">○ Inactive</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Product URL */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                  <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-2)" }}>
+                    Product Listing URL <span style={{ color: "var(--d-danger)" }}>*</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={editForm.own_url}
+                    onChange={(e) => setEditForm((f) => ({ ...f, own_url: e.target.value }))}
+                    placeholder="https://..."
+                    required
+                    style={{
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--d-border)",
+                      background: "var(--d-bg)",
+                      color: "var(--d-text)",
+                      fontSize: "13px",
+                      fontFamily: "inherit",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
+                    onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
+                  />
+                </div>
+
+                {/* Search Keyword */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-2)" }}>
+                      Search Keyword (Optional)
+                    </label>
+                    <span style={{ fontSize: "11px", color: "var(--d-text-3)" }}>
+                      Used for scraper search discovery
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={editForm.search_keyword}
+                    onChange={(e) => setEditForm((f) => ({ ...f, search_keyword: e.target.value }))}
+                    placeholder="Leave blank to auto-generate from title"
+                    style={{
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--d-border)",
+                      background: "var(--d-bg)",
+                      color: "var(--d-text)",
+                      fontSize: "13px",
+                      fontFamily: "inherit",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
+                    onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
+                  />
+                </div>
+              </div>
+
+              {/* Status feedback */}
+              {editError && (
+                <div style={{ marginTop: "14px", padding: "8px 12px", borderRadius: "6px", background: "rgba(239,68,68,0.1)", color: "var(--d-danger)", fontSize: "12.5px" }}>
+                  ⚠️ {editError}
+                </div>
+              )}
+              {editSuccess && (
+                <div style={{ marginTop: "14px", padding: "8px 12px", borderRadius: "6px", background: "rgba(34,197,94,0.1)", color: "var(--d-success)", fontSize: "12.5px" }}>
+                  ✓ {editSuccess}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div
+                style={{
+                  marginTop: "20px",
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "10px",
+                }}
+              >
+                <button
+                  type="button"
+                  disabled={savingEdit}
+                  onClick={() => setIsEditModalOpen(false)}
+                  style={{
+                    padding: "9px 16px",
+                    background: "var(--d-bg)",
+                    color: "var(--d-text-2)",
+                    border: "1px solid var(--d-border)",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  style={{
+                    padding: "9px 20px",
+                    background: "var(--d-accent)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    boxShadow: "0 2px 8px rgba(79,70,229,0.25)",
+                    opacity: savingEdit ? 0.7 : 1,
+                  }}
+                >
+                  {savingEdit ? "Saving…" : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
