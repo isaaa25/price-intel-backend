@@ -88,10 +88,23 @@ export function getPortfolioHealth(storeId) {
   return apiRequest(`/products/portfolio/health?store_id=${encodeURIComponent(storeId)}`);
 }
 
+
+/**
+ * Trigger on-demand competitor discovery for a product.
+ * Backend: POST /products/{productId}/discover
+ * Returns: candidate[] (pending review shape)
+ */
+export function discoverCompetitors(productId) {
+  return apiRequest(`/products/${productId}/discover`, {
+    method: "POST",
+  });
+}
 /**
  * Fetch unconfirmed (pending review) competitor listings for a product.
  * Backend: GET /products/{productId}/competitors/candidates
  * Returns: Array of { id, url, platform, name, discovered_by, confirmed_by_user, latest_price, last_scraped_at }
+ * 
+ 
  */
 export function getCompetitorCandidates(productId) {
   return apiRequest(`/products/${productId}/competitors/candidates`);

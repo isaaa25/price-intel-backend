@@ -9,6 +9,7 @@ import {
   confirmCompetitor,
   rejectCompetitor,
   addCompetitorManual,
+  discoverCompetitors,   
 } from "../api/products";
 
 const card = {
@@ -125,24 +126,40 @@ function Competitors() {
 
   /* ── "Search My Competitors" — triggered only by user click ─ */
   async function handleSearchCompetitors() {
-    if (products.length === 0) return;
-    setLoadingDiscovery(true);
-    setCandidates([]);
-    setDiscoverySearched(false);
+  if (products.length === 0 || loadingDiscovery) return;
 
-    // Determine which products to search candidates for
-    const targetProducts =
-      selectedProductId === "all"
-        ? products
-        : products.filter((p) => String(p.id) === String(selectedProductId));
+  const targetProducts =
+    selectedProductId === "all"
+      ? products
+      : products.filter((p) => String(p.id) === String(selectedProductId));
 
-    try {
-      const results = await Promise.allSettled(
-        targetProducts.map((p) => getCompetitorCandidates(p.id))
-      );
-      const flattened = [];
-      targetProducts.forEach((p, i) => {
-        const list = results[i].status === "fulfilled" ? results[i].value : [];
+  if (targetProducts.length === 0) return;
+
+  const label =
+    selectedProductId === "all"
+      ? `all ${targetProducts.length} tracked product(s)`
+      : displayName(targetProducts[0]);
+
+  const confirmed = window.confirm(
+    `Discover competitors for ${label}?\n\n` +
+      `This will search the marketplace, filter results, and show you ` +
+      `candidates to Accept or Reject. Previous pending candidates for ` +
+      `these products will be cleared.`
+  );
+  if (!confirmed) return;
+
+  setLoadingDiscovery(true);
+  setCandidates([]);
+  setDiscoverySearched(false);
+  setCandidatesVisible(true);
+
+  const flattened = [];
+
+  try {
+    // Sequential — one product at a time (safer for Daraz rate limits)
+    for (const p of targetProducts) {
+      try {
+        const list = await discoverCompetitors(p.id);
         (Array.isArray(list) ? list : []).forEach((c) => {
           flattened.push({
             ...c,
@@ -150,15 +167,21 @@ function Competitors() {
             productName: displayName(p),
           });
         });
-      });
-      setCandidates(flattened);
-    } catch {
-      setCandidates([]);
-    } finally {
-      setDiscoverySearched(true);
-      setLoadingDiscovery(false);
+      } catch (err) {
+        console.error(`Discovery failed for product ${p.id}:`, err);
+        // Continue other products; surface a simple alert for the failed one
+        alert(
+          err?.message ||
+            `Discovery failed for "${displayName(p)}". Please try again.`
+        );
+      }
     }
+    setCandidates(flattened);
+  } finally {
+    setDiscoverySearched(true);
+    setLoadingDiscovery(false);
   }
+}
 
   /* ── Filtered confirmed competitors ─────────────────────── */
   const filteredCompetitors = useMemo(() => {

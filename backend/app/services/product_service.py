@@ -24,12 +24,14 @@ from app.queries import (
     fetch_opportunities_rows, fetch_price_wars_rows, fetch_market_movement_rows,
     fetch_competitor_candidates_rows,
 )
+from fastapi import HTTPException
 
 from app.models.tracked_product import TrackedProduct
 from app.models.competitor_listing import CompetitorListing
 from app.models.user_store import UserStore
 from app.services.store_service import get_store_or_404
 from pipeline.ai.query_generalizer import generalize_title
+from pipeline.discovery_daraz import discover_competitors_for_product
 
 
 
@@ -124,7 +126,18 @@ async def get_product_kpis(db: AsyncSession, product_id) -> Optional[dict]:
             and own_price <= row.cheapest_competitor_price
         ),
     }
-    
+
+async def discover_competitors(db: AsyncSession, product_id, user_id) -> list[dict]:
+    """
+    On-demand discovery for one product. Verifies ownership, then runs
+    the Daraz discovery pipeline and returns pending candidates.
+    """
+    # Ownership check (raises 404 if not owned)
+    await get_product_by_id(db, product_id, user_id)
+    try:
+        return await discover_competitors_for_product(product_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 async def get_product_by_id(db: AsyncSession, product_id, user_id) -> TrackedProduct:
     """

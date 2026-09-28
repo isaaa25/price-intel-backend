@@ -22,7 +22,8 @@ from app.services.product_service import (
     create_product, get_products, get_product_kpis, get_product_by_id,
     get_product_competitors, get_portfolio_health, delete_product,
     get_active_opportunities, get_active_price_wars, get_market_movement,
-    get_competitor_candidates, confirm_competitor, reject_competitor, add_competitor_manual,
+    get_competitor_candidates, confirm_competitor, reject_competitor,
+    add_competitor_manual, discover_competitors,
 )
 
 
@@ -117,6 +118,18 @@ async def reject_competitor_route(
     await reject_competitor(db, competitor_id, current_user.id)
     return None
 
+@router.post("/{product_id}/discover")
+async def discover_competitors_route(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    """
+    Trigger on-demand competitor discovery for one product.
+    Clears previous pending candidates, runs search + relevance filter,
+    saves new unconfirmed listings, and returns them for Pending Review.
+    """
+    return await discover_competitors(db, product_id, current_user.id)
 
 # ── Per-product routes — parameterised, registered AFTER static prefixes ──
 
