@@ -11,6 +11,7 @@ import {
   addCompetitorManual,
   discoverCompetitors,   
 } from "../api/products";
+import { validateProductUrl } from "../api/marketplaceUrl";
 
 const card = {
   background: "var(--d-surface)",
@@ -260,40 +261,64 @@ function Competitors() {
 
   /* ── Add manual competitor ───────────────────────────────── */
   async function handleAddManual(e) {
-    e.preventDefault();
-    setAddError("");
-    setAddSuccess("");
-    if (!addForm.productId) { setAddError("Please select a product."); return; }
-    if (!addForm.url.trim()) { setAddError("URL is required."); return; }
+  e.preventDefault();
+  setAddError("");
+  setAddSuccess("");
 
-    setAddingManual(true);
-    try {
-      await addCompetitorManual(addForm.productId, {
-        url: addForm.url.trim(),
-        platform: addForm.platform || "unknown",
-        name: addForm.name.trim() || null,
-      });
-      setAddSuccess("Competitor added and confirmed!");
-      setAddForm((prev) => ({ ...prev, url: "", name: "" }));
-      // Refresh confirmed competitors for that product
-      const updated = await getProductCompetitors(addForm.productId);
-      const product = products.find((p) => String(p.id) === String(addForm.productId));
-      setCompetitors((prev) => {
-        const others = prev.filter((c) => String(c.productId) !== String(addForm.productId));
-        const newOnes = (Array.isArray(updated) ? updated : []).map((c) => ({
-          ...c,
-          productId: addForm.productId,
-          productName: product ? displayName(product) : "—",
-          ownPrice: product?.own_cost,
-        }));
-        return [...others, ...newOnes];
-      });
-    } catch (err) {
-      setAddError(err?.message || "Failed to add competitor.");
-    } finally {
-      setAddingManual(false);
-    }
+  if (!addForm.productId) {
+    setAddError("Please select a product.");
+    return;
   }
+  if (!addForm.url.trim()) {
+    setAddError("URL is required.");
+    return;
+  }
+  if (!selectedStore?.marketplace || !selectedStore?.country) {
+    setAddError("Select a store first so we can validate the competitor URL.");
+    return;
+  }
+
+  // Validate URL matches this store's marketplace + country
+  let info;
+  try {
+    info = validateProductUrl(
+      addForm.url.trim(),
+      selectedStore.marketplace,
+      selectedStore.country
+    );
+  } catch (err) {
+    setAddError(err.message || "Invalid competitor URL.");
+    return;
+  }
+
+  setAddingManual(true);
+  try {
+    await addCompetitorManual(addForm.productId, {
+      url: addForm.url.trim(),
+      platform: info.marketplace, // from URL, not the dropdown
+      name: addForm.name.trim() || null,
+    });
+    setAddSuccess("Competitor added and confirmed!");
+    setAddForm((prev) => ({ ...prev, url: "", name: "" }));
+
+    const updated = await getProductCompetitors(addForm.productId);
+    const product = products.find((p) => String(p.id) === String(addForm.productId));
+    setCompetitors((prev) => {
+      const others = prev.filter((c) => String(c.productId) !== String(addForm.productId));
+      const newOnes = (Array.isArray(updated) ? updated : []).map((c) => ({
+        ...c,
+        productId: addForm.productId,
+        productName: product ? displayName(product) : "—",
+        ownPrice: product?.own_cost,
+      }));
+      return [...others, ...newOnes];
+    });
+  } catch (err) {
+    setAddError(err?.message || "Failed to add competitor.");
+  } finally {
+    setAddingManual(false);
+  }
+}
 
   const btnStyle = (variant = "primary") => ({
     padding: "7px 14px",

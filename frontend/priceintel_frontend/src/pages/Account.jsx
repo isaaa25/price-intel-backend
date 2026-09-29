@@ -4,6 +4,7 @@ import Layout from "../components/Layout";
 import { getStores } from "../api/products";
 import apiRequest from "../api/client";
 import { useStore } from "../context/StoreContext";
+import { parseMarketplaceUrl } from "../api/marketplaceUrl";
 
 const cardStyle = {
   background: "var(--d-surface)",
@@ -34,8 +35,19 @@ const labelStyle = {
   marginBottom: "6px",
 };
 
-const MARKETPLACE_OPTIONS = ["noon", "daraz", "other"];
-const COUNTRY_OPTIONS = ["UAE", "Saudi Arabia", "Pakistan"];
+const MARKETPLACE_OPTIONS = ["noon", "daraz"];
+const COUNTRY_OPTIONS = [
+  "UAE",
+  "Saudi Arabia",
+  "Egypt",
+  "Kuwait",
+  "Qatar",
+  "Bahrain",
+  "Pakistan",
+  "Bangladesh",
+  "Nepal",
+  "Myanmar",
+];
 
 function MarketplaceBadge({ marketplace }) {
   const normalized = (marketplace || "other").toLowerCase();
@@ -134,13 +146,11 @@ function StoreCard({ store, onDelete }) {
         position: "relative",
       }}
     >
-      {/* Top row: Marketplace & Status */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
         <MarketplaceBadge marketplace={store.marketplace} />
         <StatusBadge active={store.is_active} />
       </div>
 
-      {/* Middle: Store info */}
       <div>
         <h3
           style={{
@@ -155,8 +165,27 @@ function StoreCard({ store, onDelete }) {
           {store.store_name}
         </h3>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12.5px", color: "var(--d-text-2)", marginBottom: "8px" }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            fontSize: "12.5px",
+            color: "var(--d-text-2)",
+            marginBottom: "8px",
+          }}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ flexShrink: 0 }}
+          >
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
             <circle cx="12" cy="10" r="3" />
           </svg>
@@ -183,7 +212,6 @@ function StoreCard({ store, onDelete }) {
         )}
       </div>
 
-      {/* Bottom actions */}
       <div
         style={{
           display: "flex",
@@ -284,6 +312,36 @@ function Account() {
   const [submitError, setSubmitError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  // URL auto-detect state (must live inside Account)
+  const [urlMeta, setUrlMeta] = useState(null);
+  const [urlError, setUrlError] = useState("");
+
+  function handleStoreUrlChange(value) {
+    setStoreUrl(value);
+    setUrlError("");
+    setUrlMeta(null);
+    if (!value.trim()) return;
+    try {
+      const info = parseMarketplaceUrl(value);
+      setUrlMeta(info);
+      setMarketplace(info.marketplace);
+      setCountry(info.country);
+    } catch (err) {
+      setUrlError(err.message || "Invalid store URL.");
+    }
+  }
+
+  function resetForm() {
+    setStoreName("");
+    setStoreSlug("");
+    setExternalId("");
+    setStoreUrl("");
+    setUrlMeta(null);
+    setUrlError("");
+    setMarketplace("noon");
+    setCountry("UAE");
+  }
+
   function loadStores() {
     setStoresLoading(true);
     setStoresError("");
@@ -301,15 +359,30 @@ function Account() {
     loadStores();
   }, []);
 
-  const isFormValid = Boolean(marketplace && country && storeName.trim() && storeUrl.trim());
+  const isFormValid = Boolean(
+    marketplace &&
+      country &&
+      storeName.trim() &&
+      storeUrl.trim() &&
+      !urlError &&
+      urlMeta
+  );
 
   async function handleAddStore(e) {
     e.preventDefault();
     setSubmitError("");
     setSuccessMsg("");
 
-    if (!marketplace || !country || !storeName.trim() || !storeUrl.trim()) {
-      setSubmitError("Please fill in all required fields (Marketplace, Country, Store Name, and Store URL).");
+    if (!storeName.trim() || !storeUrl.trim()) {
+      setSubmitError("Please fill in Store Name and Store URL.");
+      return;
+    }
+
+    if (urlError || !urlMeta) {
+      setSubmitError(
+        urlError ||
+          "Enter a valid Noon or Daraz store URL so we can detect marketplace and country."
+      );
       return;
     }
 
@@ -318,8 +391,8 @@ function Account() {
       await apiRequest("/stores/", {
         method: "POST",
         body: JSON.stringify({
-          marketplace,
-          country,
+          marketplace: urlMeta.marketplace,
+          country: urlMeta.country,
           store_name: storeName.trim(),
           store_slug: storeSlug.trim() || null,
           external_store_id: externalId.trim() || null,
@@ -327,10 +400,7 @@ function Account() {
         }),
       });
       setSuccessMsg("Store added successfully!");
-      setStoreName("");
-      setStoreSlug("");
-      setExternalId("");
-      setStoreUrl("");
+      resetForm();
       setShowForm(false);
       loadStores();
       refreshStores();
@@ -361,16 +431,33 @@ function Account() {
 
   return (
     <Layout>
-      {/* ── Breadcrumb & Section Navigation ───────────────────────── */}
       <div className="animate-in" style={{ marginBottom: "20px" }}>
-        {/* Breadcrumb Hierarchy: Account → Stores */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--d-text-3)", marginBottom: "4px" }}>
-          <span style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Account</span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            fontSize: "12px",
+            color: "var(--d-text-3)",
+            marginBottom: "4px",
+          }}
+        >
+          <span style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            Account
+          </span>
           <span>/</span>
           <span style={{ color: "var(--d-accent)", fontWeight: 600 }}>Stores</span>
         </div>
 
-        <h1 style={{ margin: "4px 0 0", fontSize: "22px", fontWeight: 700, color: "var(--d-text)", letterSpacing: "-0.4px" }}>
+        <h1
+          style={{
+            margin: "4px 0 0",
+            fontSize: "22px",
+            fontWeight: 700,
+            color: "var(--d-text)",
+            letterSpacing: "-0.4px",
+          }}
+        >
           Stores
         </h1>
         <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--d-text-2)" }}>
@@ -378,7 +465,6 @@ function Account() {
         </p>
       </div>
 
-      {/* ── Tab Navigation Strip ──────────────────────────────────── */}
       <div
         className="animate-in"
         style={{
@@ -413,9 +499,7 @@ function Account() {
         </button>
       </div>
 
-      {/* ── Main Stores Container ─────────────────────────────────── */}
       <div className="animate-in" style={cardStyle}>
-        {/* Section Header */}
         <div
           style={{
             display: "flex",
@@ -441,6 +525,7 @@ function Account() {
               setShowForm(!showForm);
               setSubmitError("");
               setSuccessMsg("");
+              if (showForm) resetForm();
             }}
             style={{
               display: "inline-flex",
@@ -478,7 +563,6 @@ function Account() {
           </button>
         </div>
 
-        {/* Global Success / Error Messages */}
         {successMsg && (
           <div
             style={{
@@ -496,7 +580,6 @@ function Account() {
           </div>
         )}
 
-        {/* Add Store Form Drawer */}
         {showForm && (
           <form
             onSubmit={handleAddStore}
@@ -514,7 +597,7 @@ function Account() {
                 Connect a New Store
               </h3>
               <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-3)" }}>
-                Enter the details of your marketplace store to enable automated competitor monitoring.
+                Paste your Noon or Daraz store URL — marketplace and country are detected automatically.
               </p>
             </div>
 
@@ -534,16 +617,51 @@ function Account() {
               </div>
             )}
 
-            {/* Row 1: Marketplace* | Country* */}
+            {/* Store URL first — drives marketplace + country */}
+            <div style={{ marginBottom: "14px" }}>
+              <label style={labelStyle}>Store URL *</label>
+              <input
+                type="url"
+                placeholder="https://www.noon.com/uae-en/... or https://www.daraz.pk/..."
+                value={storeUrl}
+                onChange={(e) => handleStoreUrlChange(e.target.value)}
+                style={{
+                  ...inputStyle,
+                  borderColor: urlError ? "var(--d-danger)" : undefined,
+                }}
+                onFocus={(e) => {
+                  if (!urlError) e.target.style.borderColor = "var(--d-accent)";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = urlError ? "var(--d-danger)" : "var(--d-border)";
+                }}
+              />
+              {urlError && (
+                <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--d-danger)" }}>
+                  {urlError}
+                </p>
+              )}
+              {urlMeta && !urlError && (
+                <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--d-success)" }}>
+                  Detected: {urlMeta.marketplace.toUpperCase()} · {urlMeta.country} ·{" "}
+                  {urlMeta.currency}
+                </p>
+              )}
+            </div>
+
+            {/* Marketplace + Country (auto-filled, locked when URL is valid) */}
             <div className="form-grid-2">
               <div>
                 <label style={labelStyle}>Marketplace *</label>
                 <select
                   value={marketplace}
                   onChange={(e) => setMarketplace(e.target.value)}
-                  style={inputStyle}
-                  onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
-                  onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
+                  disabled={Boolean(urlMeta)}
+                  style={{
+                    ...inputStyle,
+                    opacity: urlMeta ? 0.85 : 1,
+                    cursor: urlMeta ? "not-allowed" : "pointer",
+                  }}
                 >
                   {MARKETPLACE_OPTIONS.map((m) => (
                     <option key={m} value={m}>
@@ -557,9 +675,12 @@ function Account() {
                 <select
                   value={country}
                   onChange={(e) => setCountry(e.target.value)}
-                  style={inputStyle}
-                  onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
-                  onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
+                  disabled={Boolean(urlMeta)}
+                  style={{
+                    ...inputStyle,
+                    opacity: urlMeta ? 0.85 : 1,
+                    cursor: urlMeta ? "not-allowed" : "pointer",
+                  }}
                 >
                   {COUNTRY_OPTIONS.map((c) => (
                     <option key={c} value={c}>
@@ -570,7 +691,6 @@ function Account() {
               </div>
             </div>
 
-            {/* Row 2: Store Name* | Store URL* */}
             <div className="form-grid-2">
               <div>
                 <label style={labelStyle}>Store Name *</label>
@@ -585,22 +705,6 @@ function Account() {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Store URL *</label>
-                <input
-                  type="url"
-                  placeholder="https://noon.com/store/techhub"
-                  value={storeUrl}
-                  onChange={(e) => setStoreUrl(e.target.value)}
-                  style={inputStyle}
-                  onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
-                  onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
-                />
-              </div>
-            </div>
-
-            {/* Row 3: Optional Slug | Optional External ID */}
-            <div className="form-grid-2">
-              <div>
                 <label style={labelStyle}>Store Slug (Optional)</label>
                 <input
                   type="text"
@@ -612,18 +716,19 @@ function Account() {
                   onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
                 />
               </div>
-              <div>
-                <label style={labelStyle}>External Store ID (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. p-10492"
-                  value={externalId}
-                  onChange={(e) => setExternalId(e.target.value)}
-                  style={inputStyle}
-                  onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
-                  onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
-                />
-              </div>
+            </div>
+
+            <div style={{ marginBottom: "14px" }}>
+              <label style={labelStyle}>External Store ID (Optional)</label>
+              <input
+                type="text"
+                placeholder="e.g. p-10492"
+                value={externalId}
+                onChange={(e) => setExternalId(e.target.value)}
+                style={inputStyle}
+                onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
+                onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
+              />
             </div>
 
             <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
@@ -648,7 +753,10 @@ function Account() {
 
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  resetForm();
+                }}
                 style={{
                   padding: "9px 16px",
                   background: "transparent",
@@ -666,14 +774,12 @@ function Account() {
           </form>
         )}
 
-        {/* Loading State */}
         {storesLoading && (
           <div style={{ padding: "32px", textAlign: "center", color: "var(--d-text-2)", fontSize: "13.5px" }}>
             Loading your stores...
           </div>
         )}
 
-        {/* Error State */}
         {storesError && (
           <div
             style={{
@@ -689,7 +795,6 @@ function Account() {
           </div>
         )}
 
-        {/* Empty State */}
         {!storesLoading && !storesError && stores.length === 0 && (
           <div
             style={{
@@ -742,7 +847,6 @@ function Account() {
           </div>
         )}
 
-        {/* Store Cards Grid */}
         {!storesLoading && !storesError && stores.length > 0 && (
           <div className="res-grid-2">
             {stores.map((s) => (
