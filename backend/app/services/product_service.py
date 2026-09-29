@@ -32,6 +32,11 @@ from app.models.user_store import UserStore
 from app.services.store_service import get_store_or_404
 from pipeline.ai.query_generalizer import generalize_title
 from pipeline.discovery_daraz import discover_competitors_for_product
+from fastapi import HTTPException, status
+from pipeline.marketplace_url import (
+    validate_product_url,
+    MarketplaceUrlError,
+)
 
 
 
@@ -58,6 +63,18 @@ async def create_product(db: AsyncSession, user_id, product_data) -> TrackedProd
     the AI call itself.
     """
     store = await get_store_or_404(db, product_data.store_id, user_id)
+
+    try:
+        validate_product_url(
+            product_data.own_url,
+            expected_marketplace=store.marketplace,
+            expected_country=store.country,
+        )
+    except MarketplaceUrlError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
 
     product = TrackedProduct(
         store_id=store.id,
@@ -298,16 +315,32 @@ async def reject_competitor(db: AsyncSession, competitor_id, user_id) -> None:
 async def add_competitor_manual(
     db: AsyncSession, product_id, user_id, url: str, platform: str, name: str | None
 ) -> dict:
-    """
-    Manually adds a CompetitorListing for a product with confirmed_by_user=True
-    (user explicitly added it, so no review step needed).
-    Verifies the product belongs to the requesting user.
-    """
     product = await get_product_by_id(db, product_id, user_id)
+
+    # Load store for marketplace + country
+    store_result = await db.execute(
+        select(UserStore).where(UserStore.id == product.store_id)
+    )
+    store = store_result.scalar_one_or_none()
+    if store is None:
+        raise HTTPException(status_code=404, detail="Store not found")
+
+    try:
+        parsed = validate_product_url(
+            url,
+            expected_marketplace=store.marketplace,
+            expected_country=store.country,
+        )
+    except MarketplaceUrlError as exp:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exp),
+        ) from exp
+
     listing = CompetitorListing(
         tracked_product_id=product.id,
-        url=url,
-        platform=platform or "unknown",
+        url=url.strip(),
+        platform=parsed.marketplace,  # from URL, not client
         name=name or None,
         discovered_by="manual",
         confirmed_by_user=True,

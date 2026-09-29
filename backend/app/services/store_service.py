@@ -16,26 +16,31 @@ from fastapi import HTTPException, status
 from app.models.user_store import UserStore
 
 
+from pipeline.marketplace_url import validate_store_url, MarketplaceUrlError
+
+
 async def create_store(db: AsyncSession, user_id, store_data) -> UserStore:
     """
-    Creates a new UserStore row for the given user.
-
-    Does not attempt to enforce the (marketplace, country, store_name)-
-    style uniqueness some of your other tables use — user_stores'
-    actual unique constraint is (marketplace, external_store_id) per
-    uq_user_store, which is DB-enforced already. A duplicate insert
-    attempt will raise an IntegrityError from the DB layer; catching
-    and translating that into a clean 409 is a reasonable next step
-    but not done here yet to keep this function's first version small.
+    Creates a new UserStore. marketplace + country are taken from store_url
+    (URL is source of truth). Client-supplied marketplace/country are ignored
+    if they conflict.
     """
+    try:
+        parsed = validate_store_url(store_data.store_url)
+    except MarketplaceUrlError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
     store = UserStore(
         user_id=user_id,
-        marketplace=store_data.marketplace,
-        country=store_data.country,
+        marketplace=parsed.marketplace,
+        country=parsed.country,
         store_name=store_data.store_name,
-        store_slug=store_data.store_slug,
-        external_store_id=store_data.external_store_id,
-        store_url=store_data.store_url,
+        store_slug=getattr(store_data, "store_slug", None),
+        external_store_id=getattr(store_data, "external_store_id", None),
+        store_url=store_data.store_url.strip(),
     )
     db.add(store)
     await db.flush()
@@ -96,4 +101,4 @@ async def delete_store(db: AsyncSession, store_id, user_id) -> None:
     """
     store = await get_store_or_404(db, store_id, user_id)
     await db.delete(store)
-    await db.flush()
+    await db.flush()

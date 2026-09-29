@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { getStores, createProduct } from "../api/products";
+import { validateProductUrl } from "../api/marketplaceUrl";
 
 /* ── shared card style matching Dashboard ───────────────────── */
 const card = {
@@ -15,21 +16,21 @@ function AddProduct() {
   const navigate = useNavigate();
 
   /* ── stores state ─────────────────────────────────────────── */
-  const [stores, setStores]           = useState([]);
+  const [stores, setStores] = useState([]);
   const [storesLoading, setStoresLoading] = useState(true);
   const [storesError, setStoresError] = useState("");
 
   /* ── form state ───────────────────────────────────────────── */
-  const [storeId,   setStoreId]   = useState("");
-  const [title,     setTitle]     = useState("");
-  const [ownUrl,    setOwnUrl]    = useState("");
-  const [ownCost,   setOwnCost]   = useState("");
-  const [category,  setCategory]  = useState("");
+  const [storeId, setStoreId] = useState("");
+  const [title, setTitle] = useState("");
+  const [ownUrl, setOwnUrl] = useState("");
+  const [ownCost, setOwnCost] = useState("");
+  const [category, setCategory] = useState("");
 
   /* ── submit state ─────────────────────────────────────────── */
-  const [submitting,    setSubmitting]    = useState(false);
-  const [submitError,   setSubmitError]   = useState("");
-  const [successMsg,    setSuccessMsg]    = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   /* ── fetch stores on mount ────────────────────────────────── */
   useEffect(() => {
@@ -53,7 +54,9 @@ function AddProduct() {
 
     /* client-side validation */
     if (!storeId || !title.trim() || !ownUrl.trim() || !ownCost) {
-      setSubmitError("Please fill in all required fields (Store, Title, URL, and Cost).");
+      setSubmitError(
+        "Please fill in all required fields (Store, Title, URL, and Cost)."
+      );
       return;
     }
 
@@ -63,10 +66,35 @@ function AddProduct() {
       return;
     }
 
+    /* Resolve selected store — needed for marketplace + country */
+    const selectedStore = stores.find((s) => String(s.id) === String(storeId));
+    if (!selectedStore) {
+      setSubmitError("Selected store not found. Please refresh and try again.");
+      return;
+    }
+    if (!selectedStore.marketplace || !selectedStore.country) {
+      setSubmitError(
+        "This store is missing marketplace or country. Re-add the store with a valid Noon/Daraz URL."
+      );
+      return;
+    }
+
+    /* Product URL must match store marketplace + country */
+    try {
+      validateProductUrl(
+        ownUrl.trim(),
+        selectedStore.marketplace,
+        selectedStore.country
+      );
+    } catch (err) {
+      setSubmitError(err.message || "Invalid product URL for this store.");
+      return;
+    }
+
     const payload = {
       store_id: storeId,
-      title:    title.trim(),
-      own_url:  ownUrl.trim(),
+      title: title.trim(),
+      own_url: ownUrl.trim(),
       own_cost: costNum,
       category: category.trim() || null,
     };
@@ -78,13 +106,14 @@ function AddProduct() {
       if (!result.search_keyword) {
         setSuccessMsg(
           "Product added! The AI-generated search keyword is still processing — " +
-          "it will be filled in automatically on the next discovery run."
+            "it will be filled in automatically on the next discovery run."
         );
       } else {
-        setSuccessMsg(`Product added successfully! Search keyword: "${result.search_keyword}"`);
+        setSuccessMsg(
+          `Product added successfully! Search keyword: "${result.search_keyword}"`
+        );
       }
 
-      /* brief pause so the user reads the message, then redirect */
       setTimeout(() => navigate("/dashboard"), 2200);
     } catch (err) {
       setSubmitError(err.message || "Something went wrong. Please try again.");
@@ -118,11 +147,20 @@ function AddProduct() {
 
   const noStores = !storesLoading && !storesError && stores.length === 0;
 
+  const selectedStore = stores.find((s) => String(s.id) === String(storeId));
+
   return (
     <Layout>
       {/* ── Page header ──────────────────────────────────────── */}
       <div className="animate-in" style={{ marginBottom: "28px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "4px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            marginBottom: "4px",
+          }}
+        >
           <button
             id="btn-back-addproduct"
             onClick={() => navigate("/dashboard")}
@@ -140,7 +178,9 @@ function AddProduct() {
               transition: "color 0.12s",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--d-text)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--d-text-3)")}
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.color = "var(--d-text-3)")
+            }
           >
             ← Back
           </button>
@@ -167,14 +207,12 @@ function AddProduct() {
         className="animate-in"
         style={{ ...card, maxWidth: "560px", animationDelay: "0.06s" }}
       >
-        {/* ── Loading stores ─────────────────────────────────── */}
         {storesLoading && (
           <p style={{ margin: 0, fontSize: "13px", color: "var(--d-text-3)" }}>
             Loading your stores…
           </p>
         )}
 
-        {/* ── Error loading stores ────────────────────────────── */}
         {!storesLoading && storesError && (
           <div
             style={{
@@ -190,7 +228,6 @@ function AddProduct() {
           </div>
         )}
 
-        {/* ── No stores warning ──────────────────────────────── */}
         {noStores && (
           <div
             style={{
@@ -202,14 +239,16 @@ function AddProduct() {
               color: "var(--d-warning)",
             }}
           >
-            ⚠ No store found. Add a store in <strong>Settings</strong> before adding products.
+            ⚠ No store found. Add a store in <strong>Account → Stores</strong>{" "}
+            before adding products.
           </div>
         )}
 
-        {/* ── Form (only shown when stores are available) ─────── */}
         {!storesLoading && !storesError && stores.length > 0 && (
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-
+          <form
+            onSubmit={handleSubmit}
+            style={{ display: "flex", flexDirection: "column", gap: "18px" }}
+          >
             {/* Store dropdown */}
             <div>
               <label htmlFor="field-store" style={labelStyle}>
@@ -244,6 +283,18 @@ function AddProduct() {
                   </option>
                 ))}
               </select>
+              {selectedStore && (
+                <p
+                  style={{
+                    margin: "6px 0 0",
+                    fontSize: "12px",
+                    color: "var(--d-text-3)",
+                  }}
+                >
+                  Product URL must be a {selectedStore.marketplace} link for{" "}
+                  {selectedStore.country}.
+                </p>
+              )}
             </div>
 
             {/* Title */}
@@ -272,14 +323,19 @@ function AddProduct() {
             {/* Own URL */}
             <div>
               <label htmlFor="field-own-url" style={labelStyle}>
-                Your product URL <span style={{ color: "var(--d-danger)" }}>*</span>
+                Your product URL{" "}
+                <span style={{ color: "var(--d-danger)" }}>*</span>
               </label>
               <input
                 id="field-own-url"
                 type="url"
                 value={ownUrl}
                 onChange={(e) => setOwnUrl(e.target.value)}
-                placeholder="https://www.noon.com/your-product-listing"
+                placeholder={
+                  selectedStore?.marketplace === "daraz"
+                    ? "https://www.daraz.pk/products/..."
+                    : "https://www.noon.com/uae-en/..."
+                }
                 style={inputStyle}
                 onFocus={(e) => {
                   e.target.style.borderColor = "var(--d-accent)";
@@ -293,11 +349,17 @@ function AddProduct() {
             </div>
 
             {/* Cost + Category row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-              {/* Own cost */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "14px",
+              }}
+            >
               <div>
                 <label htmlFor="field-own-cost" style={labelStyle}>
-                  Your price (cost) <span style={{ color: "var(--d-danger)" }}>*</span>
+                  Your price (cost){" "}
+                  <span style={{ color: "var(--d-danger)" }}>*</span>
                 </label>
                 <input
                   id="field-own-cost"
@@ -319,10 +381,12 @@ function AddProduct() {
                 />
               </div>
 
-              {/* Category */}
               <div>
                 <label htmlFor="field-category" style={labelStyle}>
-                  Category <span style={{ color: "var(--d-text-3)", fontWeight: 400 }}>(optional)</span>
+                  Category{" "}
+                  <span style={{ color: "var(--d-text-3)", fontWeight: 400 }}>
+                    (optional)
+                  </span>
                 </label>
                 <input
                   id="field-category"
@@ -343,8 +407,6 @@ function AddProduct() {
               </div>
             </div>
 
-
-            {/* Validation / submit error */}
             {submitError && (
               <p
                 style={{
@@ -361,7 +423,6 @@ function AddProduct() {
               </p>
             )}
 
-            {/* Success message */}
             {successMsg && (
               <p
                 style={{
@@ -378,7 +439,6 @@ function AddProduct() {
               </p>
             )}
 
-            {/* Submit button */}
             <button
               id="btn-add-product-submit"
               type="submit"
@@ -394,16 +454,21 @@ function AddProduct() {
                 fontFamily: "inherit",
                 cursor: submitting ? "not-allowed" : "pointer",
                 transition: "background 0.15s ease, transform 0.1s ease",
-                boxShadow: submitting ? "none" : "0 2px 8px rgba(79,70,229,0.25)",
+                boxShadow: submitting
+                  ? "none"
+                  : "0 2px 8px rgba(79,70,229,0.25)",
               }}
               onMouseEnter={(e) => {
                 if (!submitting) {
-                  e.currentTarget.style.background = "var(--accent-hover, #4338CA)";
+                  e.currentTarget.style.background =
+                    "var(--accent-hover, #4338CA)";
                   e.currentTarget.style.transform = "translateY(-1px)";
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = submitting ? "var(--d-text-3)" : "var(--d-accent)";
+                e.currentTarget.style.background = submitting
+                  ? "var(--d-text-3)"
+                  : "var(--d-accent)";
                 e.currentTarget.style.transform = "translateY(0)";
               }}
             >

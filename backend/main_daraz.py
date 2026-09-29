@@ -1,25 +1,4 @@
 """
-main_daraz.py — Price Intel orchestrator, DARAZ ONLY
-
-Mirrors main_noon.py's shape exactly, with every platform-specific
-piece swapped. Deliberately does NOT import anything from
-scraper/platforms/noon/* — this file can be scheduled, deployed, and
-debugged completely independently of Noon's code.
-
-Shared, platform-agnostic plumbing (counters, ScrapeJob lifecycle, the
-two DB-loading queries) lives in pipeline/orchestration_common and is
-imported, not redefined here — identical usage to main_noon.py.
-
-KEY STRUCTURAL DIFFERENCE FROM main_noon.py'S MONITORING LOOP:
-    Noon's product-page API returns every seller's offer for one SKU
-    in a single call, so run_store_monitoring groups confirmed
-    listings by SKU and fans one scrape out to several listings via
-    partner_code matching. Daraz's product-detail API is scoped to one
-    itemId, which IS one specific seller's listing — there is no
-    "other sellers of this item" data to fan out from (see
-    scraper/platforms/daraz/product_scraper.py's module docstring).
-    So here: one confirmed listing -> one scrape -> one save, always,
-    no grouping step, no matching step.
 
 FLOW PER RUN (discovery mode):
     1. Load all active TrackedProducts for marketplace="daraz"
@@ -40,11 +19,6 @@ FLOW PER RUN (monitor mode):
        listing (own_url) via save_own_snapshot
     4. Log run stats
 
-TRANSACTION BOUNDARY:
-    One async transaction per TrackedProduct.
-    async with session.begin() auto-commits on success,
-    auto-rolls-back on any exception.
-    The loader never calls commit() or rollback().
 """
 
 import asyncio
@@ -52,6 +26,7 @@ import argparse
 import logging
 import time
 import uuid
+import random
 
 from app.database import AsyncSessionLocal
 
@@ -105,14 +80,6 @@ DARAZ_COUNTRY_CURRENCY = {
     "MM": "MMK",
 }
 
-
-# ─── Small delay helper ─────────────────────────────────────────────────────
-# Daraz's scraper modules carry no random_delay of their own (unlike
-# Noon's utils.py) — there's no session/block-detection layer here to
-# protect, per search_scraper.py's own docstring. A modest polite delay
-# between requests is still worth keeping between tracked products /
-# listings so we're not hammering Daraz's endpoints back-to-back.
-import random
 
 
 async def _polite_delay(min_s: float = 1.5, max_s: float = 3.5) -> None:
@@ -195,12 +162,6 @@ async def run_discovery() -> None:
     """
     For each TrackedProduct, searches Daraz using the product title,
     then saves all competitor listings found.
-
-    No client/session object needed here — Daraz's scrape_search opens
-    its own short-lived AsyncSession internally and needs no token
-    handshake (unsigned endpoint, see search_scraper.py's module
-    docstring). Only the detail-page monitoring path needs an
-    MtopClient.
 
     One async DB transaction per TrackedProduct.
     If one product fails, others are unaffected.
