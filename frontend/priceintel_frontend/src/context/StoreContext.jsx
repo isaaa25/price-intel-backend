@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { getStores } from "../api/products";
 
 const StoreContext = createContext(null);
@@ -14,7 +14,6 @@ export function StoreProvider({ children }) {
     }
   });
   const [loading, setLoading] = useState(true);
-  const fetchPromiseRef = useRef(null);
 
   const fetchStores = useCallback(async () => {
     const token = localStorage.getItem("token");
@@ -27,67 +26,54 @@ export function StoreProvider({ children }) {
       return [];
     }
 
-    if (fetchPromiseRef.current) {
-      return fetchPromiseRef.current;
-    }
-
     setLoading(true);
-    const promise = (async () => {
-      try {
-        const data = await getStores();
-        const storeList = Array.isArray(data) ? data : [];
-        setStores((prevStores) => {
-          if (
-            prevStores.length === storeList.length &&
-            prevStores.every((s, i) => s.id === storeList[i]?.id && s.name === storeList[i]?.name)
-          ) {
-            return prevStores;
-          }
-          return storeList;
-        });
+    try {
+      const data = await getStores();
+      const storeList = Array.isArray(data) ? data : [];
+      setStores(storeList);
 
-        if (storeList.length > 0) {
-          const savedId = localStorage.getItem("selected_store_id");
-          const found = storeList.find((s) => String(s.id) === String(savedId));
-          const active = found || storeList[0];
-          setSelectedStore((prev) => {
-            if (
-              prev &&
-              String(prev.id) === String(active.id) &&
-              prev.name === active.name &&
-              prev.country === active.country &&
-              prev.marketplace === active.marketplace
-            ) {
-              return prev;
-            }
-            return active;
-          });
-          localStorage.setItem("selected_store_id", String(active.id));
-          localStorage.setItem("selected_store", JSON.stringify(active));
-        } else {
-          setSelectedStore(null);
-          localStorage.removeItem("selected_store_id");
-          localStorage.removeItem("selected_store");
+      if (storeList.length > 0) {
+        const savedId = localStorage.getItem("selected_store_id");
+        // Check if saved store id matches any loaded store
+        let active = storeList.find((s) => String(s.id) === String(savedId));
+
+        // If not found, check if existing selectedStore in state matches any store in storeList
+        if (!active && selectedStore?.id) {
+          active = storeList.find((s) => String(s.id) === String(selectedStore.id));
         }
-        return storeList;
-      } catch {
+
+        // If still not found, default to the first store in the list
+        if (!active) {
+          active = storeList[0];
+        }
+
+        setSelectedStore(active);
+        localStorage.setItem("selected_store_id", String(active.id));
+        localStorage.setItem("selected_store", JSON.stringify(active));
+      } else {
+        setSelectedStore(null);
+        localStorage.removeItem("selected_store_id");
+        localStorage.removeItem("selected_store");
+      }
+      return storeList;
+    } catch (err) {
+      console.error("[StoreContext] Failed to fetch stores:", err);
+      if (err?.message?.includes("401") || err?.message?.toLowerCase().includes("unauthorized")) {
         setStores([]);
         setSelectedStore(null);
-        return [];
-      } finally {
-        setLoading(false);
-        fetchPromiseRef.current = null;
+        localStorage.removeItem("selected_store_id");
+        localStorage.removeItem("selected_store");
       }
-    })();
-
-    fetchPromiseRef.current = promise;
-    return promise;
-  }, []);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedStore?.id]);
 
   useEffect(() => {
     fetchStores();
 
-    // Re-check whenever window regains focus or storage changes (e.g. login)
+    // Re-check whenever window regains focus, storage changes (e.g. login/logout), or auth state changes
     const handleSync = () => {
       fetchStores();
     };
@@ -103,18 +89,38 @@ export function StoreProvider({ children }) {
     };
   }, [fetchStores]);
 
-  const handleSelectStore = (store) => {
+  // Fallback sync: if stores exist but no active store is selected, automatically select the first store
+  useEffect(() => {
+    if (stores.length > 0 && !selectedStore?.id) {
+      const savedId = localStorage.getItem("selected_store_id");
+      const active = stores.find((s) => String(s.id) === String(savedId)) || stores[0];
+      setSelectedStore(active);
+      localStorage.setItem("selected_store_id", String(active.id));
+      localStorage.setItem("selected_store", JSON.stringify(active));
+    }
+  }, [stores, selectedStore]);
+
+  const handleSelectStore = useCallback((store) => {
+    if (!store) {
+      setSelectedStore(null);
+      localStorage.removeItem("selected_store_id");
+      localStorage.removeItem("selected_store");
+      return;
+    }
     setSelectedStore(store);
     if (store?.id) {
       localStorage.setItem("selected_store_id", String(store.id));
       localStorage.setItem("selected_store", JSON.stringify(store));
-    } else {
-      localStorage.removeItem("selected_store_id");
-      localStorage.removeItem("selected_store");
     }
-  };
+    window.dispatchEvent(new CustomEvent("store_changed", { detail: store }));
+  }, []);
 
-  const currency = selectedStore?.country === "PK" || selectedStore?.country === "Pakistan" || selectedStore?.marketplace === "daraz" ? "PKR" : "AED";
+  const currency =
+    selectedStore?.country === "PK" ||
+    selectedStore?.country === "Pakistan" ||
+    selectedStore?.marketplace === "daraz"
+      ? "PKR"
+      : "AED";
 
   return (
     <StoreContext.Provider
@@ -139,10 +145,11 @@ export function useStore() {
       stores: [],
       selectedStore: null,
       setSelectedStore: () => {},
-      refreshStores: () => {},
+      refreshStores: () => Promise.resolve([]),
       loading: false,
       currency: "PKR",
     };
   }
   return context;
 }
+

@@ -1,4 +1,3 @@
-```python
 """
 app/routers/products.py
 """
@@ -30,6 +29,7 @@ from app.services.product_service import (
     get_active_opportunities,
     get_active_price_wars,
     get_market_movement,
+    get_product_market_movement,
     get_competitor_candidates,
     confirm_competitor,
     reject_competitor,
@@ -138,6 +138,23 @@ async def portfolio_market_movement(
             "pct_change": None,
             "direction": None,
         }
+    )
+
+
+@router.get("/portfolio/market-movement/{product_id}")
+async def portfolio_product_market_movement(
+    product_id: UUID,
+    store_id: Optional[UUID] = Query(default=None),
+    timeframe: str = Query(default="3d"),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return await get_product_market_movement(
+        db,
+        current_user.id,
+        product_id=product_id,
+        store_id=store_id,
+        timeframe=timeframe,
     )
 
 

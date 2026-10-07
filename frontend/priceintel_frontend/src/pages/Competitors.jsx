@@ -45,6 +45,83 @@ function MarketplaceBadge({ marketplace }) {
   );
 }
 
+function StockBadge({ status }) {
+  if (!status || status === "unknown") {
+    return <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>—</span>;
+  }
+
+  const normalized = String(status).toLowerCase().trim().replace(/[\s-]/g, "_");
+
+  const config = {
+    in_stock: {
+      label: "In Stock",
+      color: "#16a34a",
+      bg: "rgba(22, 163, 74, 0.08)",
+      border: "rgba(22, 163, 74, 0.2)",
+      dot: "#16a34a",
+    },
+    out_of_stock: {
+      label: "Out of Stock",
+      color: "#dc2626",
+      bg: "rgba(220, 38, 38, 0.08)",
+      border: "rgba(220, 38, 38, 0.2)",
+      dot: "#dc2626",
+    },
+    limited: {
+      label: "Limited",
+      color: "#d97706",
+      bg: "rgba(217, 119, 6, 0.08)",
+      border: "rgba(217, 119, 6, 0.2)",
+      dot: "#d97706",
+    },
+    pre_order: {
+      label: "Pre-order",
+      color: "#6366f1",
+      bg: "rgba(99, 102, 241, 0.08)",
+      border: "rgba(99, 102, 241, 0.2)",
+      dot: "#6366f1",
+    },
+  };
+
+  const current = config[normalized] || {
+    label: status.replace(/_/g, " "),
+    color: "var(--d-text-2)",
+    bg: "var(--d-bg)",
+    border: "var(--d-border)",
+    dot: "var(--d-text-3)",
+  };
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "5px",
+        padding: "2px 8px",
+        borderRadius: "9999px",
+        fontSize: "11px",
+        fontWeight: 600,
+        color: current.color,
+        background: current.bg,
+        border: `1px solid ${current.border}`,
+        whiteSpace: "nowrap",
+        textTransform: "capitalize",
+      }}
+    >
+      <span
+        style={{
+          width: "5px",
+          height: "5px",
+          borderRadius: "50%",
+          backgroundColor: current.dot,
+          flexShrink: 0,
+        }}
+      />
+      {current.label}
+    </span>
+  );
+}
+
 function Competitors() {
   const navigate = useNavigate();
   const { selectedStore, currency } = useStore();
@@ -63,7 +140,7 @@ function Competitors() {
   const [loadingDiscovery, setLoadingDiscovery] = useState(false);
 
   // Manual-add form state
-  const [addForm, setAddForm] = useState({ productId: "", url: "", platform: "noon", name: "" });
+  const [addForm, setAddForm] = useState({ url: "", platform: "noon", name: "" });
   const [addingManual, setAddingManual] = useState(false);
   const [addError, setAddError] = useState("");
   const [addSuccess, setAddSuccess] = useState("");
@@ -261,64 +338,71 @@ function Competitors() {
 
   /* ── Add manual competitor ───────────────────────────────── */
   async function handleAddManual(e) {
-  e.preventDefault();
-  setAddError("");
-  setAddSuccess("");
+    e.preventDefault();
+    setAddError("");
+    setAddSuccess("");
 
-  if (!addForm.productId) {
-    setAddError("Please select a product.");
-    return;
-  }
-  if (!addForm.url.trim()) {
-    setAddError("URL is required.");
-    return;
-  }
-  if (!selectedStore?.marketplace || !selectedStore?.country) {
-    setAddError("Select a store first so we can validate the competitor URL.");
-    return;
-  }
+    const targetProductId =
+      selectedProductId !== "all"
+        ? selectedProductId
+        : products.length === 1
+        ? products[0].id
+        : null;
 
-  // Validate URL matches this store's marketplace + country
-  let info;
-  try {
-    info = validateProductUrl(
-      addForm.url.trim(),
-      selectedStore.marketplace,
-      selectedStore.country
-    );
-  } catch (err) {
-    setAddError(err.message || "Invalid competitor URL.");
-    return;
-  }
+    if (!targetProductId) {
+      setAddError("Please select a specific product in the 'Product:' filter above to add a competitor.");
+      return;
+    }
+    if (!addForm.url.trim()) {
+      setAddError("URL is required.");
+      return;
+    }
+    if (!selectedStore?.marketplace || !selectedStore?.country) {
+      setAddError("Select a store first so we can validate the competitor URL.");
+      return;
+    }
 
-  setAddingManual(true);
-  try {
-    await addCompetitorManual(addForm.productId, {
-      url: addForm.url.trim(),
-      platform: info.marketplace, // from URL, not the dropdown
-      name: addForm.name.trim() || null,
-    });
-    setAddSuccess("Competitor added and confirmed!");
-    setAddForm((prev) => ({ ...prev, url: "", name: "" }));
+    // Validate URL matches this store's marketplace + country
+    let info;
+    try {
+      info = validateProductUrl(
+        addForm.url.trim(),
+        selectedStore.marketplace,
+        selectedStore.country
+      );
+    } catch (err) {
+      setAddError(err.message || "Invalid competitor URL.");
+      return;
+    }
 
-    const updated = await getProductCompetitors(addForm.productId);
-    const product = products.find((p) => String(p.id) === String(addForm.productId));
-    setCompetitors((prev) => {
-      const others = prev.filter((c) => String(c.productId) !== String(addForm.productId));
-      const newOnes = (Array.isArray(updated) ? updated : []).map((c) => ({
-        ...c,
-        productId: addForm.productId,
-        productName: product ? displayName(product) : "—",
-        ownPrice: product?.own_cost,
-      }));
-      return [...others, ...newOnes];
-    });
-  } catch (err) {
-    setAddError(err?.message || "Failed to add competitor.");
-  } finally {
-    setAddingManual(false);
+    setAddingManual(true);
+    try {
+      await addCompetitorManual(targetProductId, {
+        url: addForm.url.trim(),
+        platform: info.marketplace, // from URL, not the dropdown
+        name: addForm.name.trim() || null,
+      });
+      setAddSuccess("Competitor added and confirmed!");
+      setAddForm({ url: "", platform: "noon", name: "" });
+
+      const updated = await getProductCompetitors(targetProductId);
+      const product = products.find((p) => String(p.id) === String(targetProductId));
+      setCompetitors((prev) => {
+        const others = prev.filter((c) => String(c.productId) !== String(targetProductId));
+        const newOnes = (Array.isArray(updated) ? updated : []).map((c) => ({
+          ...c,
+          productId: targetProductId,
+          productName: product ? displayName(product) : "—",
+          ownPrice: product?.own_cost,
+        }));
+        return [...others, ...newOnes];
+      });
+    } catch (err) {
+      setAddError(err?.message || "Failed to add competitor.");
+    } finally {
+      setAddingManual(false);
+    }
   }
-}
 
   const btnStyle = (variant = "primary") => ({
     padding: "7px 14px",
@@ -481,29 +565,15 @@ function Competitors() {
               <h2 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: 700, color: "var(--d-text)" }}>
                 Add Competitor Manually
               </h2>
-              <p style={{ margin: "0 0 16px", fontSize: "12px", color: "var(--d-text-3)" }}>
+              <p style={{ margin: "0 0 16px", fontSize: "12px", color: "var(--d-text-3)", lineHeight: 1.5 }}>
                 Paste a competitor product URL — it will be immediately confirmed and tracked.
+                {selectedProductId !== "all" && (
+                  <span style={{ marginLeft: "8px", fontWeight: 600, color: "var(--d-accent)" }}>
+                    Adding to: {displayName(products.find((p) => String(p.id) === String(selectedProductId)))}
+                  </span>
+                )}
               </p>
               <form onSubmit={handleAddManual} style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
-                {/* Product selector */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                  <label style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.4px" }}>Product</label>
-                  <select
-                    value={addForm.productId}
-                    onChange={(e) => setAddForm((f) => ({ ...f, productId: e.target.value }))}
-                    required
-                    style={{
-                      padding: "8px 12px", borderRadius: "7px", border: "1px solid var(--d-border)",
-                      background: "var(--d-surface)", color: "var(--d-text)", fontSize: "13px",
-                      fontFamily: "inherit", outline: "none", minWidth: "180px",
-                    }}
-                  >
-                    <option value="">Select product…</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>{displayName(p)}</option>
-                    ))}
-                  </select>
-                </div>
 
                 {/* URL */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "5px", flex: 1, minWidth: "200px" }}>
@@ -706,6 +776,9 @@ function Competitors() {
                                 {c.name || c.url}
                               </span>
                               <MarketplaceBadge marketplace={c.platform} />
+                              {c.stock_status && c.stock_status !== "unknown" && (
+                                <StockBadge status={c.stock_status} />
+                              )}
                             </div>
                             <div style={{ marginTop: "3px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
                               <span style={{ fontSize: "11px", color: "var(--d-text-3)" }}>
@@ -881,12 +954,20 @@ function Competitors() {
                             )}
                           </td>
 
-                          {/* 4-6. Pending data */}
-                          {["—", "—", "—"].map((val, idx) => (
-                            <td key={idx} style={{ padding: "14px", whiteSpace: "nowrap" }}>
-                              <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>{val}</span>
-                            </td>
-                          ))}
+                          {/* 4. Behavior Type */}
+                          <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>—</span>
+                          </td>
+
+                          {/* 5. Repricing Velocity */}
+                          <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>—</span>
+                          </td>
+
+                          {/* 6. Stock Status */}
+                          <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
+                            <StockBadge status={c.stock_status} />
+                          </td>
 
                           {/* 7. Last Seen */}
                           <td style={{ padding: "14px", whiteSpace: "nowrap" }}>

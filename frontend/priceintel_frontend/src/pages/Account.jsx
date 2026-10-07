@@ -128,7 +128,7 @@ function StatusBadge({ active }) {
   );
 }
 
-function StoreCard({ store, onDelete }) {
+function StoreCard({ store, onDelete, isSelected, onSelect }) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   return (
@@ -136,7 +136,7 @@ function StoreCard({ store, onDelete }) {
       className="animate-in hover-lift"
       style={{
         background: "var(--d-surface)",
-        border: "1px solid var(--d-border)",
+        border: isSelected ? "2px solid var(--d-accent)" : "1px solid var(--d-border)",
         borderRadius: "12px",
         padding: "20px",
         display: "flex",
@@ -144,11 +144,52 @@ function StoreCard({ store, onDelete }) {
         justifyContent: "space-between",
         gap: "16px",
         position: "relative",
+        boxShadow: isSelected ? "0 0 0 1px var(--d-accent)" : "none",
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
         <MarketplaceBadge marketplace={store.marketplace} />
-        <StatusBadge active={store.is_active} />
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {isSelected ? (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "3px 9px",
+                borderRadius: "6px",
+                fontSize: "11px",
+                fontWeight: 700,
+                color: "#2563eb",
+                background: "rgba(37, 99, 235, 0.12)",
+                border: "1px solid rgba(37, 99, 235, 0.3)",
+              }}
+            >
+              ✓ Active Store
+            </span>
+          ) : (
+            <button
+              onClick={() => onSelect && onSelect(store)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "3px 9px",
+                borderRadius: "6px",
+                fontSize: "11.5px",
+                fontWeight: 600,
+                color: "var(--d-accent)",
+                background: "var(--d-accent-bg)",
+                border: "1px solid rgba(59, 130, 246, 0.3)",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              Select Store
+            </button>
+          )}
+          <StatusBadge active={store.is_active} />
+        </div>
       </div>
 
       <div>
@@ -296,7 +337,7 @@ function StoreCard({ store, onDelete }) {
 }
 
 function Account() {
-  const { refreshStores } = useStore();
+  const { refreshStores, stores: contextStores, selectedStore, setSelectedStore } = useStore();
   const [stores, setStores] = useState([]);
   const [storesLoading, setStoresLoading] = useState(true);
   const [storesError, setStoresError] = useState("");
@@ -388,7 +429,7 @@ function Account() {
 
     setSubmitting(true);
     try {
-      await apiRequest("/stores/", {
+      const created = await apiRequest("/stores/", {
         method: "POST",
         body: JSON.stringify({
           marketplace: urlMeta.marketplace,
@@ -403,7 +444,12 @@ function Account() {
       resetForm();
       setShowForm(false);
       loadStores();
-      refreshStores();
+      const updated = await refreshStores();
+      if (created && created.id) {
+        setSelectedStore(created);
+      } else if (Array.isArray(updated) && updated.length > 0) {
+        setSelectedStore(updated[0]);
+      }
     } catch (err) {
       setSubmitError(err.message || "Something went wrong.");
     } finally {
@@ -423,7 +469,14 @@ function Account() {
       });
       setSuccessMsg(`Store "${store.store_name}" deleted successfully.`);
       loadStores();
-      refreshStores();
+      const updated = await refreshStores();
+      if (selectedStore?.id === store.id) {
+        if (Array.isArray(updated) && updated.length > 0) {
+          setSelectedStore(updated[0]);
+        } else {
+          setSelectedStore(null);
+        }
+      }
     } catch (err) {
       setSubmitError(err.message || "Failed to delete store.");
     }
@@ -495,7 +548,7 @@ function Account() {
             <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
-          Stores ({stores.length})
+          Stores ({(stores.length > 0 ? stores : contextStores).length})
         </button>
       </div>
 
@@ -847,10 +900,16 @@ function Account() {
           </div>
         )}
 
-        {!storesLoading && !storesError && stores.length > 0 && (
+        {!storesLoading && !storesError && (stores.length > 0 || contextStores.length > 0) && (
           <div className="res-grid-2">
-            {stores.map((s) => (
-              <StoreCard key={s.id} store={s} onDelete={handleDeleteStore} />
+            {(stores.length > 0 ? stores : contextStores).map((s) => (
+              <StoreCard
+                key={s.id}
+                store={s}
+                onDelete={handleDeleteStore}
+                isSelected={selectedStore?.id === s.id}
+                onSelect={(storeToSelect) => setSelectedStore(storeToSelect)}
+              />
             ))}
           </div>
         )}

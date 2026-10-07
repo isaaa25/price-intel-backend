@@ -171,6 +171,21 @@ export function getMarketMovement(storeId) {
   return apiRequest(`/products/portfolio/market-movement?store_id=${encodeURIComponent(storeId)}`);
 }
 
+/**
+ * Fetch product-specific competitor price movement over time.
+ * Backend: GET /products/portfolio/market-movement/{productId}?store_id=<storeId>&timeframe=<timeframe>
+ * @param {string} productId
+ * @param {string|number|null} storeId
+ * @param {string} timeframe ("1d" | "3d" | "30d")
+ */
+export function getProductMarketMovement(productId, storeId, timeframe = "3d") {
+  let url = `/products/portfolio/market-movement/${encodeURIComponent(productId)}?timeframe=${encodeURIComponent(timeframe)}`;
+  if (storeId) {
+    url += `&store_id=${encodeURIComponent(storeId)}`;
+  }
+  return apiRequest(url);
+}
+
 export function getAttentionItems(storeId) {
   return apiRequest(`/products/portfolio/attention?store_id=${encodeURIComponent(storeId)}`);
 }

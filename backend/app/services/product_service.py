@@ -22,7 +22,7 @@ from starlette.concurrency import run_in_threadpool
 from app.queries import (
     fetch_product_kpi_row, fetch_product_competitors_rows, fetch_portfolio_rows,
     fetch_opportunities_rows, fetch_price_wars_rows, fetch_market_movement_rows,
-    fetch_competitor_candidates_rows,fetch_attention_items
+    fetch_product_market_movement_rows, fetch_competitor_candidates_rows, fetch_attention_items
 )
 from fastapi import HTTPException
 
@@ -260,6 +260,7 @@ async def get_competitor_candidates(db: AsyncSession, product_id) -> list[dict]:
             "discovered_by": r.discovered_by, "confirmed_by_user": r.confirmed_by_user,
             "latest_price": r.latest_price,
             "last_scraped_at": r.last_scraped_at.isoformat() if r.last_scraped_at else None,
+            "stock_status": r.stock_status,
         }
         for r in rows
     ]
@@ -408,8 +409,84 @@ async def get_market_movement(db: AsyncSession, user_id, store_id=None) -> Optio
         return None
     if prior.avg_price == 0:
         return None
-    pct_change = round(float((recent.avg_price - prior.avg_price) / prior.avg_price) * 100, 1)
+    raw_pct_change = (
+    float((recent.avg_price - prior.avg_price) / prior.avg_price) * 100
+    )
+
+    pct_change = round(
+        max(-100, min(100, raw_pct_change)),
+        1
+    )
     return {"pct_change": pct_change, "direction": "down" if pct_change < 0 else "up"}
+
+
+async def get_product_market_movement(
+    db: AsyncSession,
+    user_id,
+    product_id,
+    store_id=None,
+    timeframe: str = "3d",
+) -> dict:
+    """
+    Returns product-specific competitor price movement over time.
+    Calculates:
+      - recent_avg, prior_avg
+      - pct_change clamped to [-100, 100]
+      - direction ("up", "down", "flat")
+      - competitor_count
+      - series list of { time, date, raw_time, avg_price, snapshot_count }
+    """
+    # Verify product ownership and store scope
+    product = await get_product_by_id(db, product_id, user_id)
+    if store_id is not None and str(product.store_id) != str(store_id):
+        raise HTTPException(status_code=404, detail="Product not found in this store")
+
+    valid_timeframes = ("1d", "3d", "30d")
+    tf = timeframe.lower() if timeframe and timeframe.lower() in valid_timeframes else "3d"
+
+    comp_count, series_rows, window_row = await fetch_product_market_movement_rows(
+        db, user_id, product_id, store_id=store_id, timeframe=tf
+    )
+
+    series = []
+    for r in series_rows:
+        dt = r.bucket_time
+        if tf == "1d":
+            time_label = dt.strftime("%I %p").lstrip("0") if dt else ""
+        else:
+            time_label = dt.strftime("%b %d") if dt else ""
+        date_label = dt.strftime("%b %d, %Y") if dt else ""
+
+        series.append({
+            "time": time_label,
+            "date": date_label,
+            "raw_time": dt.isoformat() if dt else None,
+            "avg_price": round(float(r.avg_price), 2) if r.avg_price is not None else None,
+            "snapshot_count": int(r.snapshot_count) if r.snapshot_count else 0,
+        })
+
+    recent_avg = float(window_row.recent_avg) if window_row and window_row.recent_avg is not None else None
+    prior_avg = float(window_row.prior_avg) if window_row and window_row.prior_avg is not None else None
+
+    # Calculate percentage change safely without zero division
+    pct_change = None
+    direction = None
+
+    if recent_avg is not None and prior_avg is not None and prior_avg > 0:
+        raw_pct = ((recent_avg - prior_avg) / prior_avg) * 100
+        pct_change = round(max(-100.0, min(100.0, raw_pct)), 1)
+        direction = "up" if pct_change > 0 else ("down" if pct_change < 0 else "flat")
+
+    return {
+        "product_id": str(product.id),
+        "recent_avg": round(recent_avg, 2) if recent_avg is not None else None,
+        "prior_avg": round(prior_avg, 2) if prior_avg is not None else None,
+        "pct_change": pct_change,
+        "direction": direction,
+        "competitor_count": comp_count,
+        "timeframe": tf,
+        "series": series,
+    }
 
 
 # get attention items for dashboard

@@ -138,7 +138,7 @@ function Products() {
       else if (kpi.own_price != null && kpi.own_price > kpi.cheapest_competitor) overpriced++;
       else competitive++;
     });
-    return { total, cheapest, competitive, overpriced, needsAttention: overpriced };
+    return { total, cheapest, competitive, overpriced };
   }, [products, kpisById]);
 
   /* ── filtered list ────────────────────────────────────────── */
@@ -229,7 +229,7 @@ function Products() {
       {/* ── Pricing KPI Stats Bar ─────────────────────────────── */}
       {!loading && !error && (
         <div
-          className="animate-in res-grid-5"
+          className="animate-in res-grid-4"
           style={{
             marginBottom: "20px",
             animationDelay: "0.05s",
@@ -240,7 +240,6 @@ function Products() {
             { label: "Cheapest", value: stats.cheapest },
             { label: "Competitive", value: stats.competitive },
             { label: "Overpriced", value: stats.overpriced },
-            { label: "Needs Attention", value: stats.needsAttention },
           ].map((s, i) => (
             <div
               key={s.label}

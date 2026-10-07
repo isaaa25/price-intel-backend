@@ -74,17 +74,6 @@ function AlertIcon({ type }) {
           </svg>
         </div>
       );
-    case "new_competitor":
-      return (
-        <div style={iconStyle}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <line x1="19" y1="8" x2="19" y2="14" />
-            <line x1="22" y1="11" x2="16" y2="11" />
-          </svg>
-        </div>
-      );
     case "price_war":
       return (
         <div style={iconStyle}>
@@ -162,17 +151,7 @@ const sampleAlerts = [
     message: "Noon Store went out of stock on Galaxy Z Fold3 Cover. Opportunity to capture sales.",
     time: "5 hrs ago",
     isRead: true,
-  },
-  {
-    id: 6,
-    type: "new_competitor",
-    priority: "medium",
-    title: "New competitor detected",
-    seller: "PrimeDeals PK",
-    product: "Galaxy Z Fold3 Cover",
-    message: "PrimeDeals PK joined the listing for Galaxy Z Fold3 Cover at PKR 740.",
-    time: "7 hrs ago",
-    isRead: true,
+
   },
   {
     id: 7,
@@ -194,7 +173,6 @@ const FILTER_TABS = [
   { key: "undercut", label: "Undercuts" },
   { key: "win", label: "Wins" },
   { key: "stock_out", label: "Stock Out" },
-  { key: "new_competitor", label: "New Competitor" },
   { key: "price_war", label: "Price War" },
 ];
 

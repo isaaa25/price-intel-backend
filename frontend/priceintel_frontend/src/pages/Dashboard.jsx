@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
@@ -8,7 +8,7 @@ import Layout from "../components/Layout";
 import { useStore } from "../context/StoreContext";
 import {
   getProductsByStore, getPortfolioHealth, getActiveOpportunities,
-  getActivePriceWars, getMarketMovement, getAttentionItems,
+  getActivePriceWars, getAttentionItems, getProductMarketMovement,
 } from "../api/products";
 
 function getPortfolioTrendData(timeframe) {
@@ -107,6 +107,8 @@ function ScatterTip({ active, payload }) {
   );
 }
 
+
+
 // ── CHANGED: real attention item icon by level ─────────────────
 function AttentionIcon({ level }) {
   if (level === "HIGH") return (
@@ -145,27 +147,44 @@ function levelMeta(level) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedStore, currency, refreshStores, loading: storeLoading } = useStore();
+  const { stores, selectedStore, setSelectedStore, currency, refreshStores, loading: storeLoading } = useStore();
 
   const [storeProducts, setStoreProducts] = useState([]);
   const [portfolio, setPortfolio] = useState(null);
   const [opportunities, setOpportunities] = useState(null);
   const [priceWars, setPriceWars] = useState(null);
-  const [marketMovement, setMarketMovement] = useState(null);
   const [attentionItems, setAttentionItems] = useState([]); // CHANGED: real attention data
   const [loading, setLoading] = useState(true);
   const [trendTimeframe, setTrendTimeframe] = useState("1d");
   const [selectedTrendProduct, setSelectedTrendProduct] = useState("all");
 
+  // Dedicated Product-Specific Market Movement state
+  const [selectedMarketProduct, setSelectedMarketProduct] = useState("");
+  const [marketMovementTimeframe, setMarketMovementTimeframe] = useState("3d");
+  const [marketMovementData, setMarketMovementData] = useState(null);
+  // Attention filter state (controlled by clicking KPI cards or filter tabs)
+  const [attentionFilter, setAttentionFilter] = useState("all");
+  const [attentionHighlighted, setAttentionHighlighted] = useState(false);
+
+  const [loadingMarketMovement, setLoadingMarketMovement] = useState(false);
+  const [marketMovementError, setMarketMovementError] = useState(false);
+
   useEffect(() => { refreshStores(); }, [location.pathname]); // eslint-disable-line
 
-  // CHANGED: added getAttentionItems to the parallel fetch
+  // Ensure active store is selected if stores exist
+  useEffect(() => {
+    if (!selectedStore?.id && stores.length > 0) {
+      setSelectedStore(stores[0]);
+    }
+  }, [selectedStore, stores, setSelectedStore]);
+
+  // Parallel fetch for portfolio cards and attention items
   useEffect(() => {
     let isCurrent = true;
 
     if (!selectedStore?.id) {
       setStoreProducts([]); setPortfolio(null); setOpportunities(null);
-      setPriceWars(null); setMarketMovement(null); setAttentionItems([]);
+      setPriceWars(null); setAttentionItems([]);
       setLoading(false); return;
     }
     setLoading(true);
@@ -175,22 +194,20 @@ export default function Dashboard() {
       getPortfolioHealth(selectedStore.id).catch(() => null),
       getActiveOpportunities(selectedStore.id).catch(() => null),
       getActivePriceWars(selectedStore.id).catch(() => null),
-      getMarketMovement(selectedStore.id).catch(() => null),
-      getAttentionItems(selectedStore.id).catch(() => []),  // CHANGED
+      getAttentionItems(selectedStore.id).catch(() => []),
     ])
-      .then(([products, health, opps, wars, movement, attention]) => {
+      .then(([products, health, opps, wars, attention]) => {
         if (!isCurrent) return;
         setStoreProducts(Array.isArray(products) ? products : []);
         setPortfolio(health);
         setOpportunities(opps);
         setPriceWars(wars);
-        setMarketMovement(movement);
-        setAttentionItems(Array.isArray(attention) ? attention : []); // CHANGED
+        setAttentionItems(Array.isArray(attention) ? attention : []);
       })
       .catch(() => {
         if (!isCurrent) return;
         setStoreProducts([]); setPortfolio(null); setOpportunities(null);
-        setPriceWars(null); setMarketMovement(null); setAttentionItems([]);
+        setPriceWars(null); setAttentionItems([]);
       })
       .finally(() => {
         if (isCurrent) setLoading(false);
@@ -200,6 +217,52 @@ export default function Dashboard() {
       isCurrent = false;
     };
   }, [selectedStore?.id]);
+
+  // Synchronize product selection for Market Movement when store products change
+  useEffect(() => {
+    if (storeProducts && storeProducts.length > 0) {
+      const exists = storeProducts.some((p) => String(p.id) === String(selectedMarketProduct));
+      if (!exists) {
+        setSelectedMarketProduct(String(storeProducts[0].id));
+      }
+    } else {
+      setSelectedMarketProduct("");
+      setMarketMovementData(null);
+    }
+  }, [storeProducts]);
+
+  // Fetch product-specific competitor price movement
+  useEffect(() => {
+    if (!selectedStore?.id || !selectedMarketProduct) {
+      setMarketMovementData(null);
+      setLoadingMarketMovement(false);
+      setMarketMovementError(false);
+      return;
+    }
+
+    let isCurrent = true;
+    setLoadingMarketMovement(true);
+    setMarketMovementError(false);
+
+    getProductMarketMovement(selectedMarketProduct, selectedStore.id, marketMovementTimeframe)
+      .then((data) => {
+        if (!isCurrent) return;
+        setMarketMovementData(data);
+      })
+      .catch((err) => {
+        if (!isCurrent) return;
+        console.error("Failed to load product market movement:", err);
+        setMarketMovementError(true);
+        setMarketMovementData(null);
+      })
+      .finally(() => {
+        if (isCurrent) setLoadingMarketMovement(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedStore?.id, selectedMarketProduct, marketMovementTimeframe]);
 
   const curr = currency || (selectedStore?.country === "Pakistan" || selectedStore?.country === "PK" ? "PKR" : "AED");
   const trendData = getPortfolioTrendData(trendTimeframe);
@@ -212,13 +275,6 @@ export default function Dashboard() {
       y: Math.round(((i * 53 + 41) % 72) + 12),
     }))
     : SCATTER_FALLBACK;
-
-  const marketValue = marketMovement?.pct_change != null
-    ? `${marketMovement.direction === "down" ? "↓" : "↑"} ${Math.abs(marketMovement.pct_change)}%`
-    : "—";
-  const marketSub = marketMovement?.pct_change != null
-    ? marketMovement.direction === "down" ? "Market prices decreased today" : "Market prices increased today"
-    : "Not enough history yet";
 
   const card = { background: "var(--d-surface)", borderRadius: "12px", padding: "22px 24px", border: "1px solid var(--d-border)", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" };
   const sectionTitle = { fontSize: "15px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 3px", letterSpacing: "-0.2px" };
@@ -233,13 +289,71 @@ export default function Dashboard() {
     );
   }
 
+  const activeMarketProduct = storeProducts.find((p) => String(p.id) === String(selectedMarketProduct));
+
   const portfolioKpis = [
-    { id: "health", label: "PORTFOLIO HEALTH", value: portfolio?.portfolio_health_pct != null ? `${portfolio.portfolio_health_pct} / 100` : "—", sub: portfolio?.portfolio_health_pct != null ? (portfolio.portfolio_health_pct >= 70 ? "Healthy competitive position" : "Needs attention") : "Not enough data yet", accent: "#4f7ef7" },
-    { id: "action", label: "NEEDS ACTION", value: portfolio?.needs_action != null ? `${portfolio.needs_action} Products` : "—", sub: "Require pricing review", accent: "#ef4444" },
-    { id: "opp", label: "ACTIVE OPPORTUNITIES", value: opportunities?.active_opportunities != null ? opportunities.active_opportunities : "—", sub: opportunities?.active_opportunities != null ? (opportunities.active_opportunities > 0 ? "Competitors out of stock" : "No out-of-stock competitors") : "Not enough data yet", accent: "#10B981" },
-    { id: "wars", label: "ACTIVE PRICE WARS", value: priceWars?.active_price_wars != null ? priceWars.active_price_wars : "—", sub: priceWars?.active_price_wars != null ? (priceWars.active_price_wars > 0 ? "Aggressive repricing detected" : "No aggressive repricing") : "Not enough history yet", accent: "#f59e0b" },
-    { id: "market", label: "MARKET MOVEMENT", value: marketValue, sub: marketSub, accent: "#10B981" },
+    {
+      id: "action",
+      label: "NEEDS ACTION",
+      value: portfolio?.needs_action != null ? `${portfolio.needs_action} Products` : "—",
+      sub: "Require pricing review",
+      accent: "#ef4444",
+      filter: "HIGH",
+      cue: "View in attention below ↓",
+    },
+    {
+      id: "opp",
+      label: "ACTIVE OPPORTUNITIES",
+      value: opportunities?.active_opportunities != null ? opportunities.active_opportunities : "—",
+      sub: opportunities?.active_opportunities != null ? (opportunities.active_opportunities > 0 ? "Competitors out of stock" : "No out-of-stock competitors") : "Not enough data yet",
+      accent: "#10B981",
+      filter: "OPPORTUNITY",
+      cue: "View in attention below ↓",
+    },
+    {
+      id: "wars",
+      label: "ACTIVE PRICE WARS",
+      value: priceWars?.active_price_wars != null ? priceWars.active_price_wars : "—",
+      sub: priceWars?.active_price_wars != null ? (priceWars.active_price_wars > 0 ? "Aggressive repricing detected" : "No aggressive repricing") : "Not enough history yet",
+      accent: "#f59e0b",
+      filter: null,
+      cue: "View price alerts →",
+    },
   ];
+
+  const handleKpiClick = (kpi) => {
+    if (kpi.id === "wars") {
+      navigate("/alerts");
+      return;
+    }
+
+    if (kpi.filter) {
+      setAttentionFilter(kpi.filter);
+    } else {
+      setAttentionFilter("all");
+    }
+
+    setAttentionHighlighted(true);
+    setTimeout(() => {
+      setAttentionHighlighted(false);
+    }, 2200);
+
+    const el = document.getElementById("what-needs-attention");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const baseAttentionItems = useMemo(() => {
+    return attentionItems
+      .filter((item) => item.level !== "HEALTHY" && item.level !== "NO_DATA")
+      .concat(attentionItems.filter((item) => item.level === "NO_DATA"));
+  }, [attentionItems]);
+
+  const displayedAttentionItems = useMemo(() => {
+    if (attentionFilter === "all") return baseAttentionItems;
+    return baseAttentionItems.filter((item) => item.level === attentionFilter);
+  }, [baseAttentionItems, attentionFilter]);
 
   return (
     <Layout>
@@ -274,14 +388,38 @@ export default function Dashboard() {
       ) : (
         <>
           {/* ── KPI cards ── */}
-          <div className="res-grid-5" style={{ marginBottom: "22px" }}>
+          <div className="res-grid-3" style={{ marginBottom: "22px" }}>
             {portfolioKpis.map((kpi) => (
-              <div key={kpi.id} style={{ ...card, textAlign: "center", padding: "18px 12px" }}>
+              <div
+                key={kpi.id}
+                onClick={() => handleKpiClick(kpi)}
+                title="Click to view details in What Needs Your Attention below"
+                style={{
+                  ...card,
+                  textAlign: "center",
+                  padding: "18px 12px",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.08)";
+                  e.currentTarget.style.borderColor = "#111827";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)";
+                  e.currentTarget.style.borderColor = "var(--d-border)";
+                }}
+              >
                 <div style={{ marginBottom: "14px" }}>
                   <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--d-text-3)", letterSpacing: "0.7px", textTransform: "uppercase" }}>{kpi.label}</span>
                 </div>
                 <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--d-text)", marginBottom: "5px", letterSpacing: "-0.3px", lineHeight: 1.2 }}>{kpi.value}</div>
                 <div style={{ fontSize: "11px", color: "var(--d-text-3)", lineHeight: 1.45 }}>{kpi.sub}</div>
+                <div style={{ marginTop: "10px", fontSize: "11px", fontWeight: 600, color: kpi.accent, display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", opacity: 0.9 }}>
+                  <span>{kpi.cue}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -330,57 +468,329 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ── CHANGED: What Needs Your Attention — now 100% real data ── */}
+          {/* ── Market Movement Summary Card ── */}
           <div style={{ ...card, marginBottom: "22px", overflow: "hidden", minWidth: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
-              <h2 style={{ ...sectionTitle, margin: 0 }}>What Needs Your Attention</h2>
+            {/* Header: Title + Product Selector + Timeframe Selector */}
+            <div style={{ marginBottom: "18px" }}>
+              <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--d-text-3)", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: "10px" }}>
+                MARKET MOVEMENT
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                {/* Product Selector */}
+                <select
+                  value={selectedMarketProduct}
+                  onChange={(e) => setSelectedMarketProduct(e.target.value)}
+                  style={{
+                    padding: "6px 32px 6px 12px",
+                    borderRadius: "7px",
+                    border: "1px solid var(--d-border)",
+                    background: "var(--d-surface-2)",
+                    color: "var(--d-text)",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                    outline: "none",
+                    appearance: "none",
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 10px center",
+                    minWidth: "160px",
+                    maxWidth: "260px",
+                  }}
+                >
+                  {storeProducts.map((p) => {
+                    const dispName = p.search_keyword || p.title;
+                    const short = dispName?.length > 30 ? dispName.slice(0, 28).trim() + "…" : dispName;
+                    return (
+                      <option key={p.id} value={p.id} title={dispName}>
+                        {short}
+                      </option>
+                    );
+                  })}
+                </select>
+
+                {/* Timeframe Selector (1 Day, 3 Days, 30 Days) */}
+                <select
+                  value={marketMovementTimeframe}
+                  onChange={(e) => setMarketMovementTimeframe(e.target.value)}
+                  style={{
+                    padding: "6px 30px 6px 12px",
+                    borderRadius: "7px",
+                    border: "1px solid var(--d-border)",
+                    background: "var(--d-surface-2)",
+                    color: "var(--d-text)",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                    outline: "none",
+                    appearance: "none",
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 10px center",
+                    minWidth: "105px",
+                  }}
+                >
+                  <option value="1d">1 Day</option>
+                  <option value="3d">3 Days</option>
+                  <option value="30d">30 Days</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Card Content */}
+            {loadingMarketMovement ? (
+              <div style={{ padding: "48px 0", textAlign: "center", color: "var(--d-text-3)" }}>
+                <div style={{ fontSize: "24px", marginBottom: "8px", opacity: 0.6 }}>⏳</div>
+                <p style={{ margin: 0, fontSize: "13px" }}>Loading market movement…</p>
+              </div>
+            ) : marketMovementError ? (
+              <div style={{ padding: "48px 0", textAlign: "center", color: "#ef4444" }}>
+                <p style={{ margin: 0, fontSize: "13px" }}>Unable to load market movement.</p>
+              </div>
+            ) : (marketMovementData?.pct_change == null || marketMovementData?.recent_avg == null || marketMovementData?.prior_avg == null) ? (
+              /* Insufficient History / Not Enough Data */
+              <div style={{ padding: "36px 16px", textAlign: "center" }}>
+                <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--d-text)", marginBottom: "6px" }}>
+                  Not enough data
+                </div>
+                <p style={{ fontSize: "12.5px", color: "var(--d-text-3)", maxWidth: "360px", margin: "0 auto 16px", lineHeight: 1.5 }}>
+                  Not enough competitor price history to calculate market movement for this period.
+                </p>
+                {marketMovementData?.competitor_count != null && (
+                  <div style={{ display: "inline-block", padding: "4px 14px", borderRadius: "6px", background: "var(--d-surface-2)", border: "1px solid var(--d-border)", fontSize: "12px", color: "var(--d-text-2)" }}>
+                    <strong style={{ color: "var(--d-text)", fontWeight: 700 }}>{marketMovementData.competitor_count}</strong> active competitor{marketMovementData.competitor_count === 1 ? "" : "s"}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Real Movement Summary Display */
+              (() => {
+                const arrow = marketMovementData.direction === "down" ? "↓" : marketMovementData.direction === "up" ? "↑" : "→";
+                const statusText = marketMovementData.direction === "down" ? "Price Decreased" : marketMovementData.direction === "up" ? "Price Increased" : "Price Stable";
+                const movementColor = marketMovementData.direction === "down" ? "#ef4444" : marketMovementData.direction === "up" ? "#10B981" : "var(--d-text-2)";
+                const tfLabel = marketMovementTimeframe === "1d" ? "previous 1 day" : marketMovementTimeframe === "30d" ? "previous 30 days" : "previous 3 days";
+                const actionVerb = marketMovementData.direction === "down" ? "decreased" : marketMovementData.direction === "up" ? "increased" : "remained stable";
+                const descriptionText = `Competitor market prices ${actionVerb} compared with ${tfLabel}`;
+
+                return (
+                  <>
+                    <div style={{ textAlign: "center", padding: "24px 0 20px" }}>
+                      {/* Big Percentage Change */}
+                      <div style={{
+                        fontSize: "42px",
+                        fontWeight: 800,
+                        letterSpacing: "-1px",
+                        color: movementColor,
+                        lineHeight: 1,
+                        marginBottom: "8px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                      }}>
+                        <span>{arrow}</span>
+                        <span>{Math.abs(marketMovementData.pct_change)}%</span>
+                      </div>
+
+                      {/* Status: Price Increased / Price Decreased / Price Stable */}
+                      <div style={{
+                        fontSize: "15px",
+                        fontWeight: 700,
+                        color: "var(--d-text)",
+                        marginBottom: "10px",
+                      }}>
+                        {statusText}
+                      </div>
+
+                      {/* Description */}
+                      <p style={{
+                        margin: "0 auto",
+                        fontSize: "12.5px",
+                        color: "var(--d-text-3)",
+                        maxWidth: "360px",
+                        lineHeight: 1.5,
+                      }}>
+                        {descriptionText}
+                      </p>
+                    </div>
+
+                    {/* Bottom Supporting Metrics Row */}
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: "12px",
+                      marginTop: "16px",
+                      paddingTop: "18px",
+                      borderTop: "1px solid var(--d-border)",
+                      textAlign: "center",
+                    }}>
+                      <div>
+                        <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+                          Previous Avg
+                        </div>
+                        <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--d-text)", letterSpacing: "-0.2px" }}>
+                          {curr} {Number(Math.round(marketMovementData.prior_avg)).toLocaleString()}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+                          Current Avg
+                        </div>
+                        <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--d-text)", letterSpacing: "-0.2px" }}>
+                          {curr} {Number(Math.round(marketMovementData.recent_avg)).toLocaleString()}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+                          Competitors
+                        </div>
+                        <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--d-text)", letterSpacing: "-0.2px" }}>
+                          {marketMovementData.competitor_count != null ? `${marketMovementData.competitor_count} active` : "—"}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()
+            )}
+          </div>
+
+          {/* ── What Needs Your Attention ── */}
+          <div
+            id="what-needs-attention"
+            style={{
+              ...card,
+              marginBottom: "22px",
+              overflow: "hidden",
+              minWidth: 0,
+              scrollMarginTop: "24px",
+              borderColor: attentionHighlighted ? "var(--d-accent)" : "var(--d-border)",
+              boxShadow: attentionHighlighted
+                ? "0 0 0 3px rgba(79, 126, 247, 0.25), 0 4px 14px rgba(79, 126, 247, 0.12)"
+                : "0 1px 4px rgba(0,0,0,0.06)",
+              transition: "border-color 0.3s ease, box-shadow 0.3s ease",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
+              <div>
+                <h2 style={{ ...sectionTitle, margin: "0 0 3px" }}>What Needs Your Attention</h2>
+                <p style={sectionSub}>Prioritized items requiring pricing review or capturing market opportunities</p>
+              </div>
               <span onClick={() => navigate("/alerts")} style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-accent)", cursor: "pointer", flexShrink: 0 }}>View all alerts →</span>
             </div>
 
-            {attentionItems.length === 0 ? (
+            {/* Filter Tabs / Pills */}
+            {baseAttentionItems.length > 0 && (
+              <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
+                {[
+                  { key: "all", label: "All Items", count: baseAttentionItems.length },
+                  { key: "HIGH", label: "Needs Action (High)", count: baseAttentionItems.filter((i) => i.level === "HIGH").length },
+                  { key: "OPPORTUNITY", label: "Opportunities", count: baseAttentionItems.filter((i) => i.level === "OPPORTUNITY").length },
+                  { key: "WATCH", label: "Watch", count: baseAttentionItems.filter((i) => i.level === "WATCH").length },
+                ].filter((tab) => tab.key === "all" || tab.count > 0).map((tab) => {
+                  const active = attentionFilter === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => setAttentionFilter(tab.key)}
+                      style={{
+                        padding: "5px 12px",
+                        borderRadius: "6px",
+                        border: active ? "1px solid var(--d-accent)" : "1px solid var(--d-border)",
+                        background: active ? "var(--d-accent-bg)" : "var(--d-surface-2)",
+                        color: active ? "var(--d-accent)" : "var(--d-text-2)",
+                        fontSize: "12px",
+                        fontWeight: active ? 700 : 500,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <span>{tab.label}</span>
+                      <span style={{
+                        fontSize: "10.5px",
+                        padding: "1px 5px",
+                        borderRadius: "9999px",
+                        background: active ? "var(--d-accent)" : "var(--d-border)",
+                        color: active ? "#ffffff" : "var(--d-text-3)",
+                        fontWeight: 600,
+                      }}>
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {displayedAttentionItems.length === 0 ? (
               <div style={{ textAlign: "center", padding: "32px 0", color: "var(--d-text-3)", fontSize: "13px" }}>
-                No actionable items right now — your portfolio looks clean.
+                {attentionFilter === "all"
+                  ? "No actionable items right now — your portfolio looks clean."
+                  : "No items matching this filter."}
+                {attentionFilter !== "all" && (
+                  <button
+                    onClick={() => setAttentionFilter("all")}
+                    style={{
+                      display: "block",
+                      margin: "10px auto 0",
+                      padding: "6px 14px",
+                      background: "var(--d-surface)",
+                      border: "1px solid var(--d-border)",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "var(--d-accent)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Show all items
+                  </button>
+                )}
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {attentionItems
-                  .filter((item) => item.level !== "HEALTHY" && item.level !== "NO_DATA")
-                  .concat(attentionItems.filter((item) => item.level === "NO_DATA"))
-                  .map((item) => {
-                    const meta = levelMeta(item.level);
-                    const shortTitle = item.title?.length > 60 ? item.title.slice(0, 58).trim() + "…" : item.title;
-                    return (
-                      <div key={item.id} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 16px", borderRadius: "10px", background: "var(--d-surface-2)", border: "1px solid var(--d-border)", transition: "opacity 0.15s ease" }}>
-                        {/* Icon bubble */}
-                        <div style={{ width: "34px", height: "34px", borderRadius: "9px", background: "var(--d-surface)", border: "1px solid var(--d-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <AttentionIcon level={item.level} />
-                        </div>
-                        {/* Text */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px", flexWrap: "wrap" }}>
-                            <span style={{ fontSize: "9.5px", fontWeight: 700, color: meta.color, background: meta.bg, padding: "1.5px 7px", borderRadius: "4px", letterSpacing: "0.5px", textTransform: "uppercase", flexShrink: 0 }}>
-                              {meta.label}
-                            </span>
-                            <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--d-text)" }} title={item.title}>
-                              {shortTitle}
-                            </span>
-                          </div>
-                          <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-2)", lineHeight: 1.55 }}>
-                            {item.explanation}
-                          </p>
-                        </div>
-                        {/* Action button */}
-                        <button
-                          onClick={() => navigate(item.action_nav)}
-                          style={{ padding: "7px 15px", background: "var(--d-surface)", border: "1px solid var(--d-border)", borderRadius: "7px", fontSize: "12px", fontWeight: 600, color: "var(--d-text)", cursor: "pointer", fontFamily: "inherit", flexShrink: 0, whiteSpace: "nowrap", transition: "all 0.15s ease" }}
-                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.color = meta.color; e.currentTarget.style.background = meta.bg; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--d-border)"; e.currentTarget.style.color = "var(--d-text)"; e.currentTarget.style.background = "var(--d-surface)"; }}
-                        >
-                          {item.action} →
-                        </button>
+                {displayedAttentionItems.map((item) => {
+                  const meta = levelMeta(item.level);
+                  const shortTitle = item.title?.length > 60 ? item.title.slice(0, 58).trim() + "…" : item.title;
+                  return (
+                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 16px", borderRadius: "10px", background: "var(--d-surface-2)", border: "1px solid var(--d-border)", transition: "opacity 0.15s ease" }}>
+                      {/* Icon bubble */}
+                      <div style={{ width: "34px", height: "34px", borderRadius: "9px", background: "var(--d-surface)", border: "1px solid var(--d-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <AttentionIcon level={item.level} />
                       </div>
-                    );
-                  })}
+                      {/* Text */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px", flexWrap: "wrap" }}>
+                          <span style={{ fontSize: "9.5px", fontWeight: 700, color: meta.color, background: meta.bg, padding: "1.5px 7px", borderRadius: "4px", letterSpacing: "0.5px", textTransform: "uppercase", flexShrink: 0 }}>
+                            {meta.label}
+                          </span>
+                          <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--d-text)" }} title={item.title}>
+                            {shortTitle}
+                          </span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-2)", lineHeight: 1.55 }}>
+                          {item.explanation}
+                        </p>
+                      </div>
+                      {/* Action button */}
+                      <button
+                        onClick={() => navigate(item.action_nav)}
+                        style={{ padding: "7px 15px", background: "var(--d-surface)", border: "1px solid var(--d-border)", borderRadius: "7px", fontSize: "12px", fontWeight: 600, color: "var(--d-text)", cursor: "pointer", fontFamily: "inherit", flexShrink: 0, whiteSpace: "nowrap", transition: "all 0.15s ease" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.color = meta.color; e.currentTarget.style.background = meta.bg; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--d-border)"; e.currentTarget.style.color = "var(--d-text)"; e.currentTarget.style.background = "var(--d-surface)"; }}
+                      >
+                        {item.action} →
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

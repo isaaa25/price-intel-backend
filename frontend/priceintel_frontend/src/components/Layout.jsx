@@ -5,6 +5,7 @@ import WebsiteTour from "./WebsiteTour";
 import OnboardingModal from "./OnboardingModal";
 import { getMe, completeOnboarding } from "../api/auth";
 import { getStores } from "../api/products";
+import AIAgent, { AIFloatingButton } from "../pages/AI";
 
 const NAV_ITEMS = [
   {
@@ -106,6 +107,8 @@ function StoreSwitcher() {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
+  const activeStore = selectedStore || (stores.length > 0 ? stores[0] : null);
+
   useEffect(() => {
     function handleClickOutside(e) {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -128,7 +131,7 @@ function StoreSwitcher() {
           borderRadius: "7px",
           border: "1px solid var(--d-border)",
           background: "var(--d-surface)",
-          color: selectedStore ? "var(--d-text)" : "var(--d-text-2)",
+          color: activeStore ? "var(--d-text)" : "var(--d-text-2)",
           fontSize: "13.5px",
           fontWeight: 600,
           fontFamily: "inherit",
@@ -138,12 +141,12 @@ function StoreSwitcher() {
           overflow: "hidden",
         }}
       >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={selectedStore ? "var(--d-accent)" : "var(--d-text-3)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={activeStore ? "var(--d-accent)" : "var(--d-text-3)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {selectedStore?.store_name || "No Stores Added"}
+          {activeStore?.store_name || "No Stores Added"}
         </span>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--d-text-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <polyline points="6 9 12 15 18 9" />
@@ -160,7 +163,7 @@ function StoreSwitcher() {
             border: "1px solid var(--d-border)",
             borderRadius: "8px",
             boxShadow: "var(--shadow-md)",
-            minWidth: "190px",
+            minWidth: "210px",
             zIndex: 1000,
             padding: "4px",
           }}
@@ -170,7 +173,7 @@ function StoreSwitcher() {
           </div>
           {stores.length > 0 ? (
             stores.map((s) => {
-              const isSelected = selectedStore?.id === s.id;
+              const isSelected = activeStore?.id === s.id;
               return (
                 <div
                   key={s.id}
@@ -189,10 +192,18 @@ function StoreSwitcher() {
                     color: isSelected ? "var(--d-accent)" : "var(--d-text)",
                     background: isSelected ? "var(--d-accent-bg)" : "transparent",
                     cursor: "pointer",
+                    gap: "8px",
                   }}
                 >
-                  <span>{s.store_name}</span>
-                  <span style={{ fontSize: "10px", color: "var(--d-text-3)", textTransform: "uppercase" }}>{s.marketplace || "store"}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.store_name}</span>
+                    {isSelected && (
+                      <span style={{ fontSize: "9.5px", fontWeight: 700, color: "var(--d-accent)", background: "rgba(59,130,246,0.15)", padding: "1px 5px", borderRadius: "4px", flexShrink: 0 }}>
+                        ACTIVE
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: "10px", color: "var(--d-text-3)", textTransform: "uppercase", flexShrink: 0 }}>{s.marketplace || "store"}</span>
                 </div>
               );
             })
@@ -353,11 +364,17 @@ function HamburgerIcon({ open }) {
   );
 }
 
+// Pages where the AI floating button should appear
+const AI_ENABLED_PATHS = [
+  "/dashboard", "/products", "/competitors", "/alerts", "/reports",
+];
+
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(() => {
     // Show modal immediately on first render if user is flagged as needing onboarding (0ms delay)
@@ -419,10 +436,8 @@ export default function Layout({ children }) {
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
-    } else if (stores.length === 0) {
-      refreshStores();
     }
-  }, [navigate, stores.length, refreshStores]);
+  }, [navigate]);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -600,6 +615,16 @@ export default function Layout({ children }) {
 
       {/* Interactive Website Tour for onboarding */}
       <WebsiteTour active={tourActive} onDismiss={() => setTourActive(false)} />
+
+      {/* ── AI Agent — floating button + overlay (app pages only) ── */}
+      {AI_ENABLED_PATHS.some((p) =>
+        location.pathname === p || location.pathname.startsWith(p + "/")
+      ) && (
+        <>
+          <AIFloatingButton onClick={() => setAiOpen(true)} />
+          <AIAgent open={aiOpen} onClose={() => setAiOpen(false)} />
+        </>
+      )}
     </div>
   );
 }

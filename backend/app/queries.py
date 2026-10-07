@@ -96,7 +96,10 @@ async def fetch_competitor_candidates_rows(db: AsyncSession, product_id):
              ORDER BY ps.scraped_at DESC LIMIT 1) AS latest_price,
             (SELECT ps.scraped_at FROM price_snapshots ps
              WHERE ps.competitor_listing_id = cl.id
-             ORDER BY ps.scraped_at DESC LIMIT 1) AS last_scraped_at
+             ORDER BY ps.scraped_at DESC LIMIT 1) AS last_scraped_at,
+            (SELECT ps.stock_status FROM price_snapshots ps
+             WHERE ps.competitor_listing_id = cl.id
+             ORDER BY ps.scraped_at DESC LIMIT 1) AS stock_status
         FROM competitor_listings cl
         WHERE cl.tracked_product_id = :pid
           AND cl.confirmed_by_user = false
@@ -240,6 +243,106 @@ async def fetch_market_movement_rows(db: AsyncSession, user_id, store_id=None, h
     """), params)
 
     return recent.fetchone(), prior.fetchone()
+
+
+async def fetch_product_market_movement_rows(
+    db: AsyncSession,
+    user_id,
+    product_id,
+    store_id=None,
+    timeframe: str = "3d",
+):
+    """
+    Product-specific competitor price movement over time.
+    Calculates:
+      1. Active competitor count for this product.
+      2. Time-bucketed series of average competitor prices within the active window.
+      3. Window averages (recent vs prior) for period-over-period percentage change calculation.
+    Scoped strictly to the user's store and the selected product's active competitors.
+    Used by: get_product_market_movement() in services/product_service.py
+    """
+    store_filter = ""
+    params = {
+        "uid": str(user_id),
+        "pid": str(product_id),
+    }
+    if store_id is not None:
+        store_filter = "AND tp.store_id = :sid"
+        params["sid"] = str(store_id)
+
+    if timeframe == "1d":
+        recent_clause = "ps.scraped_at >= NOW() - INTERVAL '24 hours'"
+        prior_clause = "ps.scraped_at >= NOW() - INTERVAL '48 hours' AND ps.scraped_at < NOW() - INTERVAL '24 hours'"
+        interval_sql = "INTERVAL '24 hours'"
+        bucket_trunc = "hour"
+    elif timeframe == "30d":
+        recent_clause = "ps.scraped_at >= DATE_TRUNC('day', NOW()) - INTERVAL '29 days'"
+        prior_clause = "ps.scraped_at >= DATE_TRUNC('day', NOW()) - INTERVAL '59 days' AND ps.scraped_at < DATE_TRUNC('day', NOW()) - INTERVAL '29 days'"
+        interval_sql = "INTERVAL '30 days'"
+        bucket_trunc = "day"
+    else:  # default '3d'
+        recent_clause = "ps.scraped_at >= DATE_TRUNC('day', NOW()) - INTERVAL '2 days'"
+        prior_clause = "ps.scraped_at >= DATE_TRUNC('day', NOW()) - INTERVAL '5 days' AND ps.scraped_at < DATE_TRUNC('day', NOW()) - INTERVAL '2 days'"
+        interval_sql = "INTERVAL '3 days'"
+        bucket_trunc = "day"
+
+    # 1. Count active competitor listings for this product
+    comp_res = await db.execute(text(f"""
+        SELECT COUNT(cl.id) AS competitor_count
+        FROM competitor_listings cl
+        JOIN tracked_products tp ON tp.id = cl.tracked_product_id
+        JOIN user_stores us ON us.id = tp.store_id
+        WHERE us.user_id = :uid
+          AND tp.id = :pid
+          AND tp.is_active = true
+          AND cl.is_active = true
+          {store_filter}
+    """), params)
+    competitor_count = comp_res.scalar() or 0
+
+    # 2. Aggregated time series buckets
+    series_res = await db.execute(text(f"""
+        SELECT 
+            DATE_TRUNC('{bucket_trunc}', ps.scraped_at) AS bucket_time,
+            ROUND(AVG(ps.price)::numeric, 2) AS avg_price,
+            COUNT(ps.id) AS snapshot_count
+        FROM price_snapshots ps
+        JOIN competitor_listings cl ON cl.id = ps.competitor_listing_id
+        JOIN tracked_products tp ON tp.id = cl.tracked_product_id
+        JOIN user_stores us ON us.id = tp.store_id
+        WHERE us.user_id = :uid
+          AND tp.id = :pid
+          AND tp.is_active = true
+          AND cl.is_active = true
+          {store_filter}
+          AND ps.price IS NOT NULL
+          AND ps.price > 0
+          AND ps.scraped_at >= NOW() - {interval_sql}
+        GROUP BY 1
+        ORDER BY 1 ASC
+    """), params)
+    series_rows = series_res.fetchall()
+
+    # 3. Window comparison for percentage change
+    window_res = await db.execute(text(f"""
+        SELECT 
+            AVG(CASE WHEN {recent_clause} THEN ps.price END) AS recent_avg,
+            AVG(CASE WHEN {prior_clause} THEN ps.price END) AS prior_avg
+        FROM price_snapshots ps
+        JOIN competitor_listings cl ON cl.id = ps.competitor_listing_id
+        JOIN tracked_products tp ON tp.id = cl.tracked_product_id
+        JOIN user_stores us ON us.id = tp.store_id
+        WHERE us.user_id = :uid
+          AND tp.id = :pid
+          AND tp.is_active = true
+          AND cl.is_active = true
+          {store_filter}
+          AND ps.price IS NOT NULL
+          AND ps.price > 0
+    """), params)
+    window_row = window_res.fetchone()
+
+    return competitor_count, series_rows, window_row
 
 
 #needs attention
