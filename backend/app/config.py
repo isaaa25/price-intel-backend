@@ -23,17 +23,17 @@ class Settings(BaseSettings):
     # ─── Auth ────────────────────────────────────────────────────────────────
     secret_key: str
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = 120
 
     # ─── App Environment ──────────────────────────────────────────────────────
-    env: str = "development"  # "development", "staging", "production"
+    env: str = "production"  # "development", "staging", "production"
     debug: bool = False
 
     # ─── Database ────────────────────────────────────────────────────────────
     DB_HOST: str
     DB_PORT: int
     DB_NAME: str
-    DEMO_DB_NAME: str
+    # DEMO_DB_NAME: str
     DB_USER: str
     DB_PASSWORD: str
     DATABASE_URL_NEON: str
@@ -118,16 +118,16 @@ class Settings(BaseSettings):
     #     return self.DATABASE_URL_NEON
         
 
-    @property
-    def DEMO_DATABASE_URL(self) -> str:
-        """
-        Async URL for the noon demo/dashboard database.
-        Used by dashboard/db.py when pointing at the demo data.
-        """
-        return (
-            f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}"
-            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DEMO_DB_NAME}"
-        )
+    # @property
+    # def DEMO_DATABASE_URL(self) -> str:
+    #     """
+    #     Async URL for the noon demo/dashboard database.
+    #     Used by dashboard/db.py when pointing at the demo data.
+    #     """
+    #     return (
+    #         f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}"
+    #         f"@{self.DB_HOST}:{self.DB_PORT}/{self.DEMO_DB_NAME}"
+    #     )
 
     @property
     def SYNC_DATABASE_URL(self) -> str:
