@@ -35,6 +35,8 @@ from pipeline.ai.query_generalizer import generalize_title
 from datetime import datetime, timezone
 from sqlalchemy import update
 
+from pipeline.marketplace_url import canonicalize_product_url
+
 logger = logging.getLogger("orchestration_common")
 
 
@@ -218,30 +220,17 @@ async def load_confirmed_listings(session, marketplace: str) -> dict:
 # ─── ScrapeJob lifecycle helpers ────────────────────────────────────────────
 
 async def create_scrape_job(session, listing: CompetitorListing) -> ScrapeJob:
-    """
-    Creates a ScrapeJob row for one listing, at the moment we're about
-    to scrape it. status starts as "running" — updated to "done" or
-    "failed" by finalize_scrape_job once the outcome is known.
-
-    Platform-agnostic: only ever reads listing.id / listing.url, never
-    anything platform-specific.
-
-    scheduled_at and started_at are set to the same timestamp for now
-    — there is no separate scheduling/queueing layer yet, so "when
-    this was scheduled" and "when it actually started" are the same
-    moment. First field worth revisiting if a real scheduler is built.
-    """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc) 
     job = ScrapeJob(
         competitor_listing_id=listing.id,
-        target_identifier=listing.url,
+        target_identifier=canonicalize_product_url(listing.url),
         status="running",
         scheduled_at=now,
         started_at=now,
         attempt_number=1,
     )
     session.add(job)
-    await session.flush()
+    await session.flush()   
     return job
 
 
@@ -268,7 +257,7 @@ async def finalize_scrape_job(
     CompetitorListing. items_updated is 1 only if a new PriceSnapshot
     was actually inserted (not on a "skipped, unchanged" result).
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     job.status = "done" if success else "failed"
     job.completed_at = now
     job.items_found = 1

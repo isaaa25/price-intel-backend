@@ -181,3 +181,25 @@ def validate_product_url(
         )
 
     return info
+
+
+from urllib.parse import urlparse, urlunparse
+
+
+def canonicalize_product_url(url: str | None) -> str | None:
+    """
+    Strip query string and fragment. Daraz tracking params after ? are waste;
+    the product page is fully identified by scheme + host + path.
+    """
+    if not url or not str(url).strip():
+        return url
+    raw = str(url).strip()
+    # Allow scheme-less URLs
+    if not raw.lower().startswith(("http://", "https://")):
+        raw = "https://" + raw
+    p = urlparse(raw)
+    if not p.netloc and not p.path:
+        return url.strip()
+    clean = urlunparse((p.scheme or "https", p.netloc, p.path, "", "", ""))
+    # Optional hard cap for String(500) columns
+    return clean[:500] if len(clean) > 500 else clean

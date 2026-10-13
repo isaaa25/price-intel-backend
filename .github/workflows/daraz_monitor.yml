@@ -1,0 +1,66 @@
+name: Daraz monitor
+
+on:
+  # Manual run first — use this until one run is green
+  workflow_dispatch:
+
+  # Uncomment after a successful manual run
+  # schedule:
+  #   - cron: "0 */8 * * *"   # every 8 hours UTC
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Daraz monitor
+        env:
+          # --- Database (keep names aligned with app/config.py) ---
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL_NEON: ${{ secrets.DATABASE_URL }}
+          # DB_HOST: ${{ secrets.DB_HOST }}
+          # DB_PORT: ${{ secrets.DB_PORT }}
+          # DB_NAME: ${{ secrets.DB_NAME }}
+          # DB_USER: ${{ secrets.DB_USER }}
+          # DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+
+          # --- App ---
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          ALGORITHM: HS256
+          ACCESS_TOKEN_EXPIRE_MINUTES: "120"
+          ENV: production
+          DEBUG: "False"
+
+          # --- Scraping ---
+          SCRAPEOPS_API_KEY: ${{ secrets.SCRAPEOPS_API_KEY }}
+          SCRAPFLY_API_KEY: ${{ secrets.SCRAPFLY_API_KEY }}
+          USE_PROXY: "False"
+          PRICE_CHANGE_THRESHOLD_PCT: "3.0"
+
+          # --- AI (if required at import) ---
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+          # Proxy block — only if USE_PROXY=True later
+          # IPROYAL_USERNAME: ${{ secrets.IPROYAL_USERNAME }}
+          # IPROYAL_PASSWORD: ${{ secrets.IPROYAL_PASSWORD }}
+          # IPROYAL_HOST: geo.iproyal.com
+          # IPROYAL_SOCKS5_PORT: "11202"
+          # IPROYAL_COUNTRY: ae
+          # PROXY_PROTOCOL: http
+        run: python main_daraz.py --mode monitor
