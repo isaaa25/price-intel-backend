@@ -1253,4 +1253,20 @@ body {
   .hero-composition {
     max-width: 100%;
   }
+}
+
+/* ── Global Loading Spinner (iOS 12-blade wheel) ────────── */
+@keyframes priceintel-spinner-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.priceintel-spinner {
+  animation: priceintel-spinner-rotate 0.85s linear infinite;
+  transform-origin: center;
+  will-change: transform;
 }

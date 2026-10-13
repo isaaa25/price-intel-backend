@@ -55,7 +55,7 @@ async def fetch_product_kpi_row(db: AsyncSession, product_id):
 async def fetch_product_competitors_rows(db: AsyncSession, product_id):
     """
     All active competitor listings for one product, with latest
-    scraped price, stock status and timestamp.
+    scraped price, stock status, own cost, and 30-day repricing activity.
     Used by: get_product_competitors() in services/product_service.py
     Powers: ProductDetail.jsx "Competitor Listings" table,
             Competitors.jsx (fetched per-product across the page)
@@ -63,7 +63,8 @@ async def fetch_product_competitors_rows(db: AsyncSession, product_id):
     return await db.execute(text("""
         SELECT
             cl.id, cl.url, cl.platform, cl.name, cl.image_url,
-            cl.is_active, cl.last_seen_at,
+            cl.is_active, cl.last_seen_at, cl.volatility_score, cl.consecutive_unchanged,
+            tp.own_cost,
             (SELECT ps.price FROM price_snapshots ps
              WHERE ps.competitor_listing_id = cl.id
              ORDER BY ps.scraped_at DESC LIMIT 1) AS latest_price,
@@ -72,8 +73,12 @@ async def fetch_product_competitors_rows(db: AsyncSession, product_id):
              ORDER BY ps.scraped_at DESC LIMIT 1) AS last_scraped_at,
             (SELECT ps.stock_status FROM price_snapshots ps
              WHERE ps.competitor_listing_id = cl.id
-             ORDER BY ps.scraped_at DESC LIMIT 1) AS stock_status
+             ORDER BY ps.scraped_at DESC LIMIT 1) AS stock_status,
+            (SELECT COUNT(DISTINCT ps.price) FROM price_snapshots ps
+             WHERE ps.competitor_listing_id = cl.id
+               AND ps.scraped_at >= NOW() - INTERVAL '30 days') AS price_changes_30d
         FROM competitor_listings cl
+        JOIN tracked_products tp ON tp.id = cl.tracked_product_id
         WHERE cl.tracked_product_id = :pid AND cl.is_active = true
         ORDER BY latest_price ASC NULLS LAST
     """), {"pid": str(product_id)})
@@ -414,4 +419,171 @@ async def fetch_attention_items(db: AsyncSession, user_id, store_id=None):
                  JOIN competitor_listings cl ON cl.id = ps.competitor_listing_id
                  WHERE cl.tracked_product_id = tp.id AND cl.is_active = true)) DESC NULLS LAST
         LIMIT 6
+    """), params)
+
+
+
+    # ══════════════════════════════════════════════════════════════
+# 4. ALERTS PAGE
+# ══════════════════════════════════════════════════════════════
+# Powers: Alerts.jsx — real alert list with product + competitor context
+
+async def fetch_alerts_rows(db: AsyncSession, user_id, store_id=None, limit: int = 100):
+    """
+    All alerts for a user's products, joined to product title and
+    competitor name for display. Ordered newest first.
+    Used by: get_alerts() in services/product_service.py
+    Powers: Alerts.jsx list, unread count, tab filter counts
+    """
+    store_filter = ""
+    params = {"uid": str(user_id), "limit": limit}
+    if store_id is not None:
+        store_filter = "AND tp.store_id = :sid"
+        params["sid"] = str(store_id)
+
+    return await db.execute(text(f"""
+        SELECT
+            a.id,
+            a.alert_type,
+            a.previous_value,
+            a.current_value,
+            a.change_pct,
+            a.is_read,
+            a.created_at,
+            a.payload,
+            tp.id         AS product_id,
+            tp.title      AS product_title,
+            tp.own_url    AS product_url,
+            cl.name       AS competitor_name,
+            cl.platform   AS competitor_platform,
+            cl.url        AS competitor_url
+        FROM alerts a
+        JOIN competitor_listings cl ON cl.id = a.competitor_listing_id
+        JOIN tracked_products tp    ON tp.id = cl.tracked_product_id
+        JOIN user_stores us         ON us.id = tp.store_id
+        WHERE us.user_id = :uid
+          AND tp.is_active = true
+          {store_filter}
+        ORDER BY a.created_at DESC
+        LIMIT :limit
+    """), params)
+
+
+async def mark_alerts_read_by_user(db: AsyncSession, user_id, store_id=None) -> None:
+    """
+    Marks all unread alerts for a user as read.
+    Used by: mark_all_alerts_read() in services/product_service.py
+    """
+    store_filter = ""
+    params = {"uid": str(user_id)}
+    if store_id is not None:
+        store_filter = "AND tp.store_id = :sid"
+        params["sid"] = str(store_id)
+
+    await db.execute(text(f"""
+        UPDATE alerts a
+        SET is_read = true
+        FROM competitor_listings cl
+        JOIN tracked_products tp ON tp.id = cl.tracked_product_id
+        JOIN user_stores us      ON us.id = tp.store_id
+        WHERE a.competitor_listing_id = cl.id
+          AND us.user_id = :uid
+          AND a.is_read = false
+          {store_filter}
+    """), params)
+    await db.commit()
+
+
+# ══════════════════════════════════════════════════════════════
+# 5. PRODUCT PRICE TREND ANALYSIS (DASHBOARD)
+# ══════════════════════════════════════════════════════════════
+
+async def fetch_price_trend_rows(
+    db: AsyncSession,
+    user_id,
+    store_id=None,
+    product_id=None,
+    timeframe: str = "7d",
+):
+    """
+    Time-series price history for the Product Price Trend Analysis chart.
+    Aggregates into buckets (hour for 1d, day for 7d/30d):
+      - cheapest: MIN price across active competitor snapshots
+      - market_avg: AVG price across active competitor snapshots
+      - your_avg: AVG price across active own-product snapshots
+    Strictly scoped to user ownership, active products, and active competitors.
+    Used by: get_price_trend() in services/product_service.py
+    """
+    store_filter = ""
+    product_filter = ""
+    params = {"uid": str(user_id)}
+
+    if store_id is not None:
+        store_filter = "AND tp.store_id = :sid"
+        params["sid"] = str(store_id)
+
+    if product_id is not None:
+        product_filter = "AND tp.id = :pid"
+        params["pid"] = str(product_id)
+
+    if timeframe == "1d":
+        bucket_trunc = "hour"
+        interval_sql = "INTERVAL '24 hours'"
+    elif timeframe == "30d":
+        bucket_trunc = "day"
+        interval_sql = "INTERVAL '30 days'"
+    else:  # default 7d
+        bucket_trunc = "day"
+        interval_sql = "INTERVAL '7 days'"
+
+    return await db.execute(text(f"""
+        WITH comp_series AS (
+            SELECT
+                DATE_TRUNC('{bucket_trunc}', ps.scraped_at) AS bucket_time,
+                ROUND(MIN(ps.price)::numeric, 2) AS cheapest,
+                ROUND(AVG(ps.price)::numeric, 2) AS market_avg,
+                ROUND(MAX(ps.price)::numeric, 2) AS most_expensive,
+                COUNT(ps.id) AS comp_snapshots
+            FROM price_snapshots ps
+            JOIN competitor_listings cl ON cl.id = ps.competitor_listing_id
+            JOIN tracked_products tp    ON tp.id = cl.tracked_product_id
+            JOIN user_stores us         ON us.id = tp.store_id
+            WHERE us.user_id = :uid
+              AND tp.is_active = true
+              AND cl.is_active = true
+              AND ps.price IS NOT NULL
+              AND ps.price > 0
+              {store_filter}
+              {product_filter}
+              AND ps.scraped_at >= NOW() - {interval_sql}
+            GROUP BY 1
+        ),
+        own_series AS (
+            SELECT
+                DATE_TRUNC('{bucket_trunc}', tps.scraped_at) AS bucket_time,
+                ROUND(AVG(tps.price)::numeric, 2) AS your_avg,
+                COUNT(tps.id) AS own_snapshots
+            FROM tracked_product_snapshots tps
+            JOIN tracked_products tp ON tp.id = tps.tracked_product_id
+            JOIN user_stores us      ON us.id = tp.store_id
+            WHERE us.user_id = :uid
+              AND tp.is_active = true
+              AND tps.price IS NOT NULL
+              AND tps.price > 0
+              {store_filter}
+              {product_filter}
+              AND tps.scraped_at >= NOW() - {interval_sql}
+            GROUP BY 1
+        )
+        SELECT
+            COALESCE(c.bucket_time, o.bucket_time) AS bucket_time,
+            c.cheapest,
+            c.market_avg,
+            c.most_expensive,
+            o.your_avg,
+            COALESCE(c.comp_snapshots, 0) AS comp_snapshots,
+            COALESCE(o.own_snapshots, 0) AS own_snapshots
+        FROM comp_series c
+        FULL OUTER JOIN own_series o ON c.bucket_time = o.bucket_time
+        ORDER BY bucket_time ASC
     """), params)

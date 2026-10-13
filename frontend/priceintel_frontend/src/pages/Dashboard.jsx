@@ -5,43 +5,15 @@ import {
   CartesianGrid, Tooltip, Legend, ScatterChart, Scatter, ZAxis, ReferenceLine,
 } from "recharts";
 import Layout from "../components/Layout";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { useStore } from "../context/StoreContext";
 import {
   getProductsByStore, getPortfolioHealth, getActiveOpportunities,
   getActivePriceWars, getAttentionItems, getProductMarketMovement,
+  getProductPriceTrend,
 } from "../api/products";
 
-function getPortfolioTrendData(timeframe) {
-  if (timeframe === "1d") return [
-    { time: "4 AM", yourAvg: 12380, marketAvg: 13050, cheapest: 11180 },
-    { time: "8 AM", yourAvg: 12350, marketAvg: 12980, cheapest: 11140 },
-    { time: "12 PM", yourAvg: 12310, marketAvg: 12920, cheapest: 11090 },
-    { time: "4 PM", yourAvg: 12270, marketAvg: 12870, cheapest: 11050 },
-    { time: "8 PM", yourAvg: 12240, marketAvg: 12840, cheapest: 11020 },
-    { time: "Now", yourAvg: 12200, marketAvg: 12800, cheapest: 10990 },
-  ];
-  if (timeframe === "7d") return [
-    { time: "Mon", yourAvg: 12400, marketAvg: 13100, cheapest: 11200 },
-    { time: "Tue", yourAvg: 12350, marketAvg: 12950, cheapest: 11100 },
-    { time: "Wed", yourAvg: 12200, marketAvg: 12800, cheapest: 10900 },
-    { time: "Thu", yourAvg: 12100, marketAvg: 12600, cheapest: 10800 },
-    { time: "Fri", yourAvg: 12000, marketAvg: 12500, cheapest: 10750 },
-    { time: "Sat", yourAvg: 11900, marketAvg: 12400, cheapest: 10700 },
-    { time: "Sun", yourAvg: 11850, marketAvg: 12350, cheapest: 10650 },
-  ];
-  return [
-    { time: "Week 1", yourAvg: 13200, marketAvg: 14000, cheapest: 12000 },
-    { time: "Week 2", yourAvg: 12900, marketAvg: 13700, cheapest: 11700 },
-    { time: "Week 3", yourAvg: 12500, marketAvg: 13300, cheapest: 11400 },
-    { time: "Week 4", yourAvg: 11850, marketAvg: 12800, cheapest: 10650 },
-  ];
-}
 
-const TREND_INSIGHTS = {
-  "1d": "Your portfolio stayed 4.1% below market average price throughout today.",
-  "7d": "Your portfolio became 4.2% more competitive this week compared to market average.",
-  "30d": "Your average price dropped 10.2% relative to the market over the last 30 days.",
-};
 
 const SCATTER_FALLBACK = [
   { name: "Galaxy A17", x: 24, y: 82 },
@@ -75,15 +47,55 @@ function CustomScatterDot(props) {
 
 function LineTip({ active, payload, label, currency }) {
   if (!active || !payload?.length) return null;
+
+  const point = payload[0]?.payload || {};
+  const yourPrice = point.yourAvg != null ? Number(point.yourAvg) : null;
+  const compMax = point.rawExpensive != null ? Number(point.rawExpensive) : (point.expensive != null ? Number(point.expensive) : null);
+  const compMin = point.rawCheapest != null ? Number(point.rawCheapest) : (point.cheapest != null ? Number(point.cheapest) : null);
+  const marketAvg = point.marketAvg != null ? Number(point.marketAvg) : null;
+
+  const isMostExpensive = yourPrice != null && compMax != null && yourPrice >= compMax;
+  const isCheapest = yourPrice != null && compMin != null && yourPrice <= compMin && !isMostExpensive;
+
+  const rows = [];
+  if (isMostExpensive) {
+    if (yourPrice != null) rows.push({ name: "Your Price", value: yourPrice, color: "var(--d-accent)" });
+    if (marketAvg != null) rows.push({ name: "Market Average", value: marketAvg, color: "#94a3b8" });
+    if (compMin != null) rows.push({ name: "Cheapest in Market", value: compMin, color: "#10B981" });
+  } else if (isCheapest) {
+    if (compMax != null) rows.push({ name: "Most Expensive in Market", value: compMax, color: "#EF4444" });
+    if (marketAvg != null) rows.push({ name: "Market Average", value: marketAvg, color: "#94a3b8" });
+    if (yourPrice != null) rows.push({ name: "Your Price", value: yourPrice, color: "var(--d-accent)" });
+  } else {
+    if (compMax != null) rows.push({ name: "Most Expensive in Market", value: compMax, color: "#EF4444" });
+    if (yourPrice != null) rows.push({ name: "Your Price", value: yourPrice, color: "var(--d-accent)" });
+    if (marketAvg != null) rows.push({ name: "Market Average", value: marketAvg, color: "#94a3b8" });
+    if (compMin != null) rows.push({ name: "Cheapest in Market", value: compMin, color: "#10B981" });
+  }
+
+  const dateStr = point.date || label;
+
   return (
-    <div style={{ background: "var(--d-surface)", border: "1px solid var(--d-border)", borderRadius: "8px", padding: "10px 14px", boxShadow: "0 6px 20px rgba(0,0,0,0.14)", fontSize: "11.5px" }}>
+    <div style={{ background: "var(--d-surface)", border: "1px solid var(--d-border)", borderRadius: "8px", padding: "10px 14px", boxShadow: "0 6px 20px rgba(0,0,0,0.14)", fontSize: "11.5px", minWidth: "190px" }}>
       <p style={{ margin: "0 0 7px", fontWeight: 700, color: "var(--d-text)", fontSize: "12px" }}>{label}</p>
-      {payload.map((e) => (
+      {rows.map((e) => (
         <div key={e.name} style={{ display: "flex", justifyContent: "space-between", gap: "16px", color: e.color, margin: "3px 0", fontWeight: 600 }}>
           <span>{e.name}</span>
           <span>{currency} {Number(e.value).toLocaleString()}</span>
         </div>
       ))}
+      {isMostExpensive && (
+        <div style={{ marginTop: "8px", paddingTop: "7px", borderTop: "1px solid var(--d-border)", color: "#EF4444", fontSize: "11px", fontWeight: 600, lineHeight: 1.4, display: "flex", alignItems: "center", gap: "5px" }}>
+          <span>⚠️</span>
+          <span>You were the most expensive at this date ({dateStr})</span>
+        </div>
+      )}
+      {isCheapest && (
+        <div style={{ marginTop: "8px", paddingTop: "7px", borderTop: "1px solid var(--d-border)", color: "#10B981", fontSize: "11px", fontWeight: 600, lineHeight: 1.4, display: "flex", alignItems: "center", gap: "5px" }}>
+          <span>🏷️</span>
+          <span>You were the cheapest at this date ({dateStr})</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -156,7 +168,12 @@ export default function Dashboard() {
   const [attentionItems, setAttentionItems] = useState([]); // CHANGED: real attention data
   const [loading, setLoading] = useState(true);
   const [trendTimeframe, setTrendTimeframe] = useState("1d");
-  const [selectedTrendProduct, setSelectedTrendProduct] = useState("all");
+  const [selectedTrendProduct, setSelectedTrendProduct] = useState("");
+  const [trendData, setTrendData] = useState([]);
+  const [trendInsight, setTrendInsight] = useState("");
+  const [trendHasData, setTrendHasData] = useState(false);
+  const [loadingTrend, setLoadingTrend] = useState(false);
+  const [trendError, setTrendError] = useState(false);
 
   // Dedicated Product-Specific Market Movement state
   const [selectedMarketProduct, setSelectedMarketProduct] = useState("");
@@ -188,7 +205,6 @@ export default function Dashboard() {
       setLoading(false); return;
     }
     setLoading(true);
-    setSelectedTrendProduct("all");
     Promise.all([
       getProductsByStore(selectedStore.id),
       getPortfolioHealth(selectedStore.id).catch(() => null),
@@ -218,16 +234,23 @@ export default function Dashboard() {
     };
   }, [selectedStore?.id]);
 
-  // Synchronize product selection for Market Movement when store products change
+  // Synchronize product selection for Market Movement and Trend Chart when store products change
   useEffect(() => {
     if (storeProducts && storeProducts.length > 0) {
-      const exists = storeProducts.some((p) => String(p.id) === String(selectedMarketProduct));
-      if (!exists) {
+      const existsMarket = storeProducts.some((p) => String(p.id) === String(selectedMarketProduct));
+      if (!existsMarket) {
         setSelectedMarketProduct(String(storeProducts[0].id));
+      }
+      const existsTrend = storeProducts.some((p) => String(p.id) === String(selectedTrendProduct));
+      if (!existsTrend) {
+        setSelectedTrendProduct(String(storeProducts[0].id));
       }
     } else {
       setSelectedMarketProduct("");
       setMarketMovementData(null);
+      setSelectedTrendProduct("");
+      setTrendData([]);
+      setTrendHasData(false);
     }
   }, [storeProducts]);
 
@@ -264,9 +287,66 @@ export default function Dashboard() {
     };
   }, [selectedStore?.id, selectedMarketProduct, marketMovementTimeframe]);
 
+  // Fetch real Product Price Trend Analysis chart data
+  useEffect(() => {
+    if (!selectedStore?.id) {
+      setTrendData([]);
+      setTrendHasData(false);
+      setTrendInsight("");
+      setLoadingTrend(false);
+      setTrendError(false);
+      return;
+    }
+
+    let isCurrent = true;
+    setLoadingTrend(true);
+    setTrendError(false);
+
+    getProductPriceTrend(selectedStore.id, selectedTrendProduct, trendTimeframe)
+      .then((res) => {
+        if (!isCurrent) return;
+        const pts = Array.isArray(res?.data) ? res.data : [];
+        setTrendData(pts);
+        setTrendHasData(Boolean(res?.has_data && pts.length >= 2));
+        setTrendInsight(res?.insight || "");
+      })
+      .catch((err) => {
+        if (!isCurrent) return;
+        console.error("Failed to fetch product price trend:", err);
+        setTrendError(true);
+        setTrendData([]);
+        setTrendHasData(false);
+        setTrendInsight("");
+      })
+      .finally(() => {
+        if (isCurrent) setLoadingTrend(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedStore?.id, selectedTrendProduct, trendTimeframe]);
+
+  const processedTrendData = useMemo(() => {
+    return trendData.map((pt) => {
+      const yourPrice = pt.yourAvg != null ? Number(pt.yourAvg) : null;
+      const compMax = pt.expensive != null ? Number(pt.expensive) : null;
+      const compMin = pt.cheapest != null ? Number(pt.cheapest) : null;
+
+      const isTopExp = yourPrice != null && compMax != null && yourPrice >= compMax;
+      const isBtmChp = yourPrice != null && compMin != null && yourPrice <= compMin && !isTopExp;
+
+      return {
+        ...pt,
+        rawExpensive: compMax,
+        rawCheapest: compMin,
+        expensive: isTopExp ? null : compMax,
+        cheapest: isBtmChp ? null : compMin,
+      };
+    });
+  }, [trendData]);
+
   const curr = currency || (selectedStore?.country === "Pakistan" || selectedStore?.country === "PK" ? "PKR" : "AED");
-  const trendData = getPortfolioTrendData(trendTimeframe);
-  const trendInsight = TREND_INSIGHTS[trendTimeframe];
 
   const scatterData = storeProducts.length >= 3
     ? storeProducts.slice(0, 9).map((p, i) => ({
@@ -370,7 +450,9 @@ export default function Dashboard() {
 
       {loading || (storeLoading && !selectedStore) ? (
         <div style={{ textAlign: "center", padding: "90px 0", color: "var(--d-text-3)" }}>
-          <div style={{ fontSize: "30px", marginBottom: "14px", opacity: 0.5 }}>⏳</div>
+          <div style={{ marginBottom: "14px", display: "flex", justifyContent: "center" }}>
+            <LoadingSpinner size={32} color="var(--d-text-3)" />
+          </div>
           <p style={{ margin: 0, fontSize: "14px" }}>Loading portfolio intelligence…</p>
         </div>
       ) : !selectedStore ? (
@@ -426,11 +508,11 @@ export default function Dashboard() {
 
           {/* ── Trend chart ── */}
           <div style={{ ...card, marginBottom: "22px", overflow: "hidden", minWidth: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: selectedTrendProduct !== "all" ? "10px" : "22px", flexWrap: "wrap", gap: "12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: selectedTrendProduct ? "10px" : "22px", flexWrap: "wrap", gap: "12px" }}>
               <h2 style={sectionTitle}>Product Price Trend Analysis</h2>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                 <select value={selectedTrendProduct} onChange={(e) => setSelectedTrendProduct(e.target.value)} style={{ padding: "5px 32px 5px 12px", borderRadius: "7px", border: "1px solid var(--d-border)", background: "var(--d-surface-2)", color: "var(--d-text)", fontSize: "12.5px", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", outline: "none", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", minWidth: "160px", maxWidth: "240px" }}>
-                  <option value="all">All Tracked Products</option>
+                  {!selectedTrendProduct && <option value="" disabled>Select a product</option>}
                   {storeProducts.map((p) => { const dispName = p.search_keyword || p.title; const short = dispName?.length > 28 ? dispName.slice(0, 26).trim() + "…" : dispName; return <option key={p.id} value={p.id} title={dispName}>{short}</option>; })}
                 </select>
                 <div style={{ display: "flex", background: "var(--d-surface-2)", padding: "3px", borderRadius: "8px", border: "1px solid var(--d-border)", gap: "2px" }}>
@@ -438,34 +520,61 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-            {selectedTrendProduct !== "all" && (
+            {selectedTrendProduct && (
               <div style={{ marginBottom: "16px", fontSize: "12px", color: "var(--d-text-2)", lineHeight: 1.4, wordBreak: "break-word" }}>
                 <span style={{ color: "var(--d-text-3)", fontWeight: 500 }}>Active Product: </span>
                 <span style={{ color: "var(--d-text)", fontWeight: 600 }}>{storeProducts.find((p) => String(p.id) === String(selectedTrendProduct))?.title}</span>
               </div>
             )}
             <div style={{ width: "100%", height: "290px", minWidth: 0, maxWidth: "100%", overflow: "hidden", position: "relative" }}>
-              <div style={{ position: "absolute", inset: 0 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendData} margin={{ top: 8, right: 20, left: 8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--d-border)" />
-                    <XAxis dataKey="time" stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={{ stroke: "var(--d-border)" }} />
-                    <YAxis stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={false} width={88} domain={["dataMin - 400", "dataMax + 400"]} tickFormatter={(v) => `${curr} ${Number(v).toLocaleString()}`} />
-                    <Tooltip content={<LineTip currency={curr} />} />
-                    <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: "12px", fontSize: "11.5px", fontWeight: 600 }} />
-                    <Line type="monotone" dataKey="yourAvg" name="Your Avg Price" stroke="var(--d-accent)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--d-accent)", stroke: "var(--d-surface)", strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="marketAvg" name="Market Average" stroke="#94a3b8" strokeWidth={1.8} strokeDasharray="5 4" dot={{ r: 3, fill: "#94a3b8" }} />
-                    <Line type="monotone" dataKey="cheapest" name="Cheapest in Market" stroke="#10B981" strokeWidth={1.8} strokeDasharray="3 3" dot={{ r: 3, fill: "#10B981" }} />
-                  </LineChart>
-                </ResponsiveContainer>
+              {loadingTrend ? (
+                <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--d-text-3)", fontSize: "13px" }}>
+                  <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
+                    <LoadingSpinner size={26} color="var(--d-text-3)" />
+                  </div>
+                  <p style={{ margin: 0 }}>Loading price trend analysis…</p>
+                </div>
+              ) : trendError ? (
+                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", fontSize: "13px" }}>
+                  <p style={{ margin: 0 }}>Unable to load price trend data.</p>
+                </div>
+              ) : !trendHasData || trendData.length < 2 ? (
+                <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "20px" }}>
+                  <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--d-text)", marginBottom: "6px" }}>
+                    Not enough historical data
+                  </div>
+                  <p style={{ fontSize: "12.5px", color: "var(--d-text-3)", maxWidth: "380px", margin: "0 auto", lineHeight: 1.5 }}>
+                    {trendData.length === 1
+                      ? "Only 1 historical observation recorded for this period. At least 2 observations are required to show a trend."
+                      : "No competitor or own price observations recorded for the selected period."}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ position: "absolute", inset: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={processedTrendData} margin={{ top: 8, right: 20, left: 8, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--d-border)" />
+                      <XAxis dataKey="time" stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={{ stroke: "var(--d-border)" }} />
+                      <YAxis stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={false} width={88} domain={["auto", "auto"]} tickFormatter={(v) => `${curr} ${Number(v).toLocaleString()}`} />
+                      <Tooltip content={<LineTip currency={curr} />} />
+                      <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: "12px", fontSize: "11.5px", fontWeight: 600 }} />
+                      <Line type="monotone" dataKey="expensive" name="Most Expensive in Market" stroke="#EF4444" strokeWidth={1.8} strokeDasharray="4 4" dot={{ r: 3, fill: "#EF4444" }} connectNulls={true} />
+                      <Line type="monotone" dataKey="yourAvg" name="Your Price" stroke="var(--d-accent)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--d-accent)", stroke: "var(--d-surface)", strokeWidth: 2 }} activeDot={{ r: 6 }} connectNulls={true} />
+                      <Line type="monotone" dataKey="marketAvg" name="Market Average" stroke="#94a3b8" strokeWidth={1.8} strokeDasharray="5 4" dot={{ r: 3, fill: "#94a3b8" }} connectNulls={true} />
+                      <Line type="monotone" dataKey="cheapest" name="Cheapest in Market" stroke="#10B981" strokeWidth={1.8} strokeDasharray="3 3" dot={{ r: 3, fill: "#10B981" }} connectNulls={true} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+            {trendInsight && (
+              <div style={{ marginTop: "18px", padding: "11px 16px", borderRadius: "8px", background: "rgba(79,126,247,0.06)", border: "1px solid rgba(79,126,247,0.15)", display: "flex", alignItems: "center", gap: "10px" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--d-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                <p style={{ margin: 0, fontSize: "12.5px", color: "var(--d-text-2)", lineHeight: 1.5 }}>
+                  <strong style={{ color: "var(--d-accent)", fontWeight: 700 }}>Trend Insight — </strong>{trendInsight}
+                </p>
               </div>
-            </div>
-            <div style={{ marginTop: "18px", padding: "11px 16px", borderRadius: "8px", background: "rgba(79,126,247,0.06)", border: "1px solid rgba(79,126,247,0.15)", display: "flex", alignItems: "center", gap: "10px" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--d-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-              <p style={{ margin: 0, fontSize: "12.5px", color: "var(--d-text-2)", lineHeight: 1.5 }}>
-                <strong style={{ color: "var(--d-accent)", fontWeight: 700 }}>Trend Insight — </strong>{trendInsight}
-              </p>
-            </div>
+            )}
           </div>
 
           {/* ── Market Movement Summary Card ── */}
@@ -542,7 +651,9 @@ export default function Dashboard() {
             {/* Card Content */}
             {loadingMarketMovement ? (
               <div style={{ padding: "48px 0", textAlign: "center", color: "var(--d-text-3)" }}>
-                <div style={{ fontSize: "24px", marginBottom: "8px", opacity: 0.6 }}>⏳</div>
+                <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
+                  <LoadingSpinner size={26} color="var(--d-text-3)" />
+                </div>
                 <p style={{ margin: 0, fontSize: "13px" }}>Loading market movement…</p>
               </div>
             ) : marketMovementError ? (

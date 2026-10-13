@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import ConfirmModal from "../components/ConfirmModal";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { useStore } from "../context/StoreContext";
 import { getProductsByStore, deleteProduct, getProductKpis } from "../api/products";
 // CHANGED: added getProductKpis to the import above
@@ -325,7 +326,9 @@ function Products() {
         {/* ── Loading state ─────────────────────────────────── */}
         {loading && (
           <div style={{ textAlign: "center", padding: "48px 0", color: "var(--d-text-3)", fontSize: "13px" }}>
-            <div style={{ fontSize: "28px", marginBottom: "12px", opacity: 0.6 }}>⏳</div>
+            <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}>
+              <LoadingSpinner size={28} color="var(--d-text-3)" />
+            </div>
             Loading your products…
           </div>
         )}
