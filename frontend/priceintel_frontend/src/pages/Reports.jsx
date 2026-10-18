@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useStore } from "../context/StoreContext";
+import { useLocale } from "../context/LocaleContext";
 
 const cardStyle = {
     background: "var(--d-surface)",
@@ -13,16 +14,17 @@ const cardStyle = {
 function Reports() {
     const navigate = useNavigate();
     const { selectedStore } = useStore();
+    const { t } = useLocale();
 
     return (
         <Layout>
             {/* ── Page Header ────────────────────────────────────────── */}
             <div className="animate-in" style={{ marginBottom: "28px" }}>
                 <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--d-text)", letterSpacing: "-0.3px" }}>
-                    Reports
+                    {t("Reports")}
                 </h1>
                 <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--d-text-2)" }}>
-                    Export pricing history, competitor trends, and market analytics reports.
+                    {t("Export pricing history, competitor trends, and market analytics reports.")}
                 </p>
             </div>
 
@@ -54,10 +56,10 @@ function Reports() {
                         </svg>
                     </div>
                     <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>
-                        No Store Connected
+                        {t("No Store Connected")}
                     </h2>
                     <p style={{ fontSize: "14px", color: "var(--d-text-2)", maxWidth: "420px", margin: "0 auto 20px", lineHeight: "1.5" }}>
-                        Connect your marketplace store in Account & Stores to generate and export pricing reports.
+                        {t("Connect your marketplace store in Account & Stores to generate and export pricing reports.")}
                     </p>
                     <button
                         onClick={() => navigate("/account")}
@@ -73,7 +75,7 @@ function Reports() {
                             boxShadow: "0 2px 8px rgba(79,70,229,0.25)",
                         }}
                     >
-                        + Go to Account & Add Store
+                        {t("+ Go to Account & Add Store")}
                     </button>
                 </div>
             ) : (
@@ -84,7 +86,7 @@ function Reports() {
                             Custom Exports & Scheduled Reports for {selectedStore.store_name}
                         </h3>
                         <p style={{ margin: 0, fontSize: "13px", color: "var(--d-text-3)", maxWidth: "420px", marginInline: "auto" }}>
-                            Generate CSV/Excel reports for your pricing performance and competitor shifts.
+                            {t("Generate CSV/Excel reports for your pricing performance and competitor shifts.")}
                         </p>
                     </div>
                 </div>

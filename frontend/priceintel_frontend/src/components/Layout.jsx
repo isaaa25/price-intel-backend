@@ -6,6 +6,7 @@ import OnboardingModal from "./OnboardingModal";
 import { getMe, completeOnboarding } from "../api/auth";
 import { getStores } from "../api/products";
 import AIAgent, { AIFloatingButton } from "../pages/AI";
+import { useLocale } from "../context/LocaleContext";
 
 const NAV_ITEMS = [
   {
@@ -301,6 +302,7 @@ function UserAvatar() {
 
 function SidebarNavItem({ item, active, onClick }) {
   const [hovered, setHovered] = useState(false);
+  const { t } = useLocale();
 
   return (
     <div
@@ -339,7 +341,7 @@ function SidebarNavItem({ item, active, onClick }) {
       <span style={{ display: "flex", alignItems: "center", color: active ? "var(--d-accent)" : hovered ? "var(--d-text)" : "var(--d-text-3)" }}>
         {item.icon}
       </span>
-      <span>{item.label}</span>
+      <span>{t(item.label)}</span>
     </div>
   );
 }
@@ -382,6 +384,7 @@ export default function Layout({ children }) {
     return status === "false" && (location.pathname === "/dashboard" || window.location.pathname === "/dashboard");
   });
   const { stores, selectedStore, refreshStores } = useStore();
+  const { t } = useLocale();
 
   useEffect(() => {
     if (searchParams.get("tour") === "true") {
@@ -552,7 +555,7 @@ export default function Layout({ children }) {
             <polyline points="16 17 21 12 16 7" />
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-          <span>Logout</span>
+          <span>{t("Logout")}</span>
         </div>
       </div>
     </>

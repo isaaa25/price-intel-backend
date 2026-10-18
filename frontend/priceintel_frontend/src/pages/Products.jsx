@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import ConfirmModal from "../components/ConfirmModal";
 import { useStore } from "../context/StoreContext";
+import { useLocale } from "../context/LocaleContext";
 import { getProductsByStore, deleteProduct, getProductKpis } from "../api/products";
 // CHANGED: added getProductKpis to the import above
 
@@ -16,11 +17,12 @@ const card = {
 
 /* ── status badge helper ──────────────────────────────────── */
 function StatusBadge({ active, kpi }) {
+  const { t } = useLocale();
   if (!active) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: "var(--d-danger)" }}>
         <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--d-danger)", display: "inline-block" }} />
-        Inactive
+        {t("Inactive")}
       </span>
     );
   }
@@ -30,7 +32,7 @@ function StatusBadge({ active, kpi }) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12.5px", fontWeight: 600, color: "var(--d-text-3)" }}>
         <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--d-text-3)", display: "inline-block" }} />
-        No data
+        {t("No data")}
       </span>
     );
   }
@@ -44,7 +46,7 @@ function StatusBadge({ active, kpi }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12.5px", fontWeight: 600, color }}>
       <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: color, display: "inline-block" }} />
-      {label}
+      {t(label)}
     </span>
   );
 }
@@ -52,6 +54,7 @@ function StatusBadge({ active, kpi }) {
 function Products() {
   const navigate = useNavigate();
   const { selectedStore, currency } = useStore();
+  const { t } = useLocale();
 
   const [products, setProducts] = useState([]);
   const [kpisById, setKpisById] = useState({});
@@ -184,12 +187,12 @@ function Products() {
               letterSpacing: "-0.3px",
             }}
           >
-            Products
+            {t("Products")}
           </h1>
           <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--d-text-2)" }}>
             {selectedStore
               ? <>Products tracked for <strong>{selectedStore.store_name}</strong>.</>
-              : "All products you're tracking across marketplaces."}
+              : t("All products you're tracking across marketplaces.")}
           </p>
         </div>
 
@@ -222,7 +225,7 @@ function Products() {
           }}
         >
           <span style={{ fontSize: "16px", lineHeight: 1 }}>+</span>
-          Add Product
+          {t("Add Product")}
         </button>
       </div>
 
@@ -236,10 +239,10 @@ function Products() {
           }}
         >
           {[
-            { label: "Total Products", value: stats.total },
-            { label: "Cheapest", value: stats.cheapest },
-            { label: "Competitive", value: stats.competitive },
-            { label: "Overpriced", value: stats.overpriced },
+            { label: t("Total Products"), value: stats.total },
+            { label: t("Cheapest"), value: stats.cheapest },
+            { label: t("Competitive"), value: stats.competitive },
+            { label: t("Overpriced"), value: stats.overpriced },
           ].map((s, i) => (
             <div
               key={s.label}
@@ -286,7 +289,7 @@ function Products() {
               <input
                 id="input-products-search"
                 type="text"
-                placeholder="Search by title, category or keyword…"
+                placeholder={t("Search by title, category or keyword…")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={{ ...inputStyle, paddingLeft: "34px", width: "100%", boxSizing: "border-box" }}
@@ -316,7 +319,7 @@ function Products() {
                   textTransform: "capitalize",
                 }}
               >
-                {val === "all" ? "All" : val.charAt(0).toUpperCase() + val.slice(1)}
+                {t(val === "all" ? "All" : val.charAt(0).toUpperCase() + val.slice(1))}
               </button>
             ))}
           </div>
@@ -326,7 +329,7 @@ function Products() {
         {loading && (
           <div style={{ textAlign: "center", padding: "48px 0", color: "var(--d-text-3)", fontSize: "13px" }}>
             <div style={{ fontSize: "28px", marginBottom: "12px", opacity: 0.6 }}>⏳</div>
-            Loading your products…
+            {t("Loading your products…")}
           </div>
         )}
 
@@ -358,12 +361,12 @@ function Products() {
               📦
             </div>
             <p style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "var(--d-text-2)" }}>
-              No products yet
+              {t("No products yet")}
             </p>
             <p style={{ margin: "6px 0 0", fontSize: "13px" }}>
               {selectedStore
                 ? `No products tracked for ${selectedStore.store_name}.`
-                : "Add your first product to start tracking prices."}
+                : t("Add your first product to start tracking prices.")}
             </p>
             <button
               onClick={() => navigate("/products/add")}
@@ -380,7 +383,7 @@ function Products() {
                 cursor: "pointer",
               }}
             >
-              + Add Product
+              + {t("Add Product")}
             </button>
           </div>
         )}
@@ -396,7 +399,7 @@ function Products() {
             }}
           >
             <div style={{ fontSize: "28px", marginBottom: "12px", opacity: 0.5 }}>🔍</div>
-            No products match your search.
+            {t("No products match your search.")}
           </div>
         )}
 
@@ -413,13 +416,13 @@ function Products() {
               <thead>
                 <tr>
                   {[
-                    "Product",
-                    "Category",
-                    "Own Price",
-                    "Cheapest Competitor",
-                    "Competitors",
-                    "Status",
-                    "Actions",
+                    t("Product"),
+                    t("Category"),
+                    t("Own Price"),
+                    t("Cheapest Competitor"),
+                    t("Competitors"),
+                    t("Status"),
+                    t("Actions"),
                   ].map((h) => (
                     <th
                       key={h}

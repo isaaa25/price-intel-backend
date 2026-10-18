@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { registerUser } from "../api/auth";
 import AuthBackground from "../components/AuthBackground";
+import { useLocale } from "../context/LocaleContext";
 
 function Signup() {
   const navigate = useNavigate();
+  const { t } = useLocale();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,7 +18,7 @@ function Signup() {
     e.preventDefault();
     setError("");
     if (!name || !email || !password) {
-      setError("Please fill in every field.");
+      setError(t("Please fill in every field."));
       return;
     }
     setLoading(true);
@@ -61,13 +63,13 @@ function Signup() {
             gap: "4px",
           }}
         >
-          ← Back
+          {t("← Back")}
         </button>
 
         {/* Header */}
         <div className="auth-card-header">
-          <h1>Create your account</h1>
-          <p>Start monitoring prices across all your marketplaces</p>
+          <h1>{t("Create your account")}</h1>
+          <p>{t("Start monitoring prices across all your marketplaces")}</p>
         </div>
 
         {/* Form */}
@@ -75,7 +77,7 @@ function Signup() {
           {/* Name field */}
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             <label htmlFor="signup-name" style={{ fontSize: "12px", fontWeight: 600, color: "#334155" }}>
-              Full name
+              {t("Full name")}
             </label>
             <div className="auth-input-wrapper">
               <input
@@ -83,7 +85,7 @@ function Signup() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Your full name"
+                placeholder={t("Your full name")}
                 autoComplete="name"
                 required
               />
@@ -107,7 +109,7 @@ function Signup() {
           {/* Email field */}
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             <label htmlFor="signup-email" style={{ fontSize: "12px", fontWeight: 600, color: "#334155" }}>
-              Email address
+              {t("Email address")}
             </label>
             <div className="auth-input-wrapper">
               <input
@@ -139,7 +141,7 @@ function Signup() {
           {/* Password field */}
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             <label htmlFor="signup-password" style={{ fontSize: "12px", fontWeight: 600, color: "#334155" }}>
-              Password
+              {t("Password")}
             </label>
             <div className="auth-input-wrapper">
               <input
@@ -147,7 +149,7 @@ function Signup() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minimum 8 characters"
+                placeholder={t("Minimum 8 characters")}
                 autoComplete="new-password"
                 required
               />
@@ -210,19 +212,19 @@ function Signup() {
               marginTop: "4px",
             }}
           >
-            {loading ? "Creating account…" : "Create account"}
+            {loading ? t("Creating account…") : t("Create account")}
           </button>
         </form>
 
         {/* Footer */}
         <p style={{ textAlign: "center", fontSize: "12px", color: "#64748b", margin: 0, marginTop: "6px" }}>
-          Already have an account?{" "}
+          {t("Already have an account?")}{" "}
           <span
             role="button"
             onClick={() => navigate("/login")}
             style={{ color: "#2563EB", fontWeight: 600, cursor: "pointer" }}
           >
-            Sign in
+            {t("Sign in")}
           </span>
         </p>
       </div>

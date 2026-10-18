@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap');
 
 /* ─── Design Tokens ─────────────────────────────────────── */
 :root {
@@ -62,6 +62,11 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
+}
+
+html[lang="ar"] body,
+html[lang="ur"] body {
+  font-family: "Noto Sans Arabic", sans-serif;
 }
 
 /* ─── Auth pages shared wrapper ────────────────────────── */
@@ -915,6 +920,12 @@ body {
   z-index: 50;
 }
 
+[dir="rtl"] .layout-sidebar-desktop {
+  border-right: 0;
+  border-left: 1px solid var(--d-border);
+  box-shadow: -2px 0 8px -2px rgba(0,0,0,0.05);
+}
+
 /* ── Layout: Mobile Sidebar Drawer ────────────────────────── */
 .layout-sidebar-mobile {
   display: none; /* hidden on desktop */
@@ -1081,6 +1092,19 @@ body {
     z-index: 200;
     transform: translateX(-100%);
     transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  [dir="rtl"] .layout-sidebar-mobile {
+    left: auto;
+    right: 0;
+    border-right: 0;
+    border-left: 1px solid var(--d-border);
+    box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+    transform: translateX(100%);
+  }
+
+  [dir="rtl"] .layout-sidebar-mobile--open {
+    transform: translateX(0);
   }
 
   .layout-sidebar-mobile--open {
@@ -1253,4 +1277,4 @@ body {
   .hero-composition {
     max-width: 100%;
   }
-}
+}

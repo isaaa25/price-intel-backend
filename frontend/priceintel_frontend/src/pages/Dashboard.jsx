@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import Layout from "../components/Layout";
 import { useStore } from "../context/StoreContext";
+import { useLocale } from "../context/LocaleContext";
 import {
   getProductsByStore, getPortfolioHealth, getActiveOpportunities,
   getActivePriceWars, getAttentionItems, getProductMarketMovement,
@@ -89,6 +90,7 @@ function LineTip({ active, payload, label, currency }) {
 }
 
 function ScatterTip({ active, payload }) {
+  const { t } = useLocale();
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
   const c = quadrantColor(d?.x, d?.y);
@@ -97,8 +99,8 @@ function ScatterTip({ active, payload }) {
     <div style={{ background: "var(--d-surface)", border: "1px solid var(--d-border)", borderRadius: "8px", padding: "10px 14px", boxShadow: "0 6px 20px rgba(0,0,0,0.14)", fontSize: "11.5px", maxWidth: "200px" }}>
       <p style={{ margin: "0 0 6px", fontWeight: 700, color: "var(--d-text)", fontSize: "12px" }}>{d?.name}</p>
       <div style={{ color: "var(--d-text-2)", lineHeight: 1.7 }}>
-        <div>Competitiveness: <strong style={{ color: "var(--d-text)" }}>{d?.x} / 100</strong></div>
-        <div>Market Volatility: <strong style={{ color: "var(--d-text)" }}>{d?.y} / 100</strong></div>
+        <div>{t("Competitiveness:")} <strong style={{ color: "var(--d-text)" }}>{d?.x} / 100</strong></div>
+        <div>{t("Market Volatility:")} <strong style={{ color: "var(--d-text)" }}>{d?.y} / 100</strong></div>
       </div>
       <div style={{ marginTop: "6px", paddingTop: "6px", borderTop: "1px solid var(--d-border)" }}>
         <span style={{ fontSize: "10.5px", fontWeight: 700, color: c }}>{quadLabel}</span>
@@ -147,6 +149,7 @@ function levelMeta(level) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLocale();
   const { stores, selectedStore, setSelectedStore, currency, refreshStores, loading: storeLoading } = useStore();
 
   const [storeProducts, setStoreProducts] = useState([]);
@@ -284,7 +287,7 @@ export default function Dashboard() {
     const active = trendTimeframe === value;
     return (
       <button onClick={() => setTrendTimeframe(value)} style={{ padding: "5px 14px", borderRadius: "6px", border: "none", background: active ? "var(--d-surface)" : "transparent", color: active ? "var(--d-accent)" : "var(--d-text-3)", fontWeight: active ? 700 : 500, fontSize: "12px", cursor: "pointer", boxShadow: active ? "0 1px 3px rgba(0,0,0,0.10)" : "none", transition: "all 0.15s ease", fontFamily: "inherit" }}>
-        {label}
+        {t(label)}
       </button>
     );
   }
@@ -359,31 +362,31 @@ export default function Dashboard() {
     <Layout>
       <div className="res-page-header" style={{ marginBottom: "26px" }}>
         <div>
-          <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 3px", letterSpacing: "-0.4px" }}>Dashboard</h1>
-          <p style={{ margin: 0, fontSize: "12.5px", color: "var(--d-text-3)" }}>Portfolio intelligence &amp; actionable pricing decisions</p>
+          <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 3px", letterSpacing: "-0.4px" }}>{t("Dashboard")}</h1>
+          <p style={{ margin: 0, fontSize: "12.5px", color: "var(--d-text-3)" }}>{t("Portfolio intelligence & actionable pricing decisions")}</p>
         </div>
         <button onClick={() => navigate("/alerts")} style={{ display: "flex", alignItems: "center", gap: "7px", padding: "8px 16px", background: "var(--d-surface)", border: "1px solid var(--d-border)", borderRadius: "8px", fontSize: "12.5px", fontWeight: 600, color: "var(--d-text)", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-          View All Alerts
+          {t("View All Alerts")}
         </button>
       </div>
 
       {loading || (storeLoading && !selectedStore) ? (
         <div style={{ textAlign: "center", padding: "90px 0", color: "var(--d-text-3)" }}>
           <div style={{ fontSize: "30px", marginBottom: "14px", opacity: 0.5 }}>⏳</div>
-          <p style={{ margin: 0, fontSize: "14px" }}>Loading portfolio intelligence…</p>
+          <p style={{ margin: 0, fontSize: "14px" }}>{t("Loading portfolio intelligence…")}</p>
         </div>
       ) : !selectedStore ? (
         <div style={{ ...card, textAlign: "center", padding: "80px 20px" }}>
-          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>No Store Connected</h2>
-          <p style={{ fontSize: "13.5px", color: "var(--d-text-2)", maxWidth: "380px", margin: "0 auto 22px", lineHeight: 1.65 }}>Connect your marketplace store in Account &amp; Stores to view live price intelligence.</p>
-          <button onClick={() => navigate("/account")} style={{ padding: "10px 24px", background: "var(--d-accent)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13.5px", fontWeight: 600, cursor: "pointer" }}>+ Go to Account &amp; Add Store</button>
+          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>{t("No Store Connected")}</h2>
+          <p style={{ fontSize: "13.5px", color: "var(--d-text-2)", maxWidth: "380px", margin: "0 auto 22px", lineHeight: 1.65 }}>{t("Connect your marketplace store in Account & Stores to view live price intelligence.")}</p>
+          <button onClick={() => navigate("/account")} style={{ padding: "10px 24px", background: "var(--d-accent)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13.5px", fontWeight: 600, cursor: "pointer" }}>{t("+ Go to Account & Add Store")}</button>
         </div>
       ) : storeProducts.length === 0 ? (
         <div style={{ ...card, textAlign: "center", padding: "80px 20px" }}>
           <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>No Tracked Products in {selectedStore.store_name}</h2>
-          <p style={{ fontSize: "13.5px", color: "var(--d-text-2)", maxWidth: "380px", margin: "0 auto 22px", lineHeight: 1.65 }}>Add products to start monitoring competitor prices.</p>
-          <button onClick={() => navigate("/products/add")} style={{ padding: "10px 24px", background: "var(--d-accent)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13.5px", fontWeight: 600, cursor: "pointer" }}>+ Add Products</button>
+          <p style={{ fontSize: "13.5px", color: "var(--d-text-2)", maxWidth: "380px", margin: "0 auto 22px", lineHeight: 1.65 }}>{t("Add products to start monitoring competitor prices.")}</p>
+          <button onClick={() => navigate("/products/add")} style={{ padding: "10px 24px", background: "var(--d-accent)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13.5px", fontWeight: 600, cursor: "pointer" }}>{t("+ Add Products")}</button>
         </div>
       ) : (
         <>
@@ -427,7 +430,7 @@ export default function Dashboard() {
           {/* ── Trend chart ── */}
           <div style={{ ...card, marginBottom: "22px", overflow: "hidden", minWidth: 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: selectedTrendProduct !== "all" ? "10px" : "22px", flexWrap: "wrap", gap: "12px" }}>
-              <h2 style={sectionTitle}>Product Price Trend Analysis</h2>
+              <h2 style={sectionTitle}>{t("Product Price Trend Analysis")}</h2>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                 <select value={selectedTrendProduct} onChange={(e) => setSelectedTrendProduct(e.target.value)} style={{ padding: "5px 32px 5px 12px", borderRadius: "7px", border: "1px solid var(--d-border)", background: "var(--d-surface-2)", color: "var(--d-text)", fontSize: "12.5px", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", outline: "none", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", minWidth: "160px", maxWidth: "240px" }}>
                   <option value="all">All Tracked Products</option>

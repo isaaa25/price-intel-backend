@@ -5,6 +5,7 @@ import { useTheme } from "../context/ThemeContext";
 import Layout from "../components/Layout";
 import apiRequest from "../api/client";
 import BillingSection from "../components/BillingSection";
+import { useLocale } from "../context/LocaleContext";
 
 const cardStyle = {
   background: "var(--d-surface)",
@@ -38,16 +39,17 @@ const labelStyle = {
 
 function ThemeCard() {
   const { theme, setTheme } = useTheme();
+  const { t } = useLocale();
 
   return (
     <div className="animate-in" style={cardStyle}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
         <div>
           <h2 style={{ margin: "0 0 2px", fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
-            Appearance
+            {t("Appearance")}
           </h2>
           <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-3)" }}>
-            Choose how Price Intel looks for you. Saved automatically.
+            {t("Choose how Price Intel looks for you. Saved automatically.")}
           </p>
         </div>
       </div>
@@ -116,7 +118,7 @@ function ThemeCard() {
               }}
             >
               {opt.icon}
-              {opt.label}
+              {t(opt.label)}
             </button>
           );
         })}
@@ -125,7 +127,36 @@ function ThemeCard() {
   );
 }
 
+function LanguageCard() {
+  const { language, setLanguage, localeOptions, t } = useLocale();
+
+  return (
+    <div className="animate-in" style={cardStyle}>
+      <div style={{ marginBottom: "16px" }}>
+        <h2 style={{ margin: "0 0 2px", fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
+          {t("Language")}
+        </h2>
+        <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-3)" }}>
+          {t("Choose your preferred language for Price Intel.")}
+        </p>
+      </div>
+      <select
+        id="settings-language"
+        value={language}
+        onChange={(event) => setLanguage(event.target.value)}
+        aria-label={t("Language")}
+        style={{ ...inputStyle, maxWidth: "280px" }}
+      >
+        {localeOptions.map((option) => (
+          <option key={option.value} value={option.value}>{option.nativeLabel}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function GeneralSettingsSection() {
+  const { t } = useLocale();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [oldPassword, setOldPassword] = useState("");
@@ -156,23 +187,23 @@ function GeneralSettingsSection() {
     setMessage(null);
 
     if (!oldPassword) {
-      setMessage({ type: "error", text: "Please enter your current password." });
+      setMessage({ type: "error", text: t("Please enter your current password.") });
       return;
     }
     if (!newPassword) {
-      setMessage({ type: "error", text: "Please enter a new password." });
+      setMessage({ type: "error", text: t("Please enter a new password.") });
       return;
     }
     if (newPassword.length < 8) {
-      setMessage({ type: "error", text: "New password must be at least 8 characters." });
+      setMessage({ type: "error", text: t("New password must be at least 8 characters.") });
       return;
     }
     if (newPassword !== confirmPassword) {
-      setMessage({ type: "error", text: "New passwords do not match." });
+      setMessage({ type: "error", text: t("New passwords do not match.") });
       return;
     }
     if (oldPassword === newPassword) {
-      setMessage({ type: "error", text: "New password must be different from current password." });
+      setMessage({ type: "error", text: t("New password must be different from current password.") });
       return;
     }
 
@@ -185,7 +216,7 @@ function GeneralSettingsSection() {
           new_password: newPassword,
         }),
       });
-      setMessage({ type: "success", text: "Password updated successfully! ✓" });
+      setMessage({ type: "success", text: t("Password updated successfully! ✓") });
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -202,22 +233,23 @@ function GeneralSettingsSection() {
   return (
     <div className="animate-in">
       {/* ── A) Appearance ────────────────────────────────────────── */}
+      <LanguageCard />
       <ThemeCard />
 
       {/* ── B) Account Information ───────────────────────────────── */}
       <div className="animate-in" style={{ ...cardStyle, animationDelay: "0.04s" }}>
         <div style={{ marginBottom: "18px" }}>
           <h2 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
-            Account Information
+            {t("Account Information")}
           </h2>
           <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-3)" }}>
-            Your primary credentials and contact details associated with this account.
+            {t("Your primary credentials and contact details associated with this account.")}
           </p>
         </div>
 
         <div className="form-grid-2">
           <div>
-            <label style={labelStyle}>Email Address</label>
+            <label style={labelStyle}>{t("Email Address")}</label>
             <input
               type="email"
               value={email}
@@ -232,7 +264,7 @@ function GeneralSettingsSection() {
           </div>
 
           <div>
-            <label style={labelStyle}>Full Name / Display Name</label>
+            <label style={labelStyle}>{t("Full Name / Display Name")}</label>
             <input
               type="text"
               value={fullName || "User"}
@@ -252,12 +284,12 @@ function GeneralSettingsSection() {
       <div className="animate-in" style={{ ...cardStyle, animationDelay: "0.08s" }}>
         <div style={{ marginBottom: "18px" }}>
           <h2 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
-            Security
+            {t("Security")}
           </h2>
           <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-3)" }}>
             {showResetForm
-              ? "To change your password, verify your identity by entering your current password first."
-              : "Manage your authentication password and account access."}
+              ? t("To change your password, verify your identity by entering your current password first.")
+              : t("Manage your authentication password and account access.")}
           </p>
         </div>
 
@@ -297,7 +329,7 @@ function GeneralSettingsSection() {
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              Change / Reset Password
+              {t("Change / Reset Password")}
             </button>
           </div>
         ) : (
@@ -307,12 +339,12 @@ function GeneralSettingsSection() {
               {/* Current password */}
               <div style={{ marginBottom: "16px" }}>
                 <label style={labelStyle}>
-                  Current Password <span style={{ color: "var(--d-danger)" }}>*</span>
+                  {t("Current Password")} <span style={{ color: "var(--d-danger)" }}>*</span>
                 </label>
                 <div style={{ position: "relative" }}>
                   <input
                     type={showOld ? "text" : "password"}
-                    placeholder="Enter your current password"
+                    placeholder={t("Enter your current password")}
                     value={oldPassword}
                     onChange={(e) => setOldPassword(e.target.value)}
                     style={{ ...inputStyle, paddingRight: "42px" }}
@@ -358,12 +390,12 @@ function GeneralSettingsSection() {
               <div className="form-grid-2" style={{ marginBottom: "20px" }}>
                 <div>
                   <label style={labelStyle}>
-                    New Password <span style={{ color: "var(--d-danger)" }}>*</span>
+                    {t("New Password")} <span style={{ color: "var(--d-danger)" }}>*</span>
                   </label>
                   <div style={{ position: "relative" }}>
                     <input
                       type={showNew ? "text" : "password"}
-                      placeholder="Min. 8 characters"
+                      placeholder={t("Min. 8 characters")}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       style={{ ...inputStyle, paddingRight: "42px" }}
@@ -407,12 +439,12 @@ function GeneralSettingsSection() {
 
                 <div>
                   <label style={labelStyle}>
-                    Confirm New Password <span style={{ color: "var(--d-danger)" }}>*</span>
+                    {t("Confirm New Password")} <span style={{ color: "var(--d-danger)" }}>*</span>
                   </label>
                   <div style={{ position: "relative" }}>
                     <input
                       type={showConfirm ? "text" : "password"}
-                      placeholder="Re-enter new password"
+                      placeholder={t("Re-enter new password")}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       style={{ ...inputStyle, paddingRight: "42px" }}
@@ -473,7 +505,7 @@ function GeneralSettingsSection() {
                     transition: "background 0.15s, transform 0.1s",
                   }}
                 >
-                  {saving ? "Updating…" : "Update Password"}
+                  {saving ? t("Updating…") : t("Update Password")}
                 </button>
 
                 <button
@@ -497,7 +529,7 @@ function GeneralSettingsSection() {
                     cursor: "pointer",
                   }}
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
               </div>
             </div>
@@ -535,6 +567,7 @@ function GeneralSettingsSection() {
 function Settings({ initialTab }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useLocale();
 
   // Tab state derived from prop or search param
   const currentTab = searchParams.get("tab") || initialTab || "general";
@@ -559,20 +592,20 @@ function Settings({ initialTab }) {
       {/* ── Breadcrumb & Page Header ─────────────────────────────── */}
       <div className="animate-in" style={{ marginBottom: "20px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--d-text-3)", marginBottom: "4px" }}>
-          <span style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Settings</span>
+          <span style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>{t("Settings")}</span>
           <span>/</span>
           <span style={{ color: "var(--d-accent)", fontWeight: 600 }}>
-            {activeTab === "billing" ? "Billing & Subscription" : "General"}
+            {activeTab === "billing" ? t("Billing & Subscription") : t("General")}
           </span>
         </div>
 
         <h1 style={{ margin: "4px 0 0", fontSize: "22px", fontWeight: 700, color: "var(--d-text)", letterSpacing: "-0.4px" }}>
-          {activeTab === "billing" ? "Billing & Subscription" : "Settings"}
+          {activeTab === "billing" ? t("Billing & Subscription") : t("Settings")}
         </h1>
         <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--d-text-2)" }}>
           {activeTab === "billing"
-            ? "Manage your Price Intel plan, usage, payment method, and billing history."
-            : "Manage your account profile, appearance, and security preferences."}
+            ? t("Manage your Price Intel plan, usage, payment method, and billing history.")
+            : t("Manage your account profile, appearance, and security preferences.")}
         </p>
       </div>
 
@@ -611,7 +644,7 @@ function Settings({ initialTab }) {
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
-          General
+          {t("General")}
         </button>
 
         <button
@@ -636,7 +669,7 @@ function Settings({ initialTab }) {
             <rect x="2" y="5" width="20" height="14" rx="2" />
             <line x1="2" y1="10" x2="22" y2="10" />
           </svg>
-          Billing & Subscription
+          {t("Billing & Subscription")}
         </button>
       </div>
 

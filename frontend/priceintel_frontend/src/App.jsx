@@ -2,6 +2,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { StoreProvider } from "./context/StoreContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { LocaleProvider } from "./context/LocaleContext";
 import Welcome from "./pages/Welcome";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -20,9 +21,10 @@ import Help from "./pages/help";
 function App() {
   return (
     <ThemeProvider>
-      <StoreProvider>
-        <BrowserRouter>
-          <Routes>
+      <LocaleProvider>
+        <StoreProvider>
+          <BrowserRouter>
+            <Routes>
             <Route path="/" element={<Welcome />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
@@ -38,9 +40,10 @@ function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/billing" element={<Settings initialTab="billing" />} />
             <Route path="/help" element={<Help />} />
-          </Routes>
-        </BrowserRouter>
-      </StoreProvider>
+            </Routes>
+          </BrowserRouter>
+        </StoreProvider>
+      </LocaleProvider>
     </ThemeProvider>
   );
 }

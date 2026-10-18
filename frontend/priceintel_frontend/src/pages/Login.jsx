@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { loginUser, completeOnboarding } from "../api/auth";
 import { getStores } from "../api/products";
 import AuthBackground from "../components/AuthBackground";
+import { useLocale } from "../context/LocaleContext";
 
 function Login() {
   const navigate = useNavigate();
+  const { language, setLanguage, localeOptions, t } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -17,7 +19,7 @@ function Login() {
     e.preventDefault();
     setError("");
     if (!email || !password) {
-      setError("Please enter both email and password.");
+      setError(t("Please enter both email and password."));
       return;
     }
     setLoading(true);
@@ -49,33 +51,53 @@ function Login() {
 
       {/* Card */}
       <div className="auth-card">
-        {/* Back */}
-        <button
-          id="btn-back-login"
-          className="btn-ghost"
-          onClick={() => navigate("/")}
-          style={{
-            alignSelf: "flex-start",
-            background: "none",
-            border: "none",
-            color: "#64748b",
-            fontSize: "13px",
-            fontWeight: 500,
-            cursor: "pointer",
-            padding: 0,
-            marginBottom: "4px",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-          }}
-        >
-          ← Back
-        </button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+          <button
+            id="btn-back-login"
+            className="btn-ghost"
+            onClick={() => navigate("/")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#64748b",
+              fontSize: "13px",
+              fontWeight: 500,
+              cursor: "pointer",
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            {t("← Back")}
+          </button>
+          <select
+            id="login-language"
+            aria-label={t("Language")}
+            value={language}
+            onChange={(event) => setLanguage(event.target.value)}
+            style={{
+              maxWidth: "130px",
+              padding: "7px 10px",
+              border: "1px solid #e2e8f0",
+              borderRadius: "8px",
+              background: "#ffffff",
+              color: "#334155",
+              fontSize: "12px",
+              fontFamily: "inherit",
+              cursor: "pointer",
+            }}
+          >
+            {localeOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.nativeLabel}</option>
+            ))}
+          </select>
+        </div>
 
         {/* Header */}
         <div className="auth-card-header">
-          <h1>Welcome back</h1>
-          <p>Sign in to your Price Intel account</p>
+          <h1>{t("Welcome back")}</h1>
+          <p>{t("Sign in to your Price Intel account")}</p>
         </div>
 
         {/* Form */}
@@ -83,7 +105,7 @@ function Login() {
           {/* Email field */}
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             <label htmlFor="login-email" style={{ fontSize: "12px", fontWeight: 600, color: "#334155" }}>
-              Email address
+              {t("Email address")}
             </label>
             <div className="auth-input-wrapper">
               <input
@@ -115,7 +137,7 @@ function Login() {
           {/* Password field */}
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             <label htmlFor="login-password" style={{ fontSize: "12px", fontWeight: 600, color: "#334155" }}>
-              Password
+              {t("Password")}
             </label>
             <div className="auth-input-wrapper">
               <input
@@ -169,13 +191,13 @@ function Login() {
                 onChange={(e) => setRememberMe(e.target.checked)}
                 style={{ borderRadius: "4px", accentColor: "#2563EB", cursor: "pointer" }}
               />
-              Remember me
+              {t("Remember me")}
             </label>
             <span
               onClick={() => alert("Password reset link will be sent to your email.")}
               style={{ color: "#2563EB", fontWeight: 600, cursor: "pointer" }}
             >
-              Forgot password?
+              {t("Forgot password?")}
             </span>
           </div>
 
@@ -205,26 +227,26 @@ function Login() {
               marginTop: "4px",
             }}
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? t("Signing in…") : t("Sign in")}
           </button>
         </form>
 
         {/* Divider */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "4px 0" }}>
           <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
-          <span style={{ fontSize: "11px", color: "#94a3b8" }}>or</span>
+          <span style={{ fontSize: "11px", color: "#94a3b8" }}>{t("or")}</span>
           <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
         </div>
 
         {/* Footer */}
         <p style={{ textAlign: "center", fontSize: "12px", color: "#64748b", margin: 0 }}>
-          No account?{" "}
+          {t("No account?")}{" "}
           <span
             role="button"
             onClick={() => navigate("/signup")}
             style={{ color: "#2563EB", fontWeight: 600, cursor: "pointer" }}
           >
-            Create one free
+            {t("Create one free")}
           </span>
         </p>
       </div>
