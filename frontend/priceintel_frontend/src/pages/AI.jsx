@@ -78,16 +78,7 @@ const PLACEHOLDER_RESPONSES = {
 };
 
 function getAIResponse(message) {
-  const lower = message.toLowerCase();
-  if (lower.includes("price") || lower.includes("pricing") || lower.includes("optimal"))
-    return PLACEHOLDER_RESPONSES.pricing;
-  if (lower.includes("competitor") || lower.includes("market") || lower.includes("position"))
-    return PLACEHOLDER_RESPONSES.competitors;
-  if (lower.includes("marketing") || lower.includes("sales") || lower.includes("visibility"))
-    return PLACEHOLDER_RESPONSES.marketing;
-  if (lower.includes("insight") || lower.includes("trend") || lower.includes("opportunit"))
-    return PLACEHOLDER_RESPONSES.insights;
-  return PLACEHOLDER_RESPONSES.default;
+  return "Welcome to Price Intel AI agent, coming soon.";
 }
 
 /* ─── Typing indicator ─────────────────────────────────────────── */
@@ -199,8 +190,7 @@ function MessageBubble({ msg }) {
 const INITIAL_MESSAGES = [
   {
     role: "assistant",
-    content:
-      "Hi! I'm your Price Intel AI Agent — your personal assistant for analyzing your store, competitors, pricing, and growth opportunities.\n\nI'm currently in preview mode. Once connected to your live store data, I'll be able to give you real-time pricing recommendations, competitor analysis, and marketing strategies tailored to your business.",
+    content: "Welcome to Price Intel AI agent, coming soon.",
   },
 ];
 
@@ -350,8 +340,8 @@ export default function AIAgent({ open, onClose }) {
           position: "fixed",
           top: "50%",
           left: "50%",
-          width: "min(960px, calc(100vw - 40px))",
-          height: "min(740px, calc(100vh - 72px))",
+          width: "min(640px, calc(100vw - 40px))",
+          minHeight: "380px",
           background: "var(--d-surface)",
           border: "1px solid var(--d-border)",
           borderRadius: "20px",
@@ -501,179 +491,73 @@ export default function AIAgent({ open, onClose }) {
           </div>
         </div>
 
-        {/* Chat body */}
+        {/* Centered Body */}
         <div
-          className="ai-panel-body"
           style={{
             flex: 1,
-            overflowY: "auto",
-            padding: "22px 24px",
             display: "flex",
             flexDirection: "column",
-            gap: "16px",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "52px 24px",
+            textAlign: "center",
           }}
         >
-          {messages.map((msg, i) => (
-            <MessageBubble key={i} msg={msg} />
-          ))}
+          <div
+            style={{
+              width: "56px",
+              height: "56px",
+              borderRadius: "16px",
+              background: "linear-gradient(135deg, #3B82F6 0%, #6366f1 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 8px 24px rgba(59,130,246,0.28)",
+              color: "#fff",
+              fontWeight: 800,
+              fontSize: "19px",
+              marginBottom: "16px",
+              letterSpacing: "-0.4px",
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            PI
+          </div>
 
-          {isTyping && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-              <div
-                style={{
-                  width: "30px",
-                  height: "30px",
-                  borderRadius: "8px",
-                  background: "linear-gradient(135deg, #3B82F6 0%, #6366f1 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: "10px",
-                  letterSpacing: "-0.3px",
-                  fontFamily: "'Inter', sans-serif",
-                }}
-              >
-                PI
-              </div>
-              <div
-                style={{
-                  padding: "12px 16px",
-                  borderRadius: "4px 16px 16px 16px",
-                  background: "var(--d-surface-2)",
-                  border: "1px solid var(--d-border)",
-                }}
-              >
-                <TypingIndicator />
-              </div>
-            </div>
-          )}
+          <h2
+            style={{
+              margin: "0 0 8px",
+              fontSize: "22px",
+              fontWeight: 700,
+              color: "var(--d-text)",
+              letterSpacing: "-0.4px",
+            }}
+          >
+            Welcome to Price Intel AI
+          </h2>
 
-          {/* Suggestion cards — only shown before any chat */}
-          {!hasChatted && !isTyping && (
-            <div
+          <p
+            style={{
+              margin: 0,
+              fontSize: "14.5px",
+              fontWeight: 500,
+              color: "var(--d-text-2)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <span
               style={{
-                marginTop: "6px",
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(195px, 1fr))",
-                gap: "10px",
-              }}
-            >
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s.id}
-                  className="ai-suggestion-card"
-                  onClick={() => handleSuggestion(s)}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    gap: "8px",
-                    padding: "15px 16px",
-                    borderRadius: "12px",
-                    border: "1.5px solid var(--d-border)",
-                    background: "var(--d-surface-2)",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all 0.18s ease",
-                    fontFamily: "inherit",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "36px",
-                      height: "36px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                      color: "var(--d-text)",
-                    }}
-                  >
-                    {s.icon}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: "13px", color: "var(--d-text)", marginBottom: "3px", letterSpacing: "-0.1px" }}>
-                      {s.title}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "var(--d-text-2)", lineHeight: 1.45 }}>
-                      {s.description}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div ref={chatEndRef} />
-        </div>
-
-        {/* Input area */}
-        <div
-          style={{
-            padding: "14px 20px 18px",
-            borderTop: "1px solid var(--d-border)",
-            background: "var(--d-surface)",
-            flexShrink: 0,
-          }}
-        >
-          <form onSubmit={handleSubmit} style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
-            <textarea
-              ref={inputRef}
-              className="ai-textarea"
-              value={inputValue}
-              onChange={handleTextareaChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask your AI Agent anything about your store..."
-              rows={1}
-              style={{
-                flex: 1,
-                resize: "none",
-                padding: "11px 14px",
-                borderRadius: "12px",
-                border: "1.5px solid var(--d-accent)",
-                background: "var(--d-surface-2)",
-                color: "var(--d-text)",
-                fontSize: "13.5px",
-                fontFamily: "inherit",
-                lineHeight: 1.5,
-                transition: "border-color 0.15s ease, box-shadow 0.15s ease",
-                overflow: "hidden",
-                minHeight: "44px",
-                maxHeight: "120px",
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: "var(--d-accent)",
+                display: "inline-block",
               }}
             />
-            <button
-              type="submit"
-              className="ai-send-btn"
-              disabled={!inputValue.trim() || isTyping}
-              style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "12px",
-                border: "none",
-                background: inputValue.trim() && !isTyping ? "var(--d-accent)" : "var(--d-surface-2)",
-                color: inputValue.trim() && !isTyping ? "#ffffff" : "var(--d-text-2)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: inputValue.trim() && !isTyping ? "pointer" : "default",
-                flexShrink: 0,
-                transition: "all 0.15s ease",
-                boxShadow: inputValue.trim() && !isTyping ? "0 2px 10px rgba(59,130,246,0.28)" : "none",
-              }}
-              aria-label="Send message"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-            </button>
-          </form>
-
+            Coming soon
+          </p>
         </div>
       </div>
     </>

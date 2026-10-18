@@ -36,6 +36,9 @@ from app.services.product_service import (
     add_competitor_manual,
     discover_competitors,
     get_attention_items,
+    get_alerts, 
+    mark_all_alerts_read,
+    get_price_trend,
 )
 
 router = APIRouter()
@@ -168,6 +171,23 @@ async def portfolio_attention(
         db,
         current_user.id,
         store_id=store_id,
+    )
+
+
+@router.get("/portfolio/price-trend")
+async def portfolio_price_trend(
+    store_id: Optional[UUID] = Query(default=None),
+    product_id: Optional[UUID] = Query(default=None),
+    timeframe: str = Query(default="7d"),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return await get_price_trend(
+        db,
+        current_user.id,
+        store_id=store_id,
+        product_id=product_id,
+        timeframe=timeframe,
     )
 
 
@@ -326,3 +346,24 @@ async def remove_product(
         current_user.id,
     )
     return None
+
+
+# alerts routers 
+
+@router.get("/portfolio/alerts")
+async def portfolio_alerts(
+    store_id: Optional[UUID] = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    return await get_alerts(db, current_user.id, store_id=store_id)
+
+
+@router.post("/portfolio/alerts/mark-read")
+async def mark_alerts_read_endpoint(
+    store_id: Optional[UUID] = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    await mark_all_alerts_read(db, current_user.id, store_id=store_id)
+    return {"status": "ok"}

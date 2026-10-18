@@ -22,7 +22,8 @@ from starlette.concurrency import run_in_threadpool
 from app.queries import (
     fetch_product_kpi_row, fetch_product_competitors_rows, fetch_portfolio_rows,
     fetch_opportunities_rows, fetch_price_wars_rows, fetch_market_movement_rows,
-    fetch_product_market_movement_rows, fetch_competitor_candidates_rows, fetch_attention_items
+    fetch_product_market_movement_rows, fetch_competitor_candidates_rows, fetch_attention_items, fetch_alerts_rows, mark_alerts_read_by_user,
+    fetch_price_trend_rows,
 )
 from fastapi import HTTPException
 
@@ -230,8 +231,42 @@ async def delete_product(db: AsyncSession, product_id, user_id) -> None:
 async def get_product_competitors(db: AsyncSession, product_id) -> list[dict]:
     result = await fetch_product_competitors_rows(db, product_id)
     rows = result.fetchall()
-    return [
-        {
+    competitors = []
+
+    for r in rows:
+        latest = float(r.latest_price) if r.latest_price is not None else None
+        own = float(r.own_cost) if hasattr(r, "own_cost") and r.own_cost is not None else None
+        changes = int(r.price_changes_30d) if hasattr(r, "price_changes_30d") and r.price_changes_30d is not None else 0
+        volatility = float(r.volatility_score) if hasattr(r, "volatility_score") and r.volatility_score is not None else 0.0
+
+        # ── 1. Calculate Repricing Velocity ──
+        if changes >= 3 or volatility >= 0.5:
+            velocity = "High"
+        elif changes == 2 or volatility >= 0.2:
+            velocity = "Moderate"
+        elif changes == 1:
+            velocity = "Low"
+        else:
+            velocity = "Static"
+
+        # ── 2. Calculate Behavior Type ──
+        if latest is not None and own is not None and own > 0:
+            diff_pct = ((latest - own) / own) * 100
+
+            if diff_pct <= -10:
+                behavior = "Aggressive Undercutter" if velocity in ("High", "Moderate") else "Discount Seller"
+            elif -10 < diff_pct <= -2:
+                behavior = "Undercutter"
+            elif -2 <= diff_pct <= 2:
+                behavior = "Price Matcher"
+            elif diff_pct > 10:
+                behavior = "Premium Seller"
+            else:
+                behavior = "Above Market"
+        else:
+            behavior = "Passive Seller" if velocity == "Static" else "Standard Seller"
+
+        competitors.append({
             "id": str(r.id),
             "url": r.url,
             "platform": r.platform,
@@ -240,10 +275,12 @@ async def get_product_competitors(db: AsyncSession, product_id) -> list[dict]:
             "is_active": r.is_active,
             "latest_price": r.latest_price,
             "last_scraped_at": r.last_scraped_at.isoformat() if r.last_scraped_at else None,
-            "stock_status": r.stock_status,  # ADDED
-        }
-        for r in rows
-    ]
+            "stock_status": r.stock_status,
+            "behavior_type": behavior,
+            "repricing_velocity": velocity,
+        })
+
+    return competitors
 
 
 async def get_competitor_candidates(db: AsyncSession, product_id) -> list[dict]:
@@ -561,3 +598,268 @@ async def get_attention_items(db: AsyncSession, user_id, store_id=None) -> list[
         })
 
     return items
+
+
+# alerts service functions. 
+async def get_alerts(db: AsyncSession, user_id, store_id=None) -> list[dict]:
+    """
+    Returns alerts enriched with product + competitor context,
+    with human-readable title/description and category for tab filtering.
+    """
+    result = await fetch_alerts_rows(db, user_id, store_id=store_id)
+    rows = result.fetchall()
+    items = []
+
+    for r in rows:
+        alert_type = r.alert_type or "unknown"
+        competitor = r.competitor_name or r.competitor_platform or "A competitor"
+        prev = float(r.previous_value) if r.previous_value is not None else None
+        curr = float(r.current_value) if r.current_value is not None else None
+        pct = abs(float(r.change_pct)) if r.change_pct is not None else None
+        curr_fmt = f"{curr:,.0f}" if curr else ""
+
+        if alert_type in ("price_drop", "price_decrease"):
+            title = "Competitor price drop"
+            description = f"{competitor} dropped price by {pct}% — now {curr_fmt}." if pct and curr_fmt else f"{competitor} dropped their price."
+            category = "price_drop"
+            urgency = "urgent" if pct and pct >= 10 else None
+
+        elif alert_type == "price_increase":
+            title = "Competitor price increase"
+            description = f"{competitor} raised price by {pct}% — now {curr_fmt}." if pct and curr_fmt else f"{competitor} raised their price."
+            category = "price_drop"
+            urgency = None
+
+        elif alert_type == "stock_out":
+            title = "Competitor out of stock"
+            description = f"{competitor} went out of stock. Opportunity to capture sales."
+            category = "stock_out"
+            urgency = "opportunity"
+
+        elif alert_type == "new_competitor":
+            title = "New competitor detected"
+            description = f"{competitor} is now selling this product on {r.competitor_platform or 'the marketplace'}."
+            category = "new_competitor"
+            urgency = None
+
+        elif alert_type == "undercut":
+            title = "You've been undercut"
+            description = f"{competitor} is now selling below your price by {pct}%." if pct else f"{competitor} is now selling below your price."
+            category = "undercut"
+            urgency = "urgent"
+
+        elif alert_type == "win":
+            title = "You're the cheapest"
+            description = "You now have the lowest price across all tracked competitors."
+            category = "win"
+            urgency = "winning"
+
+        elif alert_type == "flash_sale":
+            title = "Flash sale detected"
+            description = f"{competitor} launched a limited-time flash deal with {pct}% discount." if pct else f"{competitor} launched a flash sale."
+            category = "flash_sale"
+            urgency = "urgent"
+
+        elif alert_type == "price_war":
+            title = "Price war detected"
+            description = f"Multiple sellers are aggressively repricing for this product."
+            category = "price_war"
+            urgency = "urgent"
+
+        else:
+            title = alert_type.replace("_", " ").title()
+            description = f"Alert triggered for {r.product_title[:50] if r.product_title else 'this product'}."
+            category = "other"
+            urgency = None
+
+        items.append({
+            "id": str(r.id),
+            "alert_type": alert_type,
+            "category": category,
+            "title": title,
+            "description": description,
+            "product_id": str(r.product_id),
+            "product_title": r.product_title,
+            "product_url": r.product_url,
+            "competitor_name": r.competitor_name,
+            "competitor_platform": r.competitor_platform,
+            "competitor_url": r.competitor_url,
+            "previous_value": prev,
+            "current_value": curr,
+            "change_pct": pct,
+            "is_read": r.is_read,
+            "urgency": urgency,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        })
+
+    return items
+
+
+async def mark_all_alerts_read(db: AsyncSession, user_id, store_id=None) -> None:
+    await mark_alerts_read_by_user(db, user_id, store_id=store_id)
+
+
+async def get_price_trend(
+    db: AsyncSession,
+    user_id,
+    store_id: Optional[uuid.UUID] = None,
+    product_id: Optional[uuid.UUID] = None,
+    timeframe: str = "7d",
+) -> dict:
+    """
+    Executes fetch_price_trend_rows to retrieve real historical price points
+    for Cheapest in Market, Market Average, and Your Avg Price.
+    Validates ownership, clamps timeframe, structures data for Recharts,
+    and derives honest trend insights from real database observations.
+    """
+    # 1. Product ownership validation if specific product requested
+    product_own_cost = None
+    if product_id is not None:
+        product = await get_product_by_id(db, product_id, user_id)
+        if store_id is not None and str(product.store_id) != str(store_id):
+            raise HTTPException(status_code=404, detail="Product not found in this store")
+        product_own_cost = float(product.own_cost) if product.own_cost is not None else None
+
+    # 2. Timeframe validation
+    valid_timeframes = ("1d", "7d", "30d")
+    tf = timeframe.lower() if timeframe and timeframe.lower() in valid_timeframes else "7d"
+
+    # 3. Execute query
+    result = await fetch_price_trend_rows(
+        db, user_id, store_id=store_id, product_id=product_id, timeframe=tf
+    )
+    rows = result.fetchall()
+
+    # 4. Map rows to series items
+    data = []
+    market_avg_values = []
+    your_avg_values = []
+
+    for r in rows:
+        dt = r.bucket_time
+        if tf == "1d":
+            time_label = dt.strftime("%I %p").lstrip("0") if dt else ""
+        elif tf == "7d":
+            time_label = dt.strftime("%b %d") if dt else ""
+        else:  # "30d"
+            time_label = dt.strftime("%b %d") if dt else ""
+
+        date_label = dt.strftime("%b %d, %Y") if dt else ""
+
+        c_val = float(r.cheapest) if r.cheapest is not None else None
+        m_val = float(r.market_avg) if r.market_avg is not None else None
+        e_val = float(r.most_expensive) if hasattr(r, "most_expensive") and r.most_expensive is not None else None
+        y_val = float(r.your_avg) if r.your_avg is not None else None
+
+        if m_val is not None:
+            market_avg_values.append(m_val)
+        if y_val is not None:
+            your_avg_values.append(y_val)
+
+        data.append({
+            "time": time_label,
+            "date": date_label,
+            "raw_time": dt.isoformat() if dt else None,
+            "cheapest": c_val,
+            "marketAvg": m_val,
+            "expensive": e_val,
+            "yourAvg": y_val,
+        })
+
+    # For a specific product: align known prices across observation points
+    if product_id is not None and data:
+        last_c = None
+        last_m = None
+        last_e = None
+        last_y = product_own_cost
+
+        for pt in data:
+            if pt["cheapest"] is not None:
+                last_c = pt["cheapest"]
+            elif last_c is not None:
+                pt["cheapest"] = last_c
+
+            if pt["marketAvg"] is not None:
+                last_m = pt["marketAvg"]
+            elif last_m is not None:
+                pt["marketAvg"] = last_m
+
+            if pt["expensive"] is not None:
+                last_e = pt["expensive"]
+            elif last_e is not None:
+                pt["expensive"] = last_e
+
+            if pt["yourAvg"] is not None:
+                last_y = pt["yourAvg"]
+            elif last_y is not None:
+                pt["yourAvg"] = last_y
+
+        b_c = None
+        b_m = None
+        b_e = None
+        for pt in reversed(data):
+            if pt["cheapest"] is not None:
+                b_c = pt["cheapest"]
+            elif b_c is not None:
+                pt["cheapest"] = b_c
+
+            if pt["marketAvg"] is not None:
+                b_m = pt["marketAvg"]
+            elif b_m is not None:
+                pt["marketAvg"] = b_m
+
+            if pt["expensive"] is not None:
+                b_e = pt["expensive"]
+            elif b_e is not None:
+                pt["expensive"] = b_e
+
+        market_avg_values = [pt["marketAvg"] for pt in data if pt["marketAvg"] is not None]
+        your_avg_values = [pt["yourAvg"] for pt in data if pt["yourAvg"] is not None]
+
+    has_data = len(data) >= 2
+
+    # 5. Derive honest insight from real observations
+    if len(data) < 2:
+        if len(data) == 1:
+            insight = "Only 1 historical observation recorded. At least 2 observations are needed to show a price trend."
+        else:
+            insight = "No historical pricing observations available for the selected period."
+    else:
+        # Check comparison between your price/average and market average
+        if len(your_avg_values) > 0 and len(market_avg_values) > 0:
+            avg_y = sum(your_avg_values) / len(your_avg_values)
+            avg_m = sum(market_avg_values) / len(market_avg_values)
+            if avg_m > 0:
+                diff_pct = round(((avg_y - avg_m) / avg_m) * 100, 1)
+                term = "Your price is" if product_id is not None else "Your prices averaged"
+                if diff_pct < 0:
+                    insight = f"{term} {abs(diff_pct)}% below market average across this period."
+                elif diff_pct > 0:
+                    insight = f"{term} {diff_pct}% above market average across this period."
+                else:
+                    insight = f"{term} matching market average prices across this period."
+            else:
+                insight = "Prices remained stable across observed intervals."
+        elif len(market_avg_values) >= 2:
+            first_m = market_avg_values[0]
+            last_m = market_avg_values[-1]
+            if first_m > 0:
+                m_diff = round(((last_m - first_m) / first_m) * 100, 1)
+                if m_diff < 0:
+                    insight = f"Market average prices dropped {abs(m_diff)}% across this period."
+                elif m_diff > 0:
+                    insight = f"Market average prices increased {m_diff}% across this period."
+                else:
+                    insight = "Market average prices remained flat across this period."
+            else:
+                insight = "Market pricing observed across active intervals."
+        else:
+            insight = "Limited historical observations recorded for this timeframe."
+
+    return {
+        "timeframe": tf,
+        "product_id": str(product_id) if product_id else "all",
+        "has_data": has_data,
+        "data": data,
+        "insight": insight,
+    }

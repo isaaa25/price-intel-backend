@@ -13,10 +13,12 @@ export default function ConfirmModal({
   confirmText = "Delete",
   cancelText = "Cancel",
   loading = false,
+  loadingText,
   error = "",
   onConfirm,
   onCancel,
   isDestructive = true,
+  icon,
 }) {
   // Close on Escape key press
   useEffect(() => {
@@ -107,7 +109,9 @@ export default function ConfirmModal({
             marginBottom: "16px",
           }}
         >
-          {isDestructive ? (
+          {icon ? (
+            icon
+          ) : isDestructive ? (
             <svg
               width="22"
               height="22"
@@ -277,7 +281,7 @@ export default function ConfirmModal({
                     animation: "confirmModalSpin 0.6s linear infinite",
                   }}
                 />
-                <span>Deleting…</span>
+                <span>{loadingText || (isDestructive ? "Deleting…" : "Processing…")}</span>
               </>
             ) : (
               confirmText

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { useStore } from "../context/StoreContext";
 import { getProduct, getProductKpis, getProductCompetitors, updateProduct } from "../api/products";
 
@@ -165,7 +166,9 @@ function ProductDetail() {
             fontSize: "13px",
           }}
         >
-          <div style={{ fontSize: "32px", marginBottom: "12px", opacity: 0.6 }}>⏳</div>
+          <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}>
+            <LoadingSpinner size={32} color="var(--d-text-3)" />
+          </div>
           Loading product…
         </div>
       </Layout>

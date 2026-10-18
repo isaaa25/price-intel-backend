@@ -189,3 +189,32 @@ export function getProductMarketMovement(productId, storeId, timeframe = "3d") {
 export function getAttentionItems(storeId) {
   return apiRequest(`/products/portfolio/attention?store_id=${encodeURIComponent(storeId)}`);
 }
+
+/** alerts page fucntion  */
+export function getAlerts(storeId) {
+  return apiRequest(`/products/portfolio/alerts?store_id=${encodeURIComponent(storeId)}`);
+}
+
+export function markAlertsRead(storeId) {
+  return apiRequest(`/products/portfolio/alerts/mark-read?store_id=${encodeURIComponent(storeId)}`, {
+    method: "POST",
+  });
+}
+
+/**
+ * Fetch Product Price Trend Analysis chart data.
+ * Backend: GET /products/portfolio/price-trend?store_id=<storeId>&product_id=<productId>&timeframe=<timeframe>
+ * @param {string|number|null} storeId
+ * @param {string|null} productId
+ * @param {string} timeframe ("1d" | "7d" | "30d")
+ */
+export function getProductPriceTrend(storeId, productId, timeframe = "7d") {
+  let url = `/products/portfolio/price-trend?timeframe=${encodeURIComponent(timeframe)}`;
+  if (storeId) {
+    url += `&store_id=${encodeURIComponent(storeId)}`;
+  }
+  if (productId && productId !== "all") {
+    url += `&product_id=${encodeURIComponent(productId)}`;
+  }
+  return apiRequest(url);
+}
