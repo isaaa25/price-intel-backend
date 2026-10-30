@@ -522,7 +522,7 @@ async def fetch_price_trend_rows(
         store_filter = "AND tp.store_id = :sid"
         params["sid"] = str(store_id)
 
-    if product_id is not None:
+    if product_id is not None and str(product_id).lower() != "all":
         product_filter = "AND tp.id = :pid"
         params["pid"] = str(product_id)
 

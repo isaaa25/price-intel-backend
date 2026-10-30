@@ -16,7 +16,7 @@ run_in_threadpool for the same reason bcrypt was.
 from typing import List, Optional
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 from app.queries import (
@@ -714,11 +714,29 @@ async def get_price_trend(
     """
     # 1. Product ownership validation if specific product requested
     product_own_cost = None
-    if product_id is not None:
-        product = await get_product_by_id(db, product_id, user_id)
+    target_pid = product_id if product_id is not None and str(product_id).lower() != "all" else None
+    if target_pid is not None:
+        product = await get_product_by_id(db, target_pid, user_id)
         if store_id is not None and str(product.store_id) != str(store_id):
             raise HTTPException(status_code=404, detail="Product not found in this store")
         product_own_cost = float(product.own_cost) if product.own_cost is not None else None
+
+    # Resolve baseline active price for store or specific product
+    active_own_price = product_own_cost
+    if active_own_price is None and store_id is not None:
+        avg_stmt = select(func.avg(TrackedProduct.own_cost)).join(
+            UserStore, UserStore.id == TrackedProduct.store_id
+        ).where(
+            UserStore.user_id == user_id,
+            TrackedProduct.store_id == store_id,
+            TrackedProduct.is_active == True,
+            TrackedProduct.own_cost.is_not(None),
+            TrackedProduct.own_cost > 0,
+        )
+        avg_res = await db.execute(avg_stmt)
+        val = avg_res.scalar()
+        if val is not None:
+            active_own_price = round(float(val), 2)
 
     # 2. Timeframe validation
     valid_timeframes = ("1d", "7d", "30d")
@@ -726,7 +744,7 @@ async def get_price_trend(
 
     # 3. Execute query
     result = await fetch_price_trend_rows(
-        db, user_id, store_id=store_id, product_id=product_id, timeframe=tf
+        db, user_id, store_id=store_id, product_id=target_pid, timeframe=tf
     )
     rows = result.fetchall()
 
@@ -748,7 +766,7 @@ async def get_price_trend(
 
         c_val = float(r.cheapest) if r.cheapest is not None else None
         m_val = float(r.market_avg) if r.market_avg is not None else None
-        e_val = float(r.most_expensive) if hasattr(r, "most_expensive") and r.most_expensive is not None else None
+        e_val = float(r.most_expensive) if getattr(r, "most_expensive", None) is not None else None
         y_val = float(r.your_avg) if r.your_avg is not None else None
 
         if m_val is not None:
@@ -766,55 +784,19 @@ async def get_price_trend(
             "yourAvg": y_val,
         })
 
-    # For a specific product: align known prices across observation points
-    if product_id is not None and data:
-        last_c = None
-        last_m = None
-        last_e = None
-        last_y = product_own_cost
+    # 5. Price continuity: maintain active price when not scraped, update to new price on scraped dates
+    first_observed_snapshot = next((d["yourAvg"] for d in data if d["yourAvg"] is not None), None)
+    initial_seed_price = first_observed_snapshot if first_observed_snapshot is not None else active_own_price
 
-        for pt in data:
-            if pt["cheapest"] is not None:
-                last_c = pt["cheapest"]
-            elif last_c is not None:
-                pt["cheapest"] = last_c
+    last_known_price = initial_seed_price
+    for d in data:
+        if d["yourAvg"] is not None:
+            last_known_price = d["yourAvg"]
+        elif last_known_price is not None:
+            d["yourAvg"] = last_known_price
 
-            if pt["marketAvg"] is not None:
-                last_m = pt["marketAvg"]
-            elif last_m is not None:
-                pt["marketAvg"] = last_m
-
-            if pt["expensive"] is not None:
-                last_e = pt["expensive"]
-            elif last_e is not None:
-                pt["expensive"] = last_e
-
-            if pt["yourAvg"] is not None:
-                last_y = pt["yourAvg"]
-            elif last_y is not None:
-                pt["yourAvg"] = last_y
-
-        b_c = None
-        b_m = None
-        b_e = None
-        for pt in reversed(data):
-            if pt["cheapest"] is not None:
-                b_c = pt["cheapest"]
-            elif b_c is not None:
-                pt["cheapest"] = b_c
-
-            if pt["marketAvg"] is not None:
-                b_m = pt["marketAvg"]
-            elif b_m is not None:
-                pt["marketAvg"] = b_m
-
-            if pt["expensive"] is not None:
-                b_e = pt["expensive"]
-            elif b_e is not None:
-                pt["expensive"] = b_e
-
-        market_avg_values = [pt["marketAvg"] for pt in data if pt["marketAvg"] is not None]
-        your_avg_values = [pt["yourAvg"] for pt in data if pt["yourAvg"] is not None]
+    # Recalculate your_avg_values with active continuity
+    your_avg_values = [d["yourAvg"] for d in data if d["yourAvg"] is not None]
 
     has_data = len(data) >= 2
 

@@ -10,39 +10,10 @@ import { useLocale } from "../context/LocaleContext";
 import {
   getProductsByStore, getPortfolioHealth, getActiveOpportunities,
   getActivePriceWars, getAttentionItems, getProductMarketMovement,
+  getProductPriceTrend,
 } from "../api/products";
 
-function getPortfolioTrendData(timeframe) {
-  if (timeframe === "1d") return [
-    { time: "4 AM", yourAvg: 12380, marketAvg: 13050, cheapest: 11180 },
-    { time: "8 AM", yourAvg: 12350, marketAvg: 12980, cheapest: 11140 },
-    { time: "12 PM", yourAvg: 12310, marketAvg: 12920, cheapest: 11090 },
-    { time: "4 PM", yourAvg: 12270, marketAvg: 12870, cheapest: 11050 },
-    { time: "8 PM", yourAvg: 12240, marketAvg: 12840, cheapest: 11020 },
-    { time: "Now", yourAvg: 12200, marketAvg: 12800, cheapest: 10990 },
-  ];
-  if (timeframe === "7d") return [
-    { time: "Mon", yourAvg: 12400, marketAvg: 13100, cheapest: 11200 },
-    { time: "Tue", yourAvg: 12350, marketAvg: 12950, cheapest: 11100 },
-    { time: "Wed", yourAvg: 12200, marketAvg: 12800, cheapest: 10900 },
-    { time: "Thu", yourAvg: 12100, marketAvg: 12600, cheapest: 10800 },
-    { time: "Fri", yourAvg: 12000, marketAvg: 12500, cheapest: 10750 },
-    { time: "Sat", yourAvg: 11900, marketAvg: 12400, cheapest: 10700 },
-    { time: "Sun", yourAvg: 11850, marketAvg: 12350, cheapest: 10650 },
-  ];
-  return [
-    { time: "Week 1", yourAvg: 13200, marketAvg: 14000, cheapest: 12000 },
-    { time: "Week 2", yourAvg: 12900, marketAvg: 13700, cheapest: 11700 },
-    { time: "Week 3", yourAvg: 12500, marketAvg: 13300, cheapest: 11400 },
-    { time: "Week 4", yourAvg: 11850, marketAvg: 12800, cheapest: 10650 },
-  ];
-}
 
-const TREND_INSIGHTS = {
-  "1d": "Your portfolio stayed 4.1% below market average price throughout today.",
-  "7d": "Your portfolio became 4.2% more competitive this week compared to market average.",
-  "30d": "Your average price dropped 10.2% relative to the market over the last 30 days.",
-};
 
 const SCATTER_FALLBACK = [
   { name: "Galaxy A17", x: 24, y: 82 },
@@ -76,15 +47,51 @@ function CustomScatterDot(props) {
 
 function LineTip({ active, payload, label, currency }) {
   if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload;
+  const yourPrice = row?.yourAvg;
+  const cheapestPrice = row?.cheapest;
+  const expensivePrice = row?.expensive;
+  const dateStr = row?.date || row?.time || label;
+
+  const isMostExpensive =
+    yourPrice != null &&
+    expensivePrice != null &&
+    yourPrice >= expensivePrice &&
+    (cheapestPrice == null || yourPrice > cheapestPrice || expensivePrice > cheapestPrice);
+
+  const isCheapest =
+    !isMostExpensive &&
+    yourPrice != null &&
+    cheapestPrice != null &&
+    yourPrice <= cheapestPrice &&
+    (expensivePrice == null || yourPrice < expensivePrice || expensivePrice > cheapestPrice);
+
+  const visiblePayload = payload.filter((e) => {
+    if (e.value == null) return false;
+    if (isMostExpensive && e.dataKey === "expensive") return false;
+    if (isCheapest && e.dataKey === "cheapest") return false;
+    return true;
+  });
+
   return (
-    <div style={{ background: "var(--d-surface)", border: "1px solid var(--d-border)", borderRadius: "8px", padding: "10px 14px", boxShadow: "0 6px 20px rgba(0,0,0,0.14)", fontSize: "11.5px" }}>
-      <p style={{ margin: "0 0 7px", fontWeight: 700, color: "var(--d-text)", fontSize: "12px" }}>{label}</p>
-      {payload.map((e) => (
+    <div style={{ background: "var(--d-surface)", border: "1px solid var(--d-border)", borderRadius: "8px", padding: "10px 14px", boxShadow: "0 6px 20px rgba(0,0,0,0.14)", fontSize: "11.5px", minWidth: "180px" }}>
+      <p style={{ margin: "0 0 7px", fontWeight: 700, color: "var(--d-text)", fontSize: "12px" }}>{row?.date || label}</p>
+      {visiblePayload.map((e) => (
         <div key={e.name} style={{ display: "flex", justifyContent: "space-between", gap: "16px", color: e.color, margin: "3px 0", fontWeight: 600 }}>
           <span>{e.name}</span>
           <span>{currency} {Number(e.value).toLocaleString()}</span>
         </div>
       ))}
+      {isMostExpensive && (
+        <div style={{ marginTop: "8px", paddingTop: "6px", borderTop: "1px solid var(--d-border)", fontSize: "11px", color: "#ef4444", fontWeight: 600, lineHeight: 1.4 }}>
+          You were the most expensive at this date [{dateStr}]
+        </div>
+      )}
+      {isCheapest && (
+        <div style={{ marginTop: "8px", paddingTop: "6px", borderTop: "1px solid var(--d-border)", fontSize: "11px", color: "#10B981", fontWeight: 600, lineHeight: 1.4 }}>
+          You were the cheapest at this date [{dateStr}]
+        </div>
+      )}
     </div>
   );
 }
@@ -160,6 +167,13 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [trendTimeframe, setTrendTimeframe] = useState("1d");
   const [selectedTrendProduct, setSelectedTrendProduct] = useState("all");
+
+  // Dedicated Real Price Trend chart state
+  const [trendChartData, setTrendChartData] = useState([]);
+  const [trendInsight, setTrendInsight] = useState("");
+  const [trendHasData, setTrendHasData] = useState(false);
+  const [loadingTrend, setLoadingTrend] = useState(false);
+  const [trendError, setTrendError] = useState(false);
 
   // Dedicated Product-Specific Market Movement state
   const [selectedMarketProduct, setSelectedMarketProduct] = useState("");
@@ -267,9 +281,46 @@ export default function Dashboard() {
     };
   }, [selectedStore?.id, selectedMarketProduct, marketMovementTimeframe]);
 
+  // Fetch real price trend chart data
+  useEffect(() => {
+    if (!selectedStore?.id) {
+      setTrendChartData([]);
+      setTrendInsight("");
+      setTrendHasData(false);
+      setLoadingTrend(false);
+      setTrendError(false);
+      return;
+    }
+
+    let isCurrent = true;
+    setLoadingTrend(true);
+    setTrendError(false);
+
+    getProductPriceTrend(selectedStore.id, selectedTrendProduct, trendTimeframe)
+      .then((res) => {
+        if (!isCurrent) return;
+        setTrendChartData(Array.isArray(res?.data) ? res.data : []);
+        setTrendInsight(res?.insight || "");
+        setTrendHasData(Boolean(res?.has_data));
+      })
+      .catch((err) => {
+        if (!isCurrent) return;
+        console.error("Failed to load price trend data:", err);
+        setTrendError(true);
+        setTrendChartData([]);
+        setTrendInsight("");
+        setTrendHasData(false);
+      })
+      .finally(() => {
+        if (isCurrent) setLoadingTrend(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedStore?.id, selectedTrendProduct, trendTimeframe]);
+
   const curr = currency || (selectedStore?.country === "Pakistan" || selectedStore?.country === "PK" ? "PKR" : "AED");
-  const trendData = getPortfolioTrendData(trendTimeframe);
-  const trendInsight = TREND_INSIGHTS[trendTimeframe];
 
   const scatterData = storeProducts.length >= 3
     ? storeProducts.slice(0, 9).map((p, i) => ({
@@ -448,27 +499,52 @@ export default function Dashboard() {
               </div>
             )}
             <div style={{ width: "100%", height: "290px", minWidth: 0, maxWidth: "100%", overflow: "hidden", position: "relative" }}>
-              <div style={{ position: "absolute", inset: 0 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendData} margin={{ top: 8, right: 20, left: 8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--d-border)" />
-                    <XAxis dataKey="time" stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={{ stroke: "var(--d-border)" }} />
-                    <YAxis stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={false} width={88} domain={["dataMin - 400", "dataMax + 400"]} tickFormatter={(v) => `${curr} ${Number(v).toLocaleString()}`} />
-                    <Tooltip content={<LineTip currency={curr} />} />
-                    <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: "12px", fontSize: "11.5px", fontWeight: 600 }} />
-                    <Line type="monotone" dataKey="yourAvg" name="Your Avg Price" stroke="var(--d-accent)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--d-accent)", stroke: "var(--d-surface)", strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="marketAvg" name="Market Average" stroke="#94a3b8" strokeWidth={1.8} strokeDasharray="5 4" dot={{ r: 3, fill: "#94a3b8" }} />
-                    <Line type="monotone" dataKey="cheapest" name="Cheapest in Market" stroke="#10B981" strokeWidth={1.8} strokeDasharray="3 3" dot={{ r: 3, fill: "#10B981" }} />
-                  </LineChart>
-                </ResponsiveContainer>
+              {loadingTrend ? (
+                <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--d-text-3)", fontSize: "13px" }}>
+                  <div style={{ fontSize: "24px", marginBottom: "8px", opacity: 0.6 }}>⏳</div>
+                  <p style={{ margin: 0 }}>Loading price trend analysis…</p>
+                </div>
+              ) : trendError ? (
+                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", fontSize: "13px" }}>
+                  <p style={{ margin: 0 }}>Unable to load price trend data.</p>
+                </div>
+              ) : !trendHasData || trendChartData.length < 2 ? (
+                <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "20px" }}>
+                  <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--d-text)", marginBottom: "6px" }}>
+                    Not enough historical data
+                  </div>
+                  <p style={{ fontSize: "12.5px", color: "var(--d-text-3)", maxWidth: "380px", margin: "0 auto", lineHeight: 1.5 }}>
+                    {trendChartData.length === 1
+                      ? "Only 1 historical observation recorded for this period. At least 2 observations are required to show a trend."
+                      : "No competitor or own price observations recorded for the selected period."}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ position: "absolute", inset: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendChartData} margin={{ top: 8, right: 20, left: 8, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--d-border)" />
+                      <XAxis dataKey="time" stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={{ stroke: "var(--d-border)" }} />
+                      <YAxis stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={false} width={88} domain={["auto", "auto"]} tickFormatter={(v) => `${curr} ${Number(v).toLocaleString()}`} />
+                      <Tooltip content={<LineTip currency={curr} />} />
+                      <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: "12px", fontSize: "11.5px", fontWeight: 600 }} />
+                      <Line type="monotone" dataKey="cheapest" name="Cheapest in Market" stroke="#10B981" strokeWidth={1.8} strokeDasharray="3 3" dot={{ r: 3, fill: "#10B981" }} connectNulls={true} />
+                      <Line type="monotone" dataKey="marketAvg" name="Market Average" stroke="#94a3b8" strokeWidth={1.8} strokeDasharray="5 4" dot={{ r: 3, fill: "#94a3b8" }} connectNulls={true} />
+                      <Line type="monotone" dataKey="expensive" name="Expensive in Market" stroke="#ef4444" strokeWidth={1.8} strokeDasharray="4 4" dot={{ r: 3, fill: "#ef4444" }} connectNulls={true} />
+                      <Line type="monotone" dataKey="yourAvg" name={selectedTrendProduct !== "all" ? "Your Price" : "Your Avg Price"} stroke="var(--d-accent)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--d-accent)", stroke: "var(--d-surface)", strokeWidth: 2 }} activeDot={{ r: 6 }} connectNulls={true} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+            {trendInsight && (
+              <div style={{ marginTop: "18px", padding: "11px 16px", borderRadius: "8px", background: "rgba(79,126,247,0.06)", border: "1px solid rgba(79,126,247,0.15)", display: "flex", alignItems: "center", gap: "10px" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--d-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                <p style={{ margin: 0, fontSize: "12.5px", color: "var(--d-text-2)", lineHeight: 1.5 }}>
+                  <strong style={{ color: "var(--d-accent)", fontWeight: 700 }}>Trend Insight — </strong>{trendInsight}
+                </p>
               </div>
-            </div>
-            <div style={{ marginTop: "18px", padding: "11px 16px", borderRadius: "8px", background: "rgba(79,126,247,0.06)", border: "1px solid rgba(79,126,247,0.15)", display: "flex", alignItems: "center", gap: "10px" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--d-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-              <p style={{ margin: 0, fontSize: "12.5px", color: "var(--d-text-2)", lineHeight: 1.5 }}>
-                <strong style={{ color: "var(--d-accent)", fontWeight: 700 }}>Trend Insight — </strong>{trendInsight}
-              </p>
-            </div>
+            )}
           </div>
 
           {/* ── Market Movement Summary Card ── */}
