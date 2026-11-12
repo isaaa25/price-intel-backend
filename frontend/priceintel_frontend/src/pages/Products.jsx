@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
+import LoadingSpinner from "../components/LoadingSpinner";
 import ConfirmModal from "../components/ConfirmModal";
 import { useStore } from "../context/StoreContext";
 import { useLocale } from "../context/LocaleContext";
@@ -41,7 +42,7 @@ function StatusBadge({ active, kpi }) {
   const isOverpriced = kpi.own_price > kpi.cheapest_competitor;
 
   const label = isCheapest ? "Cheapest" : isOverpriced ? "Overpriced" : "Competitive";
-  const color = isCheapest ? "var(--d-success)" : isOverpriced ? "var(--d-danger)" : "var(--d-text)";
+  const color = isCheapest ? "var(--d-accent)" : isOverpriced ? "var(--d-text)" : "var(--d-text-2)";
 
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12.5px", fontWeight: 600, color }}>
@@ -309,7 +310,7 @@ function Products() {
                   border: "1px solid",
                   borderColor: filterStatus === val ? "var(--d-accent)" : "var(--d-border)",
                   borderRadius: "8px",
-                  background: filterStatus === val ? "var(--d-accent-bg)" : "var(--d-surface)",
+                  background: "var(--d-surface)",
                   color: filterStatus === val ? "var(--d-accent)" : "var(--d-text-2)",
                   fontSize: "12px",
                   fontWeight: filterStatus === val ? 600 : 500,
@@ -328,7 +329,9 @@ function Products() {
         {/* ── Loading state ─────────────────────────────────── */}
         {loading && (
           <div style={{ textAlign: "center", padding: "48px 0", color: "var(--d-text-3)", fontSize: "13px" }}>
-            <div style={{ fontSize: "28px", marginBottom: "12px", opacity: 0.6 }}>⏳</div>
+            <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}>
+              <LoadingSpinner size={34} color="var(--d-accent)" />
+            </div>
             {t("Loading your products…")}
           </div>
         )}
@@ -564,9 +567,9 @@ function Products() {
                             onClick={() => navigate(`/products/${product.id}`)}
                             style={{
                               padding: "5px 12px",
-                              background: "var(--d-accent-bg)",
+                              background: "transparent",
                               color: "var(--d-accent)",
-                              border: "1px solid var(--d-accent)",
+                              border: "none",
                               borderRadius: "6px",
                               fontSize: "12px",
                               fontWeight: 600,
@@ -586,7 +589,7 @@ function Products() {
                               padding: "5px 10px",
                               background: "transparent",
                               color: "var(--d-danger)",
-                              border: "1px solid var(--d-danger)",
+                              border: "none",
                               borderRadius: "6px",
                               fontSize: "12px",
                               fontWeight: 600,

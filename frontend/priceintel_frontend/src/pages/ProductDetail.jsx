@@ -15,13 +15,35 @@ const card = {
 
 /* ── platform icon map ───────────────────────────────────────── */
 const PLATFORM_ICONS = {
-  daraz: "🛒",
   amazon: "📦",
   aliexpress: "🔴",
   jumia: "🟠",
   carrefour: "🔵",
   lulu: "🟢",
 };
+
+function EditPencilIcon({ size = 14 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ flexShrink: 0 }}
+    >
+      <path
+        d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
+        stroke="var(--d-text)"
+        strokeWidth="2"
+        fill="rgba(79, 126, 247, 0.14)"
+      />
+      <path d="M15 5l4 4" stroke="var(--d-accent)" strokeWidth="2.2" />
+      <path d="M2 22l3.5-1-2.5-2.5L2 22z" fill="var(--d-accent)" stroke="var(--d-accent)" strokeWidth="1" />
+    </svg>
+  );
+}
 
 function platformIcon(platform = "") {
   const key = platform.toLowerCase();
@@ -41,11 +63,8 @@ function PriceDelta({ ownPrice, competitorPrice }) {
   return (
     <span
       style={{
-        fontSize: "11px",
+        fontSize: "11.5px",
         fontWeight: 700,
-        padding: "2px 7px",
-        borderRadius: "20px",
-        background: cheaper ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.12)",
         color: cheaper ? "var(--d-danger)" : "var(--d-success)",
         whiteSpace: "nowrap",
       }}
@@ -167,7 +186,7 @@ function ProductDetail() {
           }}
         >
           <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}>
-            <LoadingSpinner size={32} color="var(--d-text-3)" />
+            <LoadingSpinner size={34} color="var(--d-accent)" />
           </div>
           Loading product…
         </div>
@@ -278,7 +297,7 @@ function ProductDetail() {
               style={{
                 fontSize: "12px",
                 fontWeight: 600,
-                color: product.is_active ? "var(--d-success)" : "var(--d-danger)",
+                color: product.is_active ? "#059669" : "var(--d-danger)",
               }}
             >
               {product.is_active ? "● Active" : "● Inactive"}
@@ -315,7 +334,7 @@ function ProductDetail() {
               e.currentTarget.style.color = "var(--d-text)";
             }}
           >
-            ✏️ Edit Product
+            <EditPencilIcon size={14} /> Edit Product
           </button>
 
           {product.own_url && (
@@ -618,7 +637,7 @@ function ProductDetail() {
                           alignItems: "center",
                           gap: "5px",
                           padding: "5px 12px",
-                          background: "var(--d-accent-bg)",
+                          background: "transparent",
                           color: "var(--d-accent)",
                           border: "1px solid var(--d-accent)",
                           borderRadius: "6px",
@@ -685,8 +704,8 @@ function ProductDetail() {
               }}
             >
               <div>
-                <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--d-text)" }}>
-                  ✏️ Edit Product
+                <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--d-text)", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <EditPencilIcon size={16} /> Edit Product
                 </h2>
                 <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--d-text-3)" }}>
                   Update name, price, URL, category, or discovery search keyword.

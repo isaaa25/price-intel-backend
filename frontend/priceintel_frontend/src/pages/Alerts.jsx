@@ -8,7 +8,7 @@ import { getProductsByStore, getAlerts, markAlertsRead } from "../api/products";
 /* ── alert type → icon + colors ───────────────────────────── */
 function alertMeta(category, urgency) {
   if (category === "flash_sale") return { color: "#f59e0b", bg: "rgba(245,158,11,0.08)", label: "Flash Sale" };
-  if (category === "price_drop") return { color: "#3b82f6", bg: "rgba(59,130,246,0.08)", label: "Price Drop" };
+  if (category === "price_drop") return { color: "var(--d-text)", bg: "transparent", label: "Price Drop" };
   if (category === "undercut") return { color: "#ef4444", bg: "rgba(239,68,68,0.08)", label: "Undercut" };
   if (category === "win") return { color: "#10B981", bg: "rgba(16,185,129,0.08)", label: "Win" };
   if (category === "stock_out") return { color: "#8b5cf6", bg: "rgba(139,92,246,0.08)", label: "Stock Out" };
@@ -25,7 +25,7 @@ function AlertIcon({ category }) {
     </svg>
   );
   if (category === "price_drop") return (
-    <svg style={style} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg style={style} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--d-text)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" />
     </svg>
   );
@@ -280,7 +280,7 @@ export default function Alerts() {
             {loading && (
               <div style={{ textAlign: "center", padding: "48px 0", color: "var(--d-text-3)", fontSize: "13px" }}>
                 <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
-                  <LoadingSpinner size={26} color="var(--d-text-3)" />
+                  <LoadingSpinner size={28} color="var(--d-accent)" />
                 </div>
                 Loading alerts…
               </div>

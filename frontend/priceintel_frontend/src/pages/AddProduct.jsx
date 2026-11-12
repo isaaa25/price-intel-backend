@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { getStores, createProduct } from "../api/products";
 import { validateProductUrl } from "../api/marketplaceUrl";
 
@@ -208,9 +209,12 @@ function AddProduct() {
         style={{ ...card, maxWidth: "560px", animationDelay: "0.06s" }}
       >
         {storesLoading && (
-          <p style={{ margin: 0, fontSize: "13px", color: "var(--d-text-3)" }}>
+          <div style={{ textAlign: "center", padding: "20px 0", color: "var(--d-text-3)", fontSize: "13px" }}>
+            <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
+              <LoadingSpinner size={28} color="var(--d-accent)" />
+            </div>
             Loading your stores…
-          </p>
+          </div>
         )}
 
         {!storesLoading && storesError && (

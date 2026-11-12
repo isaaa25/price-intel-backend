@@ -879,6 +879,15 @@ html[lang="ur"] body {
   animation: fadeUp 0.35s ease both;
 }
 
+@keyframes pi-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .fade-in {
   animation: fadeIn 0.3s ease both;
 }

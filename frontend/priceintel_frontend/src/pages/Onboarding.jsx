@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AuthBackground from "../components/AuthBackground";
+import LoadingSpinner from "../components/LoadingSpinner";
 import apiRequest from "../api/client";
 import { getStores } from "../api/products";
 import { completeOnboarding } from "../api/auth";
@@ -134,9 +135,10 @@ export default function Onboarding() {
 
   if (loadingInitial) {
     return (
-      <div className="auth-page">
+      <div className="auth-page" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <AuthBackground />
-        <div style={{ zIndex: 2, color: "#475569", fontSize: "14px", fontWeight: 500 }}>
+        <div style={{ zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center", gap: "14px", color: "var(--d-text-2)", fontSize: "14px", fontWeight: 500 }}>
+          <LoadingSpinner size={38} color="var(--d-accent)" />
           Loading your onboarding…
         </div>
       </div>

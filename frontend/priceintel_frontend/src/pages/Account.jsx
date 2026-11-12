@@ -1,6 +1,7 @@
 // src/pages/Account.jsx
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { getStores } from "../api/products";
 import apiRequest from "../api/client";
 import { useStore } from "../context/StoreContext";
@@ -52,26 +53,10 @@ const COUNTRY_OPTIONS = [
 function MarketplaceBadge({ marketplace }) {
   const normalized = (marketplace || "other").toLowerCase();
   const styles = {
-    noon: {
-      color: "#ea580c",
-      background: "rgba(234, 88, 12, 0.10)",
-      border: "1px solid rgba(234, 88, 12, 0.20)",
-    },
-    daraz: {
-      color: "#e11d48",
-      background: "rgba(225, 29, 72, 0.10)",
-      border: "1px solid rgba(225, 29, 72, 0.20)",
-    },
-    amazon: {
-      color: "#d97706",
-      background: "rgba(217, 119, 6, 0.10)",
-      border: "1px solid rgba(217, 119, 6, 0.20)",
-    },
-    other: {
-      color: "var(--d-accent)",
-      background: "var(--d-accent-bg)",
-      border: "1px solid rgba(59, 130, 246, 0.20)",
-    },
+    noon: { color: "#ea580c" },
+    daraz: { color: "#e11d48" },
+    amazon: { color: "#d97706" },
+    other: { color: "var(--d-accent)" },
   };
 
   const current = styles[normalized] || styles.other;
@@ -81,16 +66,11 @@ function MarketplaceBadge({ marketplace }) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "4px",
-        padding: "3px 9px",
-        borderRadius: "6px",
         fontSize: "11px",
         fontWeight: 700,
         textTransform: "uppercase",
         letterSpacing: "0.5px",
         color: current.color,
-        background: current.background,
-        border: current.border,
       }}
     >
       {marketplace || "OTHER"}
@@ -106,13 +86,9 @@ function StatusBadge({ active }) {
         display: "inline-flex",
         alignItems: "center",
         gap: "5px",
-        padding: "3px 9px",
-        borderRadius: "6px",
         fontSize: "11.5px",
         fontWeight: 600,
-        color: isActive ? "var(--d-success)" : "var(--d-text-3)",
-        background: isActive ? "var(--d-success-bg)" : "var(--d-surface-2)",
-        border: `1px solid ${isActive ? "rgba(34, 197, 94, 0.25)" : "var(--d-border)"}`,
+        color: isActive ? "#059669" : "var(--d-text-3)",
       }}
     >
       <span
@@ -120,7 +96,7 @@ function StatusBadge({ active }) {
           width: "6px",
           height: "6px",
           borderRadius: "50%",
-          background: isActive ? "var(--d-success)" : "var(--d-text-3)",
+          background: isActive ? "#059669" : "var(--d-text-3)",
         }}
       />
       {isActive ? "Active" : "Inactive"}
@@ -156,13 +132,9 @@ function StoreCard({ store, onDelete, isSelected, onSelect }) {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "4px",
-                padding: "3px 9px",
-                borderRadius: "6px",
-                fontSize: "11px",
+                fontSize: "11.5px",
                 fontWeight: 700,
-                color: "#2563eb",
-                background: "rgba(37, 99, 235, 0.12)",
-                border: "1px solid rgba(37, 99, 235, 0.3)",
+                color: "var(--d-accent)",
               }}
             >
               ✓ Active Store
@@ -179,8 +151,8 @@ function StoreCard({ store, onDelete, isSelected, onSelect }) {
                 fontSize: "11.5px",
                 fontWeight: 600,
                 color: "var(--d-accent)",
-                background: "var(--d-accent-bg)",
-                border: "1px solid rgba(59, 130, 246, 0.3)",
+                background: "transparent",
+                border: "1px solid var(--d-border)",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
@@ -537,7 +509,7 @@ function Account() {
             padding: "8px 16px",
             borderRadius: "8px",
             border: "1px solid var(--d-accent)",
-            background: "var(--d-accent-bg)",
+            background: "transparent",
             color: "var(--d-accent)",
             fontWeight: 600,
             fontSize: "13px",
@@ -829,6 +801,9 @@ function Account() {
 
         {storesLoading && (
           <div style={{ padding: "32px", textAlign: "center", color: "var(--d-text-2)", fontSize: "13.5px" }}>
+            <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
+              <LoadingSpinner size={28} color="var(--d-accent)" />
+            </div>
             Loading your stores...
           </div>
         )}
@@ -863,7 +838,8 @@ function Account() {
                 width: "48px",
                 height: "48px",
                 borderRadius: "50%",
-                background: "var(--d-accent-bg)",
+                background: "var(--d-surface-2)",
+                border: "1px solid var(--d-border)",
                 color: "var(--d-accent)",
                 display: "inline-flex",
                 alignItems: "center",

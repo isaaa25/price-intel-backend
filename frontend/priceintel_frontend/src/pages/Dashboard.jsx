@@ -5,6 +5,7 @@ import {
   CartesianGrid, Tooltip, Legend, ScatterChart, Scatter, ZAxis, ReferenceLine,
 } from "recharts";
 import Layout from "../components/Layout";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { useStore } from "../context/StoreContext";
 import { useLocale } from "../context/LocaleContext";
 import {
@@ -27,10 +28,10 @@ const SCATTER_FALLBACK = [
 ];
 
 function quadrantColor(x, y) {
-  if (y >= 50 && x < 50) return "#ef4444";
-  if (y >= 50 && x >= 50) return "#f59e0b";
+  if (y >= 50 && x < 50) return "#e05656";
+  if (y >= 50 && x >= 50) return "#d97706";
   if (y < 50 && x < 50) return "#4f7ef7";
-  return "#10B981";
+  return "#059669";
 }
 
 function CustomScatterDot(props) {
@@ -83,12 +84,12 @@ function LineTip({ active, payload, label, currency }) {
         </div>
       ))}
       {isMostExpensive && (
-        <div style={{ marginTop: "8px", paddingTop: "6px", borderTop: "1px solid var(--d-border)", fontSize: "11px", color: "#ef4444", fontWeight: 600, lineHeight: 1.4 }}>
+        <div style={{ marginTop: "8px", paddingTop: "6px", borderTop: "1px solid var(--d-border)", fontSize: "11px", color: "#e05656", fontWeight: 600, lineHeight: 1.4 }}>
           You were the most expensive at this date [{dateStr}]
         </div>
       )}
       {isCheapest && (
-        <div style={{ marginTop: "8px", paddingTop: "6px", borderTop: "1px solid var(--d-border)", fontSize: "11px", color: "#10B981", fontWeight: 600, lineHeight: 1.4 }}>
+        <div style={{ marginTop: "8px", paddingTop: "6px", borderTop: "1px solid var(--d-border)", fontSize: "11px", color: "#059669", fontWeight: 600, lineHeight: 1.4 }}>
           You were the cheapest at this date [{dateStr}]
         </div>
       )}
@@ -121,24 +122,24 @@ function ScatterTip({ active, payload }) {
 // ── CHANGED: real attention item icon by level ─────────────────
 function AttentionIcon({ level }) {
   if (level === "HIGH") return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
       <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
     </svg>
   );
   if (level === "OPPORTUNITY") return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
       <polyline points="17 6 23 6 23 12" />
     </svg>
   );
   if (level === "WATCH") return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
   );
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--d-text-3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--d-text-3)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
     </svg>
   );
@@ -146,10 +147,10 @@ function AttentionIcon({ level }) {
 
 // ── CHANGED: maps level string to display label + colors ───────
 function levelMeta(level) {
-  if (level === "HIGH") return { label: "High Priority", color: "#ef4444", bg: "rgba(239,68,68,0.07)" };
-  if (level === "OPPORTUNITY") return { label: "Opportunity", color: "#10B981", bg: "rgba(16,185,129,0.07)" };
-  if (level === "WATCH") return { label: "Watch", color: "#f59e0b", bg: "rgba(245,158,11,0.07)" };
-  if (level === "HEALTHY") return { label: "Healthy", color: "#10B981", bg: "rgba(16,185,129,0.07)" };
+  if (level === "HIGH") return { label: "High Priority", color: "#e05656", bg: "transparent" };
+  if (level === "OPPORTUNITY") return { label: "Opportunity", color: "#059669", bg: "transparent" };
+  if (level === "WATCH") return { label: "Watch", color: "#d97706", bg: "rgba(217,119,6,0.07)" };
+  if (level === "HEALTHY") return { label: "Healthy", color: "#059669", bg: "rgba(5,150,105,0.07)" };
   return { label: "No data", color: "var(--d-text-3)", bg: "var(--d-bg)" };
 }
 
@@ -185,6 +186,19 @@ export default function Dashboard() {
 
   const [loadingMarketMovement, setLoadingMarketMovement] = useState(false);
   const [marketMovementError, setMarketMovementError] = useState(false);
+
+  // Manual refresh state
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshStores();
+    } catch (_) {}
+    setRefreshKey((k) => k + 1);
+    setTimeout(() => setRefreshing(false), 600);
+  };
 
   useEffect(() => { refreshStores(); }, [location.pathname]); // eslint-disable-line
 
@@ -233,7 +247,7 @@ export default function Dashboard() {
     return () => {
       isCurrent = false;
     };
-  }, [selectedStore?.id]);
+  }, [selectedStore?.id, refreshKey]);
 
   // Synchronize product selection for Market Movement when store products change
   useEffect(() => {
@@ -279,11 +293,11 @@ export default function Dashboard() {
     return () => {
       isCurrent = false;
     };
-  }, [selectedStore?.id, selectedMarketProduct, marketMovementTimeframe]);
+  }, [selectedStore?.id, selectedMarketProduct, marketMovementTimeframe, refreshKey]);
 
   // Fetch real price trend chart data
   useEffect(() => {
-    if (!selectedStore?.id) {
+    if (!selectedStore?.id || !selectedTrendProduct || selectedTrendProduct === "all") {
       setTrendChartData([]);
       setTrendInsight("");
       setTrendHasData(false);
@@ -318,7 +332,7 @@ export default function Dashboard() {
     return () => {
       isCurrent = false;
     };
-  }, [selectedStore?.id, selectedTrendProduct, trendTimeframe]);
+  }, [selectedStore?.id, selectedTrendProduct, trendTimeframe, refreshKey]);
 
   const curr = currency || (selectedStore?.country === "Pakistan" || selectedStore?.country === "PK" ? "PKR" : "AED");
 
@@ -331,7 +345,7 @@ export default function Dashboard() {
     : SCATTER_FALLBACK;
 
   const card = { background: "var(--d-surface)", borderRadius: "12px", padding: "22px 24px", border: "1px solid var(--d-border)", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" };
-  const sectionTitle = { fontSize: "15px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 3px", letterSpacing: "-0.2px" };
+  const sectionTitle = { fontSize: "17px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 3px", letterSpacing: "-0.2px" };
   const sectionSub = { margin: 0, fontSize: "12px", color: "var(--d-text-3)", lineHeight: 1.5 };
 
   function TfBtn({ value, label }) {
@@ -351,7 +365,7 @@ export default function Dashboard() {
       label: "NEEDS ACTION",
       value: portfolio?.needs_action != null ? `${portfolio.needs_action} Products` : "—",
       sub: "Require pricing review",
-      accent: "#ef4444",
+      accent: "var(--d-accent)",
       filter: "HIGH",
       cue: "View in attention below ↓",
     },
@@ -360,7 +374,7 @@ export default function Dashboard() {
       label: "ACTIVE OPPORTUNITIES",
       value: opportunities?.active_opportunities != null ? opportunities.active_opportunities : "—",
       sub: opportunities?.active_opportunities != null ? (opportunities.active_opportunities > 0 ? "Competitors out of stock" : "No out-of-stock competitors") : "Not enough data yet",
-      accent: "#10B981",
+      accent: "var(--d-accent)",
       filter: "OPPORTUNITY",
       cue: "View in attention below ↓",
     },
@@ -369,7 +383,7 @@ export default function Dashboard() {
       label: "ACTIVE PRICE WARS",
       value: priceWars?.active_price_wars != null ? priceWars.active_price_wars : "—",
       sub: priceWars?.active_price_wars != null ? (priceWars.active_price_wars > 0 ? "Aggressive repricing detected" : "No aggressive repricing") : "Not enough history yet",
-      accent: "#f59e0b",
+      accent: "var(--d-accent)",
       filter: null,
       cue: "View price alerts →",
     },
@@ -416,15 +430,66 @@ export default function Dashboard() {
           <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 3px", letterSpacing: "-0.4px" }}>{t("Dashboard")}</h1>
           <p style={{ margin: 0, fontSize: "12.5px", color: "var(--d-text-3)" }}>{t("Portfolio intelligence & actionable pricing decisions")}</p>
         </div>
-        <button onClick={() => navigate("/alerts")} style={{ display: "flex", alignItems: "center", gap: "7px", padding: "8px 16px", background: "var(--d-surface)", border: "1px solid var(--d-border)", borderRadius: "8px", fontSize: "12.5px", fontWeight: 600, color: "var(--d-text)", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-          {t("View All Alerts")}
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          title={t("Refresh dashboard data")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "7px",
+            padding: "8px 16px",
+            background: "var(--d-surface)",
+            border: "1px solid var(--d-border)",
+            borderRadius: "8px",
+            fontSize: "12.5px",
+            fontWeight: 600,
+            color: "var(--d-text)",
+            cursor: refreshing ? "default" : "pointer",
+            fontFamily: "inherit",
+            whiteSpace: "nowrap",
+            transition: "all 0.15s ease",
+            opacity: refreshing ? 0.75 : 1,
+          }}
+          onMouseEnter={(e) => {
+            if (!refreshing) {
+              e.currentTarget.style.borderColor = "var(--d-accent)";
+              e.currentTarget.style.color = "var(--d-accent)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "var(--d-border)";
+            e.currentTarget.style.color = "var(--d-text)";
+          }}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              transition: "transform 0.6s ease",
+              transform: refreshing ? "rotate(360deg)" : "none",
+            }}
+          >
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+            <path d="M8 16H3v5" />
+          </svg>
+          {refreshing ? t("Refreshing…") : t("Refresh")}
         </button>
       </div>
 
       {loading || (storeLoading && !selectedStore) ? (
         <div style={{ textAlign: "center", padding: "90px 0", color: "var(--d-text-3)" }}>
-          <div style={{ fontSize: "30px", marginBottom: "14px", opacity: 0.5 }}>⏳</div>
+          <div style={{ marginBottom: "14px", display: "flex", justifyContent: "center" }}>
+            <LoadingSpinner size={36} color="var(--d-accent)" />
+          </div>
           <p style={{ margin: 0, fontSize: "14px" }}>{t("Loading portfolio intelligence…")}</p>
         </div>
       ) : !selectedStore ? (
@@ -499,13 +564,25 @@ export default function Dashboard() {
               </div>
             )}
             <div style={{ width: "100%", height: "290px", minWidth: 0, maxWidth: "100%", overflow: "hidden", position: "relative" }}>
-              {loadingTrend ? (
+              {(!selectedTrendProduct || selectedTrendProduct === "all") ? (
+                <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "20px" }}>
+                  <div style={{ fontSize: "28px", marginBottom: "8px", opacity: 0.6 }}>📈</div>
+                  <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--d-text)", marginBottom: "4px" }}>
+                    Select the product first from dropdown
+                  </div>
+                  <p style={{ fontSize: "12.5px", color: "var(--d-text-3)", margin: 0, maxWidth: "340px", lineHeight: 1.5 }}>
+                    Please select a specific product from the dropdown above to view its price trend chart and insights.
+                  </p>
+                </div>
+              ) : loadingTrend ? (
                 <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--d-text-3)", fontSize: "13px" }}>
-                  <div style={{ fontSize: "24px", marginBottom: "8px", opacity: 0.6 }}>⏳</div>
+                  <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
+                    <LoadingSpinner size={28} color="var(--d-accent)" />
+                  </div>
                   <p style={{ margin: 0 }}>Loading price trend analysis…</p>
                 </div>
               ) : trendError ? (
-                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", fontSize: "13px" }}>
+                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#e05656", fontSize: "13px" }}>
                   <p style={{ margin: 0 }}>Unable to load price trend data.</p>
                 </div>
               ) : !trendHasData || trendChartData.length < 2 ? (
@@ -528,16 +605,16 @@ export default function Dashboard() {
                       <YAxis stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={false} width={88} domain={["auto", "auto"]} tickFormatter={(v) => `${curr} ${Number(v).toLocaleString()}`} />
                       <Tooltip content={<LineTip currency={curr} />} />
                       <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: "12px", fontSize: "11.5px", fontWeight: 600 }} />
-                      <Line type="monotone" dataKey="cheapest" name="Cheapest in Market" stroke="#10B981" strokeWidth={1.8} strokeDasharray="3 3" dot={{ r: 3, fill: "#10B981" }} connectNulls={true} />
+                      <Line type="monotone" dataKey="cheapest" name="Cheapest in Market" stroke="#059669" strokeWidth={1.8} strokeDasharray="3 3" dot={{ r: 3, fill: "#059669" }} connectNulls={true} />
                       <Line type="monotone" dataKey="marketAvg" name="Market Average" stroke="#94a3b8" strokeWidth={1.8} strokeDasharray="5 4" dot={{ r: 3, fill: "#94a3b8" }} connectNulls={true} />
-                      <Line type="monotone" dataKey="expensive" name="Expensive in Market" stroke="#ef4444" strokeWidth={1.8} strokeDasharray="4 4" dot={{ r: 3, fill: "#ef4444" }} connectNulls={true} />
+                      <Line type="monotone" dataKey="expensive" name="Expensive in Market" stroke="#e05656" strokeWidth={1.8} strokeDasharray="4 4" dot={{ r: 3, fill: "#e05656" }} connectNulls={true} />
                       <Line type="monotone" dataKey="yourAvg" name={selectedTrendProduct !== "all" ? "Your Price" : "Your Avg Price"} stroke="var(--d-accent)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--d-accent)", stroke: "var(--d-surface)", strokeWidth: 2 }} activeDot={{ r: 6 }} connectNulls={true} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               )}
             </div>
-            {trendInsight && (
+            {selectedTrendProduct !== "all" && trendInsight && (
               <div style={{ marginTop: "18px", padding: "11px 16px", borderRadius: "8px", background: "rgba(79,126,247,0.06)", border: "1px solid rgba(79,126,247,0.15)", display: "flex", alignItems: "center", gap: "10px" }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--d-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                 <p style={{ margin: 0, fontSize: "12.5px", color: "var(--d-text-2)", lineHeight: 1.5 }}>
@@ -551,9 +628,9 @@ export default function Dashboard() {
           <div style={{ ...card, marginBottom: "22px", overflow: "hidden", minWidth: 0 }}>
             {/* Header: Title + Product Selector + Timeframe Selector */}
             <div style={{ marginBottom: "18px" }}>
-              <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--d-text-3)", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: "10px" }}>
-                MARKET MOVEMENT
-              </div>
+              <h2 style={{ ...sectionTitle, margin: "0 0 10px" }}>
+                Market Movement
+              </h2>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                 {/* Product Selector */}
                 <select
@@ -621,11 +698,13 @@ export default function Dashboard() {
             {/* Card Content */}
             {loadingMarketMovement ? (
               <div style={{ padding: "48px 0", textAlign: "center", color: "var(--d-text-3)" }}>
-                <div style={{ fontSize: "24px", marginBottom: "8px", opacity: 0.6 }}>⏳</div>
+                <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
+                  <LoadingSpinner size={28} color="var(--d-accent)" />
+                </div>
                 <p style={{ margin: 0, fontSize: "13px" }}>Loading market movement…</p>
               </div>
             ) : marketMovementError ? (
-              <div style={{ padding: "48px 0", textAlign: "center", color: "#ef4444" }}>
+              <div style={{ padding: "48px 0", textAlign: "center", color: "#e05656" }}>
                 <p style={{ margin: 0, fontSize: "13px" }}>Unable to load market movement.</p>
               </div>
             ) : (marketMovementData?.pct_change == null || marketMovementData?.recent_avg == null || marketMovementData?.prior_avg == null) ? (
@@ -648,7 +727,7 @@ export default function Dashboard() {
               (() => {
                 const arrow = marketMovementData.direction === "down" ? "↓" : marketMovementData.direction === "up" ? "↑" : "→";
                 const statusText = marketMovementData.direction === "down" ? "Price Decreased" : marketMovementData.direction === "up" ? "Price Increased" : "Price Stable";
-                const movementColor = marketMovementData.direction === "down" ? "#ef4444" : marketMovementData.direction === "up" ? "#10B981" : "var(--d-text-2)";
+                const movementColor = marketMovementData.direction === "down" ? "#e05656" : marketMovementData.direction === "up" ? "#059669" : "var(--d-text-2)";
                 const tfLabel = marketMovementTimeframe === "1d" ? "previous 1 day" : marketMovementTimeframe === "30d" ? "previous 30 days" : "previous 3 days";
                 const actionVerb = marketMovementData.direction === "down" ? "decreased" : marketMovementData.direction === "up" ? "increased" : "remained stable";
                 const descriptionText = `Competitor market prices ${actionVerb} compared with ${tfLabel}`;
@@ -780,7 +859,7 @@ export default function Dashboard() {
                         padding: "5px 12px",
                         borderRadius: "6px",
                         border: active ? "1px solid var(--d-accent)" : "1px solid var(--d-border)",
-                        background: active ? "var(--d-accent-bg)" : "var(--d-surface-2)",
+                        background: active ? "var(--d-surface)" : "var(--d-surface-2)",
                         color: active ? "var(--d-accent)" : "var(--d-text-2)",
                         fontSize: "12px",
                         fontWeight: active ? 700 : 500,
@@ -840,14 +919,14 @@ export default function Dashboard() {
                   const shortTitle = item.title?.length > 60 ? item.title.slice(0, 58).trim() + "…" : item.title;
                   return (
                     <div key={item.id} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 16px", borderRadius: "10px", background: "var(--d-surface-2)", border: "1px solid var(--d-border)", transition: "opacity 0.15s ease" }}>
-                      {/* Icon bubble */}
-                      <div style={{ width: "34px", height: "34px", borderRadius: "9px", background: "var(--d-surface)", border: "1px solid var(--d-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {/* Icon */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <AttentionIcon level={item.level} />
                       </div>
                       {/* Text */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px", flexWrap: "wrap" }}>
-                          <span style={{ fontSize: "9.5px", fontWeight: 700, color: meta.color, background: meta.bg, padding: "1.5px 7px", borderRadius: "4px", letterSpacing: "0.5px", textTransform: "uppercase", flexShrink: 0 }}>
+                          <span style={{ fontSize: "10px", fontWeight: 700, color: meta.color, background: meta.bg, padding: meta.bg === "transparent" ? "0 4px 0 0" : "1.5px 7px", borderRadius: "4px", letterSpacing: "0.5px", textTransform: "uppercase", flexShrink: 0 }}>
                             {meta.label}
                           </span>
                           <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--d-text)" }} title={item.title}>
@@ -861,9 +940,9 @@ export default function Dashboard() {
                       {/* Action button */}
                       <button
                         onClick={() => navigate(item.action_nav)}
-                        style={{ padding: "7px 15px", background: "var(--d-surface)", border: "1px solid var(--d-border)", borderRadius: "7px", fontSize: "12px", fontWeight: 600, color: "var(--d-text)", cursor: "pointer", fontFamily: "inherit", flexShrink: 0, whiteSpace: "nowrap", transition: "all 0.15s ease" }}
+                        style={{ padding: "7px 15px", background: "var(--d-surface)", border: "1px solid var(--d-border)", borderRadius: "7px", fontSize: "12px", fontWeight: 600, color: "var(--d-accent)", cursor: "pointer", fontFamily: "inherit", flexShrink: 0, whiteSpace: "nowrap", transition: "all 0.15s ease" }}
                         onMouseEnter={(e) => { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.color = meta.color; e.currentTarget.style.background = meta.bg; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--d-border)"; e.currentTarget.style.color = "var(--d-text)"; e.currentTarget.style.background = "var(--d-surface)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--d-border)"; e.currentTarget.style.color = "var(--d-accent)"; e.currentTarget.style.background = "var(--d-surface)"; }}
                       >
                         {item.action} →
                       </button>
@@ -884,10 +963,16 @@ export default function Dashboard() {
               <span onClick={() => navigate("/products")} style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-accent)", cursor: "pointer", flexShrink: 0 }}>View products →</span>
             </div>
             <div style={{ width: "100%", height: "340px", position: "relative", minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
-              <div style={{ position: "absolute", top: 30, left: "12%", fontSize: "12px", fontWeight: 700, color: "#d42b2b", pointerEvents: "none", zIndex: 2 }}>⚠ Risk Zone</div>
-              <div style={{ position: "absolute", top: 30, right: "7%", fontSize: "12px", fontWeight: 700, color: "#c97d00", pointerEvents: "none", zIndex: 2 }}>👁 Monitor Closely</div>
-              <div style={{ position: "absolute", bottom: 68, left: "12%", fontSize: "12px", fontWeight: 700, color: "#3b6ae8", pointerEvents: "none", zIndex: 2 }}>💡 Improve Pricing</div>
-              <div style={{ position: "absolute", bottom: 68, right: "7%", fontSize: "12px", fontWeight: 700, color: "#0a9668", pointerEvents: "none", zIndex: 2 }}>✓ Healthy Position</div>
+              <div style={{ position: "absolute", top: 30, left: "12%", fontSize: "12px", fontWeight: 700, color: "#e05656", pointerEvents: "none", zIndex: 2 }}>⚠ Risk Zone</div>
+              <div style={{ position: "absolute", top: 30, right: "7%", fontSize: "12px", fontWeight: 700, color: "#d97706", pointerEvents: "none", zIndex: 2 }}>👁 Monitor Closely</div>
+              <div style={{ position: "absolute", bottom: 68, left: "12%", fontSize: "12px", fontWeight: 700, color: "var(--d-accent)", pointerEvents: "none", zIndex: 2, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                  <polyline points="17 6 23 6 23 12" />
+                </svg>
+                Improve Pricing
+              </div>
+              <div style={{ position: "absolute", bottom: 68, right: "7%", fontSize: "12px", fontWeight: 700, color: "#059669", pointerEvents: "none", zIndex: 2 }}>✓ Healthy Position</div>
               <div style={{ position: "absolute", inset: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ScatterChart margin={{ top: 24, right: 34, left: 4, bottom: 28 }}>
@@ -905,10 +990,10 @@ export default function Dashboard() {
             </div>
             <div className="res-grid-2" style={{ marginTop: "18px", paddingTop: "18px", borderTop: "1px solid var(--d-border)" }}>
               {[
-                { color: "#ef4444", label: "Risk Zone", desc: "High volatility · Weak position" },
-                { color: "#f59e0b", label: "Monitor Closely", desc: "High volatility · Strong position" },
-                { color: "#4f7ef7", label: "Improve Pricing", desc: "Low volatility · Weak position" },
-                { color: "#10B981", label: "Healthy Position", desc: "Low volatility · Strong position" },
+                { color: "#e05656", label: "Risk Zone", desc: "High volatility · Weak position" },
+                { color: "#d97706", label: "Monitor Closely", desc: "High volatility · Strong position" },
+                { color: "var(--d-accent)", label: "Improve Pricing", desc: "Low volatility · Weak position" },
+                { color: "#059669", label: "Healthy Position", desc: "Low volatility · Strong position" },
               ].map((l) => (
                 <div key={l.label} style={{ display: "flex", alignItems: "flex-start", gap: "8px", padding: "10px 12px", borderRadius: "8px", background: `${l.color}08`, border: `1px solid ${l.color}1a` }}>
                   <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: l.color, flexShrink: 0, marginTop: "3px" }} />

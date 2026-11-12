@@ -13,6 +13,7 @@ import {
 } from "../api/products";
 import { validateProductUrl } from "../api/marketplaceUrl";
 import ConfirmModal from "../components/ConfirmModal";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 const card = {
   background: "var(--d-surface)",
@@ -27,17 +28,12 @@ function displayName(product) {
 }
 
 function MarketplaceBadge({ marketplace }) {
-  const colors = {
-    noon: { color: "#C2410C" },
-    daraz: { color: "#E11D48" },
-  };
-  const c = colors[(marketplace || "").toLowerCase()] || { color: "var(--d-text-2)" };
   return (
     <span
       style={{
         fontSize: "12.5px",
         fontWeight: 600,
-        color: c.color,
+        color: "var(--d-accent)",
         textTransform: "capitalize",
       }}
     >
@@ -56,24 +52,18 @@ function StockBadge({ status }) {
   const config = {
     in_stock: {
       label: "In Stock",
-      color: "#16a34a",
-      bg: "rgba(22, 163, 74, 0.08)",
-      border: "rgba(22, 163, 74, 0.2)",
-      dot: "#16a34a",
+      color: "var(--d-accent)",
+      dot: "var(--d-accent)",
     },
     out_of_stock: {
       label: "Out of Stock",
-      color: "#dc2626",
-      bg: "rgba(220, 38, 38, 0.08)",
-      border: "rgba(220, 38, 38, 0.2)",
-      dot: "#dc2626",
+      color: "var(--d-text)",
+      dot: "var(--d-text)",
     },
     limited: {
       label: "Limited",
-      color: "#d97706",
-      bg: "rgba(217, 119, 6, 0.08)",
-      border: "rgba(217, 119, 6, 0.2)",
-      dot: "#d97706",
+      color: "var(--d-text-2)",
+      dot: "var(--d-text-2)",
     },
     pre_order: {
       label: "Pre-order",
@@ -117,18 +107,21 @@ function StockBadge({ status }) {
 function BehaviorBadge({ behavior }) {
   if (!behavior) return <span style={{ color: "var(--d-text-3)", fontSize: "12.5px" }}>—</span>;
 
+  const b = String(behavior).trim().toLowerCase();
   let color = "var(--d-text-2)";
 
-  if (behavior.includes("Aggressive") || behavior.includes("Undercutter")) {
-    color = "#ef4444";
-  } else if (behavior === "Price Matcher") {
-    color = "#3b82f6";
-  } else if (behavior === "Premium Seller") {
-    color = "#8b5cf6";
-  } else if (behavior === "Discount Seller") {
-    color = "#d97706";
-  } else if (behavior === "Above Market") {
-    color = "#10b981";
+  if (b.includes("aggressive")) {
+    color = "#b91c1c";
+  } else if (b.includes("discount")) {
+    color = "#b45309";
+  } else if (b.includes("undercutter")) {
+    color = "#c2410c";
+  } else if (b.includes("premium")) {
+    color = "#6d28d9";
+  } else if (b.includes("match")) {
+    color = "#1d4ed8";
+  } else if (b.includes("above")) {
+    color = "#047857";
   }
 
   return (
@@ -137,7 +130,7 @@ function BehaviorBadge({ behavior }) {
         display: "inline-block",
         fontSize: "12px",
         fontWeight: 600,
-        color: color,
+        color,
         whiteSpace: "nowrap",
       }}
     >
@@ -153,14 +146,14 @@ function VelocityBadge({ velocity }) {
   let dotColor = "#94a3b8";
 
   if (velocity === "High") {
-    color = "#ef4444";
-    dotColor = "#ef4444";
+    color = "var(--d-text)";
+    dotColor = "var(--d-text)";
   } else if (velocity === "Moderate") {
-    color = "#f59e0b";
-    dotColor = "#f59e0b";
+    color = "#6b7280";
+    dotColor = "#6b7280";
   } else if (velocity === "Low") {
-    color = "#10B981";
-    dotColor = "#10B981";
+    color = "var(--d-accent)";
+    dotColor = "var(--d-accent)";
   }
 
   return (
@@ -454,8 +447,8 @@ function Competitors() {
     if (c.latest_price == null || c.ownPrice == null) return null;
     const diff = c.latest_price - c.ownPrice;
     const pct = Math.abs((diff / c.ownPrice) * 100).toFixed(1);
-    if (diff < 0) return { text: `${pct}% below you`, color: "#dc2626" };
-    if (diff > 0) return { text: `${pct}% above you`, color: "#16a34a" };
+    if (diff < 0) return { text: `${pct}% below you`, color: "var(--d-text)" };
+    if (diff > 0) return { text: `${pct}% above you`, color: "var(--d-accent)" };
     return { text: "Same price", color: "var(--d-text-2)" };
   }
 
@@ -846,12 +839,9 @@ function Competitors() {
                   {s.badge && (
                     <span
                       style={{
-                        fontSize: "11px",
+                        fontSize: "12.5px",
                         fontWeight: 600,
-                        color: "#16a34a",
-                        background: "rgba(22, 163, 74, 0.12)",
-                        padding: "2px 8px",
-                        borderRadius: "6px",
+                        color: "var(--d-accent)",
                       }}
                     >
                       {s.badge}
@@ -1249,6 +1239,9 @@ function Competitors() {
                   {loadingCompetitors ? (
                     <tr>
                       <td colSpan={7} style={{ textAlign: "center", padding: "48px 14px", color: "var(--d-text-3)", fontSize: "13px" }}>
+                        <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
+                          <LoadingSpinner size={28} color="var(--d-accent)" />
+                        </div>
                         Loading competitors…
                       </td>
                     </tr>
