@@ -3,18 +3,19 @@ import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useStore } from "../context/StoreContext";
+import { useLocale } from "../context/LocaleContext";
 import { getProductsByStore, getAlerts, markAlertsRead } from "../api/products";
 
 /* ── alert type → icon + colors ───────────────────────────── */
-function alertMeta(category, urgency) {
-  if (category === "flash_sale") return { color: "#f59e0b", bg: "rgba(245,158,11,0.08)", label: "Flash Sale" };
-  if (category === "price_drop") return { color: "var(--d-text)", bg: "transparent", label: "Price Drop" };
-  if (category === "undercut") return { color: "#ef4444", bg: "rgba(239,68,68,0.08)", label: "Undercut" };
-  if (category === "win") return { color: "#10B981", bg: "rgba(16,185,129,0.08)", label: "Win" };
-  if (category === "stock_out") return { color: "#8b5cf6", bg: "rgba(139,92,246,0.08)", label: "Stock Out" };
-  if (category === "price_war") return { color: "#ef4444", bg: "rgba(239,68,68,0.08)", label: "Price War" };
-  if (category === "new_competitor") return { color: "#06b6d4", bg: "rgba(6,182,212,0.08)", label: "New Competitor" };
-  return { color: "var(--d-text-3)", bg: "var(--d-bg)", label: "Alert" };
+function alertMeta(category, urgency, t) {
+  if (category === "flash_sale") return { color: "#f59e0b", bg: "rgba(245,158,11,0.08)", label: t("Flash Sale") };
+  if (category === "price_drop") return { color: "var(--d-text)", bg: "transparent", label: t("Price Drop") };
+  if (category === "undercut") return { color: "#ef4444", bg: "rgba(239,68,68,0.08)", label: t("Undercut") };
+  if (category === "win") return { color: "#10B981", bg: "rgba(16,185,129,0.08)", label: t("Win") };
+  if (category === "stock_out") return { color: "#8b5cf6", bg: "rgba(139,92,246,0.08)", label: t("Stock Out") };
+  if (category === "price_war") return { color: "#ef4444", bg: "rgba(239,68,68,0.08)", label: t("Price War") };
+  if (category === "new_competitor") return { color: "#06b6d4", bg: "rgba(6,182,212,0.08)", label: t("New Competitor") };
+  return { color: "var(--d-text-3)", bg: "var(--d-bg)", label: t("Alert") };
 }
 
 function AlertIcon({ category }) {
@@ -57,13 +58,13 @@ function AlertIcon({ category }) {
   );
 }
 
-function timeAgo(isoString) {
+function timeAgo(isoString, t) {
   if (!isoString) return "";
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
-  if (diff < 60) return "Just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`;
-  return `${Math.floor(diff / 86400)} days ago`;
+  if (diff < 60) return t("Just now");
+  if (diff < 3600) return `${Math.floor(diff / 60)} ${t("min ago")}`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} ${t("hr ago")}`;
+  return `${Math.floor(diff / 86400)} ${t("days ago")}`;
 }
 
 const TABS = [
@@ -79,6 +80,7 @@ const TABS = [
 
 export default function Alerts() {
   const navigate = useNavigate();
+  const { t } = useLocale();
   const { selectedStore } = useStore();
 
   const [products, setProducts] = useState([]);
@@ -157,10 +159,10 @@ export default function Alerts() {
       <div className="res-page-header animate-in" style={{ marginBottom: "20px" }}>
         <div>
           <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--d-text)", letterSpacing: "-0.3px" }}>
-            Alerts
+            {t("Alerts")}
           </h1>
           <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--d-text-2)" }}>
-            Real-time notifications about competitor price changes and opportunities.
+            {t("Real-time notifications about competitor price changes and opportunities.")}
           </p>
         </div>
         {unreadCount > 0 && (
@@ -181,19 +183,19 @@ export default function Alerts() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            Mark all as read ({unreadCount})
+            {t("Mark all as read")} ({unreadCount})
           </button>
         )}
       </div>
 
       {!selectedStore ? (
         <div style={{ ...card, textAlign: "center", padding: "60px 20px" }}>
-          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>No Store Connected</h2>
+          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>{t("No Store Connected")}</h2>
           <p style={{ fontSize: "13.5px", color: "var(--d-text-2)", maxWidth: "380px", margin: "0 auto 20px" }}>
-            Connect a store to start receiving price alerts.
+            {t("Connect a store to start receiving price alerts.")}
           </p>
           <button onClick={() => navigate("/account")} style={{ padding: "10px 20px", background: "var(--d-accent)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
-            + Go to Account
+            + {t("Account")}
           </button>
         </div>
       ) : (
@@ -205,7 +207,7 @@ export default function Alerts() {
             </span>
             <input
               type="text"
-              placeholder={`Search alerts in ${selectedStore.store_name}...`}
+              placeholder={`${t("Search alerts in")} ${selectedStore.store_name}...`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ width: "100%", padding: "10px 14px 10px 38px", borderRadius: "8px", border: "1px solid var(--d-border)", background: "var(--d-surface)", color: "var(--d-text)", fontSize: "13px", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
@@ -216,7 +218,7 @@ export default function Alerts() {
 
           {/* ── Product filter ── */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
-            <label style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--d-text-2)", whiteSpace: "nowrap" }}>Product:</label>
+            <label style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--d-text-2)", whiteSpace: "nowrap" }}>{t("Product:")}</label>
             <select
               value={selectedProductId}
               onChange={(e) => setSelectedProductId(e.target.value)}
@@ -224,7 +226,7 @@ export default function Alerts() {
               onFocus={(e) => (e.target.style.borderColor = "var(--d-accent)")}
               onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
             >
-              <option value="all">All Tracked Products ({products.length})</option>
+              <option value="all">{t("All Tracked Products")} ({products.length})</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>{p.title}</option>
               ))}
@@ -260,7 +262,7 @@ export default function Alerts() {
                       transition: "all 0.12s",
                     }}
                   >
-                    {tab.label}
+                    {t(tab.label)}
                     <span style={{
                       fontSize: "11px",
                       fontWeight: 700,
@@ -282,7 +284,7 @@ export default function Alerts() {
                 <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
                   <LoadingSpinner size={28} color="var(--d-accent)" />
                 </div>
-                Loading alerts…
+                {t("Loading alerts…")}
               </div>
             )}
 
@@ -291,12 +293,12 @@ export default function Alerts() {
               <div style={{ textAlign: "center", padding: "48px 0", color: "var(--d-text-3)", fontSize: "13px" }}>
                 <div style={{ fontSize: "28px", marginBottom: "10px", opacity: 0.4 }}>🔔</div>
                 <p style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: 600, color: "var(--d-text)" }}>
-                  {alerts.length === 0 ? "No alerts yet" : "No alerts match your filter"}
+                  {alerts.length === 0 ? t("No alerts yet") : t("No alerts match your filter")}
                 </p>
                 <p style={{ margin: 0 }}>
                   {alerts.length === 0
-                    ? "Alerts will appear here once your scraper detects competitor price changes."
-                    : "Try changing the tab or search filter."}
+                    ? t("Alerts will appear here once your scraper detects competitor price changes.")
+                    : t("Try changing the tab or search filter.")}
                 </p>
               </div>
             )}
@@ -305,7 +307,7 @@ export default function Alerts() {
             {!loading && filtered.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
                 {filtered.map((alert, i) => {
-                  const meta = alertMeta(alert.category, alert.urgency);
+                  const meta = alertMeta(alert.category, alert.urgency, t);
                   const isUrgent = alert.urgency === "urgent";
                   const isWinning = alert.urgency === "winning";
                   const isOpportunity = alert.urgency === "opportunity";
@@ -357,19 +359,19 @@ export default function Alerts() {
                           {isUrgent && (
                             <span style={{ fontSize: "10.5px", fontWeight: 700, color: "#ef4444", display: "flex", alignItems: "center", gap: "3px" }}>
                               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
-                              Urgent
+                              {t("Urgent")}
                             </span>
                           )}
                           {isWinning && (
                             <span style={{ fontSize: "10.5px", fontWeight: 700, color: "#10B981", display: "flex", alignItems: "center", gap: "3px" }}>
                               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10B981", display: "inline-block" }} />
-                              Winning
+                              {t("Winning")}
                             </span>
                           )}
                           {isOpportunity && (
                             <span style={{ fontSize: "10.5px", fontWeight: 700, color: "#8b5cf6", display: "flex", alignItems: "center", gap: "3px" }}>
                               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#8b5cf6", display: "inline-block" }} />
-                              Opportunity
+                              {t("Opportunity")}
                             </span>
                           )}
                         </div>
@@ -381,7 +383,7 @@ export default function Alerts() {
                       {/* Right side: time + action */}
                       <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
                         <span style={{ fontSize: "11.5px", color: "var(--d-text-3)", whiteSpace: "nowrap" }}>
-                          {timeAgo(alert.created_at)}
+                          {timeAgo(alert.created_at, t)}
                         </span>
                         <button
                           onClick={() => navigate("/products")}
@@ -406,7 +408,7 @@ export default function Alerts() {
                         <button
                           onClick={() => setAlerts((prev) => prev.filter((a) => a.id !== alert.id))}
                           style={{ background: "none", border: "none", cursor: "pointer", color: "var(--d-text-3)", padding: "4px", display: "flex", alignItems: "center" }}
-                          title="Dismiss"
+                          title={t("Dismiss")}
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />

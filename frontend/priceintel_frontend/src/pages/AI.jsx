@@ -1,5 +1,6 @@
 // src/pages/AI.jsx
 import React, { useState, useRef, useEffect } from "react";
+import { useLocale } from "../context/LocaleContext";
 
 /* ─── Static suggestion cards ─────────────────────────────────── */
 const SUGGESTIONS = [
@@ -77,8 +78,8 @@ const PLACEHOLDER_RESPONSES = {
     "I'm currently a UI prototype. Once connected to your live store data, I'll be able to analyze your pricing, competitors, costs, and market position to give you personalized recommendations.",
 };
 
-function getAIResponse(message) {
-  return "Welcome to Price Intel AI agent, coming soon.";
+function getAIResponse(message, t) {
+  return t("Welcome to Price Intel AI agent, coming soon.");
 }
 
 /* ─── Typing indicator ─────────────────────────────────────────── */
@@ -187,15 +188,10 @@ function MessageBubble({ msg }) {
 }
 
 /* ─── Main AI Agent overlay component ─────────────────────────── */
-const INITIAL_MESSAGES = [
-  {
-    role: "assistant",
-    content: "Welcome to Price Intel AI agent, coming soon.",
-  },
-];
-
 export default function AIAgent({ open, onClose }) {
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const { t } = useLocale();
+  const initialMessages = [{ role: "assistant", content: t("Welcome to Price Intel AI agent, coming soon.") }];
+  const [messages, setMessages] = useState(initialMessages);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef(null);
@@ -225,7 +221,7 @@ export default function AIAgent({ open, onClose }) {
     setTimeout(() => {
       const response = responseKey
         ? PLACEHOLDER_RESPONSES[responseKey]
-        : getAIResponse(trimmed);
+        : getAIResponse(trimmed, t);
       setMessages((prev) => [...prev, { role: "assistant", content: response }]);
       setIsTyping(false);
     }, 900 + Math.random() * 500);
@@ -252,12 +248,12 @@ export default function AIAgent({ open, onClose }) {
   };
 
   const handleClearChat = () => {
-    setMessages(INITIAL_MESSAGES);
+    setMessages(initialMessages);
     setIsTyping(false);
   };
 
   const handleNewChat = () => {
-    setMessages(INITIAL_MESSAGES);
+    setMessages(initialMessages);
     setInputValue("");
     setIsTyping(false);
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -389,11 +385,11 @@ export default function AIAgent({ open, onClose }) {
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
                 <span style={{ fontWeight: 700, fontSize: "15.5px", color: "var(--d-text)", letterSpacing: "-0.2px" }}>
-                  Price Intel AI
+                  {t("Price Intel AI")}
                 </span>
               </div>
               <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-2)", fontWeight: 400, lineHeight: 1 }}>
-                Your intelligent pricing &amp; business assistant
+                {t("Your intelligent pricing & business assistant")}
               </p>
             </div>
           </div>
@@ -404,7 +400,7 @@ export default function AIAgent({ open, onClose }) {
                 <button
                   className="ai-action-btn"
                   onClick={handleClearChat}
-                  title="Clear chat history"
+                  title={t("Clear chat history")}
                   style={{
                     height: "33px",
                     padding: "0 12px",
@@ -431,12 +427,12 @@ export default function AIAgent({ open, onClose }) {
                     <path d="M14 11v6" />
                     <path d="M9 6V4h6v2" />
                   </svg>
-                  Clear
+                  {t("Clear")}
                 </button>
                 <button
                   className="ai-action-btn"
                   onClick={handleNewChat}
-                  title="Start a new chat"
+                  title={t("Start a new chat")}
                   style={{
                     height: "33px",
                     padding: "0 12px",
@@ -460,14 +456,14 @@ export default function AIAgent({ open, onClose }) {
                     <path d="M12 5v14" />
                     <path d="M5 12h14" />
                   </svg>
-                  New Chat
+                  {t("New Chat")}
                 </button>
               </>
             )}
             <button
               className="ai-close-btn"
               onClick={onClose}
-              aria-label="Close AI Agent"
+              aria-label={t("Close AI Agent")}
               style={{
                 width: "33px",
                 height: "33px",
@@ -533,7 +529,7 @@ export default function AIAgent({ open, onClose }) {
               letterSpacing: "-0.4px",
             }}
           >
-            Welcome to Price Intel AI
+            {t("Welcome to Price Intel AI")}
           </h2>
 
           <p
@@ -556,7 +552,7 @@ export default function AIAgent({ open, onClose }) {
                 display: "inline-block",
               }}
             />
-            Coming soon
+            {t("Coming soon")}
           </p>
         </div>
       </div>
@@ -566,6 +562,7 @@ export default function AIAgent({ open, onClose }) {
 
 /* ─── Floating trigger button (rendered in Layout) ─────────────── */
 export function AIFloatingButton({ onClick }) {
+  const { t } = useLocale();
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -581,7 +578,7 @@ export function AIFloatingButton({ onClick }) {
         onClick={onClick}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        aria-label="Open AI Agent"
+        aria-label={t("Open AI Agent")}
         style={{
           position: "fixed",
           bottom: "28px",
@@ -632,7 +629,7 @@ export function AIFloatingButton({ onClick }) {
             fontFamily: "'Inter', sans-serif",
           }}>PI</span>
         <span style={{ fontWeight: 600, fontSize: "13.5px", letterSpacing: "-0.1px", whiteSpace: "nowrap" }}>
-          Ask Agent
+          {t("Ask Agent")}
         </span>
       </button>
     </>

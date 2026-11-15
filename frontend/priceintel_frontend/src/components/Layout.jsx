@@ -105,6 +105,7 @@ const BOTTOM_NAV = [
 function StoreSwitcher() {
   const navigate = useNavigate();
   const { stores, selectedStore, setSelectedStore } = useStore();
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -147,7 +148,7 @@ function StoreSwitcher() {
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {activeStore?.store_name || "No Stores Added"}
+          {activeStore?.store_name || t("No Stores Added")}
         </span>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--d-text-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <polyline points="6 9 12 15 18 9" />
@@ -170,7 +171,7 @@ function StoreSwitcher() {
           }}
         >
           <div style={{ padding: "5px 8px 3px", fontSize: "10px", fontWeight: 600, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-            Your Stores
+            {t("Your Stores")}
           </div>
           {stores.length > 0 ? (
             stores.map((s) => {
@@ -200,18 +201,18 @@ function StoreSwitcher() {
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.store_name}</span>
                     {isSelected && (
                       <span style={{ fontSize: "9.5px", fontWeight: 700, color: "var(--d-accent)", background: "rgba(59,130,246,0.15)", padding: "1px 5px", borderRadius: "4px", flexShrink: 0 }}>
-                        ACTIVE
+                        {t("ACTIVE")}
                       </span>
                     )}
                   </div>
-                  <span style={{ fontSize: "10px", color: "var(--d-text-3)", textTransform: "uppercase", flexShrink: 0 }}>{s.marketplace || "store"}</span>
+                  <span style={{ fontSize: "10px", color: "var(--d-text-3)", textTransform: "uppercase", flexShrink: 0 }}>{s.marketplace || t("store")}</span>
                 </div>
               );
             })
           ) : (
             <div style={{ padding: "8px 10px", textAlign: "center" }}>
               <div style={{ fontSize: "12px", color: "var(--d-text-2)", marginBottom: "8px" }}>
-                No stores connected yet.
+                {t("No stores connected yet.")}
               </div>
               <button
                 onClick={() => {
@@ -230,7 +231,7 @@ function StoreSwitcher() {
                   cursor: "pointer",
                 }}
               >
-                + Add Store in Account
+                {t("+ Add Store in Account")}
               </button>
             </div>
           )}
@@ -293,7 +294,7 @@ function UserAvatar() {
       }}
       onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.08)")}
       onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-      title="My Account"
+      title={t("My Account")}
     >
       {initial}
     </div>
@@ -489,7 +490,7 @@ export default function Layout({ children }) {
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <span style={{ fontWeight: 700, fontSize: "15px", color: "var(--d-text)", lineHeight: 1.2 }}>Price Intel</span>
-          <span style={{ fontSize: "11px", color: "var(--d-text-3)", fontWeight: 500 }}>Enterprise Analytics</span>
+          <span style={{ fontSize: "11px", color: "var(--d-text-3)", fontWeight: 500 }}>{t("Enterprise Analytics")}</span>
         </div>
       </div>
 
@@ -591,7 +592,7 @@ export default function Layout({ children }) {
             id="btn-sidebar-toggle"
             className="layout-hamburger"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label="Toggle navigation"
+            aria-label={t("Toggle navigation")}
           >
             <HamburgerIcon open={sidebarOpen} />
           </button>

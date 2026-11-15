@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useStore } from "../context/StoreContext";
+import { useLocale } from "../context/LocaleContext";
 import { getProduct, getProductKpis, getProductCompetitors, updateProduct } from "../api/products";
 
 /* ── card style ─────────────────────────────────────────────── */
@@ -56,6 +57,7 @@ function platformIcon(platform = "") {
 
 /* ── price delta badge ───────────────────────────────────────── */
 function PriceDelta({ ownPrice, competitorPrice }) {
+  const { t } = useLocale();
   if (ownPrice == null || competitorPrice == null) return null;
   const diff = competitorPrice - ownPrice;
   const pct = ((diff / ownPrice) * 100).toFixed(1);
@@ -69,7 +71,7 @@ function PriceDelta({ ownPrice, competitorPrice }) {
         whiteSpace: "nowrap",
       }}
     >
-      {cheaper ? `▼ ${Math.abs(pct)}% cheaper` : `▲ ${pct}% higher`}
+      {cheaper ? `▼ ${Math.abs(pct)}% ${t("cheaper")}` : `▲ ${pct}% ${t("higher")}`}
     </span>
   );
 }
@@ -77,6 +79,7 @@ function PriceDelta({ ownPrice, competitorPrice }) {
 function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useLocale();
   const { currency } = useStore();
 
   const [product, setProduct] = useState(null);
@@ -120,12 +123,12 @@ function ProductDetail() {
     setEditSuccess("");
 
     if (!editForm.title.trim()) {
-      setEditError("Product name/title is required.");
+      setEditError(t("Product name/title is required."));
       return;
     }
     const numericCost = parseFloat(editForm.own_cost);
     if (isNaN(numericCost) || numericCost < 0) {
-      setEditError("Please enter a valid price.");
+      setEditError(t("Please enter a valid price."));
       return;
     }
 
@@ -142,13 +145,13 @@ function ProductDetail() {
       setProduct(updated);
       const newKpi = await getProductKpis(id).catch(() => null);
       if (newKpi) setKpi(newKpi);
-      setEditSuccess("Product updated successfully!");
+      setEditSuccess(t("Product updated successfully!"));
       setTimeout(() => {
         setIsEditModalOpen(false);
         setEditSuccess("");
       }, 700);
     } catch (err) {
-      setEditError(err.message || "Failed to update product.");
+      setEditError(t(err.message || "Failed to update product."));
     } finally {
       setSavingEdit(false);
     }
@@ -169,7 +172,7 @@ function ProductDetail() {
         setKpi(kpiData);
         setCompetitors(Array.isArray(comps) ? comps : []);
       })
-      .catch((err) => setError(err.message || "Failed to load product."))
+      .catch((err) => setError(t(err.message || "Failed to load product.")))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -188,7 +191,7 @@ function ProductDetail() {
           <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}>
             <LoadingSpinner size={34} color="var(--d-accent)" />
           </div>
-          Loading product…
+          {t("Loading product…")}
         </div>
       </Layout>
     );
@@ -207,7 +210,7 @@ function ProductDetail() {
           }}
         >
           <div style={{ fontSize: "32px", marginBottom: "12px" }}>⚠️</div>
-          {error || "Product not found."}
+          {error || t("Product not found.")}
           <br />
           <button
             onClick={() => navigate("/products")}
@@ -224,7 +227,7 @@ function ProductDetail() {
               cursor: "pointer",
             }}
           >
-            ← Back to Products
+            {t("← Back to Products")}
           </button>
         </div>
       </Layout>
@@ -300,7 +303,7 @@ function ProductDetail() {
                 color: product.is_active ? "#059669" : "var(--d-danger)",
               }}
             >
-              {product.is_active ? "● Active" : "● Inactive"}
+              {product.is_active ? `● ${t("Active")}` : `● ${t("Inactive")}`}
             </span>
           </div>
         </div>
@@ -334,7 +337,7 @@ function ProductDetail() {
               e.currentTarget.style.color = "var(--d-text)";
             }}
           >
-            <EditPencilIcon size={14} /> Edit Product
+            <EditPencilIcon size={14} /> {t("Edit Product")}
           </button>
 
           {product.own_url && (
@@ -360,7 +363,7 @@ function ProductDetail() {
                 whiteSpace: "nowrap",
               }}
             >
-              🔗 View My Listing
+              🔗 {t("View My Listing")}
             </a>
           )}
         </div>
@@ -384,29 +387,29 @@ function ProductDetail() {
             sub:
               kpi?.cheapest_competitor != null
                 ? isOverpriced
-                  ? "⚠️ You're priced higher"
-                  : "✅ You're competitive"
-                : "No competitor data yet",
+                  ? `⚠️ ${t("You're priced higher")}`
+                  : `✅ ${t("You're competitive")}`
+                : t("No competitor data yet"),
             color: isOverpriced ? "var(--d-danger)" : "var(--d-success)",
           },
           {
             label: "Active Competitors",
             value: kpi?.num_competitors ?? competitors.length,
-            sub: "Listings tracked",
+            sub: t("Listings tracked"),
             color: "var(--d-text)",
           },
           {
             label: "Price Position",
             value: isCheapest
-              ? "Cheapest"
+              ? t("Cheapest")
               : isOverpriced
-                ? "Overpriced"
-                : "Competitive",
+                ? t("Overpriced")
+                : t("Competitive"),
             sub: isCheapest
-              ? "You have the lowest price"
+              ? t("You have the lowest price")
               : isOverpriced
-                ? "Competitors are cheaper"
-                : "Within competitive range",
+                ? t("Competitors are cheaper")
+                : t("Within competitive range"),
             color: isCheapest
               ? "var(--d-success)"
               : isOverpriced
@@ -457,7 +460,7 @@ function ProductDetail() {
             color: "var(--d-text)",
           }}
         >
-          Competitor Listings
+          {t("Competitor Listings")}
           {competitors.length > 0 && (
             <span
               style={{
@@ -486,10 +489,10 @@ function ProductDetail() {
           >
             <div style={{ fontSize: "32px", marginBottom: "12px", opacity: 0.4 }}>🔍</div>
             <p style={{ margin: 0, fontWeight: 600, color: "var(--d-text-2)" }}>
-              No competitors found yet
+              {t("No competitors found yet")}
             </p>
             <p style={{ margin: "4px 0 0", fontSize: "12px" }}>
-              Competitor listings are discovered automatically when the scraper runs.
+              {t("Competitor listings are discovered automatically when the scraper runs.")}
             </p>
           </div>
         ) : (
@@ -525,7 +528,7 @@ function ProductDetail() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {h}
+                      {t(h)}
                     </th>
                   ))}
                 </tr>
@@ -560,7 +563,7 @@ function ProductDetail() {
                           textTransform: "capitalize",
                         }}
                       >
-                        {comp.platform || "Unknown"}
+                        {t(comp.platform || "Unknown")}
                       </span>
                     </td>
 
@@ -582,7 +585,7 @@ function ProductDetail() {
                         title={comp.name || ""}
                       >
                         {comp.name || (
-                          <em style={{ color: "var(--d-text-3)" }}>Not scraped yet</em>
+                          <em style={{ color: "var(--d-text-3)" }}>{t("Not scraped yet")}</em>
                         )}
                       </div>
                     </td>
@@ -623,7 +626,7 @@ function ProductDetail() {
                     >
                       {comp.last_scraped_at
                         ? new Date(comp.last_scraped_at).toLocaleDateString()
-                        : "Never"}
+                        : t("Never")}
                     </td>
 
                     {/* Action — opens the REAL competitor listing on Noon/Daraz/etc */}
@@ -651,7 +654,7 @@ function ProductDetail() {
                         onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.75")}
                         onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                       >
-                        🔗 View on {comp.platform || "Site"}
+                        🔗 {t("View on")} {comp.platform || t("Site")}
                       </a>
                     </td>
                   </tr>
@@ -705,10 +708,10 @@ function ProductDetail() {
             >
               <div>
                 <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--d-text)", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <EditPencilIcon size={16} /> Edit Product
+                  <EditPencilIcon size={16} /> {t("Edit Product")}
                 </h2>
                 <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--d-text-3)" }}>
-                  Update name, price, URL, category, or discovery search keyword.
+                  {t("Update name, price, URL, category, or discovery search keyword.")}
                 </p>
               </div>
               <button
@@ -734,13 +737,13 @@ function ProductDetail() {
                 {/* Product Name */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                   <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-2)" }}>
-                    Product Name / Title <span style={{ color: "var(--d-danger)" }}>*</span>
+                    {t("Product Name / Title")} <span style={{ color: "var(--d-danger)" }}>*</span>
                   </label>
                   <input
                     type="text"
                     value={editForm.title}
                     onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
-                    placeholder="e.g. Smart Watch Series 9"
+                    placeholder={t("e.g. Smart Watch Series 9")}
                     required
                     style={{
                       padding: "9px 12px",
@@ -760,7 +763,7 @@ function ProductDetail() {
                 {/* My Price + Currency */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                   <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-2)" }}>
-                    My Price ({currency || "Cost"}) <span style={{ color: "var(--d-danger)" }}>*</span>
+                    {t("My Price")} ({currency || t("Cost")}) <span style={{ color: "var(--d-danger)" }}>*</span>
                   </label>
                   <div style={{ position: "relative" }}>
                     <span
@@ -807,13 +810,13 @@ function ProductDetail() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: "12px" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                     <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-2)" }}>
-                      Category (Optional)
+                      {t("Category (Optional)")}
                     </label>
                     <input
                       type="text"
                       value={editForm.category}
                       onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
-                      placeholder="e.g. Electronics"
+                      placeholder={t("e.g. Electronics")}
                       style={{
                         padding: "9px 12px",
                         borderRadius: "8px",
@@ -831,7 +834,7 @@ function ProductDetail() {
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                     <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-2)" }}>
-                      Status
+                      {t("Status")}
                     </label>
                     <select
                       value={editForm.is_active ? "true" : "false"}
@@ -848,8 +851,8 @@ function ProductDetail() {
                         cursor: "pointer",
                       }}
                     >
-                      <option value="true">● Active</option>
-                      <option value="false">○ Inactive</option>
+                      <option value="true">● {t("Active")}</option>
+                      <option value="false">○ {t("Inactive")}</option>
                     </select>
                   </div>
                 </div>
@@ -857,7 +860,7 @@ function ProductDetail() {
                 {/* Product URL */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                   <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-2)" }}>
-                    Product Listing URL <span style={{ color: "var(--d-danger)" }}>*</span>
+                    {t("Product Listing URL")} <span style={{ color: "var(--d-danger)" }}>*</span>
                   </label>
                   <input
                     type="url"
@@ -884,17 +887,17 @@ function ProductDetail() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-text-2)" }}>
-                      Search Keyword (Optional)
+                      {t("Search Keyword (Optional)")}
                     </label>
                     <span style={{ fontSize: "11px", color: "var(--d-text-3)" }}>
-                      Used for scraper search discovery
+                      {t("Used for scraper search discovery")}
                     </span>
                   </div>
                   <input
                     type="text"
                     value={editForm.search_keyword}
                     onChange={(e) => setEditForm((f) => ({ ...f, search_keyword: e.target.value }))}
-                    placeholder="Leave blank to auto-generate from title"
+                    placeholder={t("Leave blank to auto-generate from title")}
                     style={{
                       padding: "9px 12px",
                       borderRadius: "8px",
@@ -948,7 +951,7 @@ function ProductDetail() {
                     fontFamily: "inherit",
                   }}
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   type="submit"
@@ -967,7 +970,7 @@ function ProductDetail() {
                     opacity: savingEdit ? 0.7 : 1,
                   }}
                 >
-                  {savingEdit ? "Saving…" : "Save Changes"}
+                  {savingEdit ? t("Saving…") : t("Save Changes")}
                 </button>
               </div>
             </form>

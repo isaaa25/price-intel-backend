@@ -4,6 +4,7 @@ import Layout from "../components/Layout";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { getStores, createProduct } from "../api/products";
 import { validateProductUrl } from "../api/marketplaceUrl";
+import { useLocale } from "../context/LocaleContext";
 
 /* ── shared card style matching Dashboard ───────────────────── */
 const card = {
@@ -15,6 +16,7 @@ const card = {
 
 function AddProduct() {
   const navigate = useNavigate();
+  const { t } = useLocale();
 
   /* ── stores state ─────────────────────────────────────────── */
   const [stores, setStores] = useState([]);
@@ -42,7 +44,7 @@ function AddProduct() {
         if (list.length > 0) setStoreId(list[0].id);
       })
       .catch((err) => {
-        setStoresError(err.message || "Failed to load stores.");
+        setStoresError(err.message || t("Could not load stores"));
       })
       .finally(() => setStoresLoading(false));
   }, []);
@@ -55,28 +57,24 @@ function AddProduct() {
 
     /* client-side validation */
     if (!storeId || !title.trim() || !ownUrl.trim() || !ownCost) {
-      setSubmitError(
-        "Please fill in all required fields (Store, Title, URL, and Cost)."
-      );
+      setSubmitError(t("Please fill in all required fields (Store, Title, URL, and Cost)."));
       return;
     }
 
     const costNum = parseFloat(ownCost);
     if (isNaN(costNum) || costNum < 0) {
-      setSubmitError("Cost must be a valid positive number.");
+      setSubmitError(t("Cost must be a valid positive number."));
       return;
     }
 
     /* Resolve selected store — needed for marketplace + country */
     const selectedStore = stores.find((s) => String(s.id) === String(storeId));
     if (!selectedStore) {
-      setSubmitError("Selected store not found. Please refresh and try again.");
+      setSubmitError(t("Selected store not found. Please refresh and try again."));
       return;
     }
     if (!selectedStore.marketplace || !selectedStore.country) {
-      setSubmitError(
-        "This store is missing marketplace or country. Re-add the store with a valid Noon/Daraz URL."
-      );
+      setSubmitError(t("This store is missing marketplace or country. Re-add the store with a valid Noon/Daraz URL."));
       return;
     }
 
@@ -88,7 +86,7 @@ function AddProduct() {
         selectedStore.country
       );
     } catch (err) {
-      setSubmitError(err.message || "Invalid product URL for this store.");
+      setSubmitError(err.message || t("Invalid product URL for this store."));
       return;
     }
 
@@ -106,18 +104,17 @@ function AddProduct() {
 
       if (!result.search_keyword) {
         setSuccessMsg(
-          "Product added! The AI-generated search keyword is still processing — " +
-            "it will be filled in automatically on the next discovery run."
+          t("Product added! The AI-generated search keyword is still processing — it will be filled in automatically on the next discovery run.")
         );
       } else {
         setSuccessMsg(
-          `Product added successfully! Search keyword: "${result.search_keyword}"`
+          `${t("Product added successfully! Search keyword:")} "${result.search_keyword}"`
         );
       }
 
       setTimeout(() => navigate("/dashboard"), 2200);
     } catch (err) {
-      setSubmitError(err.message || "Something went wrong. Please try again.");
+      setSubmitError(err.message || t("Something went wrong. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -183,7 +180,7 @@ function AddProduct() {
               (e.currentTarget.style.color = "var(--d-text-3)")
             }
           >
-            ← Back
+            {t("← Back")}
           </button>
           <span style={{ color: "var(--d-border)", fontSize: "14px" }}>/</span>
           <h1
@@ -195,11 +192,11 @@ function AddProduct() {
               letterSpacing: "-0.3px",
             }}
           >
-            Add Product
+            {t("Add Product")}
           </h1>
         </div>
         <p style={{ margin: 0, fontSize: "13px", color: "var(--d-text-2)" }}>
-          Track a new product across competitor marketplaces.
+          {t("Track a new product across competitor marketplaces.")}
         </p>
       </div>
 
@@ -213,7 +210,7 @@ function AddProduct() {
             <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
               <LoadingSpinner size={28} color="var(--d-accent)" />
             </div>
-            Loading your stores…
+            {t("Loading your stores…")}
           </div>
         )}
 
@@ -228,7 +225,7 @@ function AddProduct() {
               color: "var(--d-danger)",
             }}
           >
-            ⚠ Could not load stores: {storesError}
+            ⚠ {t("Could not load stores")}: {storesError}
           </div>
         )}
 
@@ -243,8 +240,7 @@ function AddProduct() {
               color: "var(--d-warning)",
             }}
           >
-            ⚠ No store found. Add a store in <strong>Account → Stores</strong>{" "}
-            before adding products.
+            ⚠ {t("No store found. Add a store in Account → Stores before adding products.")}
           </div>
         )}
 
@@ -295,8 +291,7 @@ function AddProduct() {
                     color: "var(--d-text-3)",
                   }}
                 >
-                  Product URL must be a {selectedStore.marketplace} link for{" "}
-                  {selectedStore.country}.
+                  {t("Product URL must be a")} {selectedStore.marketplace} {t("link for")} {selectedStore.country}.
                 </p>
               )}
             </div>
@@ -304,7 +299,7 @@ function AddProduct() {
             {/* Title */}
             <div>
               <label htmlFor="field-title" style={labelStyle}>
-                Product title <span style={{ color: "var(--d-danger)" }}>*</span>
+                {t("Product title")} <span style={{ color: "var(--d-danger)" }}>*</span>
               </label>
               <input
                 id="field-title"
@@ -327,8 +322,7 @@ function AddProduct() {
             {/* Own URL */}
             <div>
               <label htmlFor="field-own-url" style={labelStyle}>
-                Your product URL{" "}
-                <span style={{ color: "var(--d-danger)" }}>*</span>
+                {t("Your product URL")} <span style={{ color: "var(--d-danger)" }}>*</span>
               </label>
               <input
                 id="field-own-url"
@@ -362,7 +356,7 @@ function AddProduct() {
             >
               <div>
                 <label htmlFor="field-own-cost" style={labelStyle}>
-                  Your price (cost){" "}
+                  {t("Your price (cost)" )}{" "}
                   <span style={{ color: "var(--d-danger)" }}>*</span>
                 </label>
                 <input
@@ -387,9 +381,8 @@ function AddProduct() {
 
               <div>
                 <label htmlFor="field-category" style={labelStyle}>
-                  Category{" "}
-                  <span style={{ color: "var(--d-text-3)", fontWeight: 400 }}>
-                    (optional)
+                  {t("Category")} <span style={{ color: "var(--d-text-3)", fontWeight: 400 }}>
+                    ({t("optional")})
                   </span>
                 </label>
                 <input
@@ -476,7 +469,7 @@ function AddProduct() {
                 e.currentTarget.style.transform = "translateY(0)";
               }}
             >
-              {submitting ? "Saving product…" : "Save product"}
+              {submitting ? t("Saving product…") : t("Save product")}
             </button>
           </form>
         )}

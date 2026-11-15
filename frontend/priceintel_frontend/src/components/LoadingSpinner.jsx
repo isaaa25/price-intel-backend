@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { useLocale } from "../context/LocaleContext";
 
 export default function LoadingSpinner({
   size = 32,
@@ -8,6 +9,7 @@ export default function LoadingSpinner({
   ...props
 }) {
   const reactId = useId();
+  const { t } = useLocale();
   const gradId = "pi-spin-" + reactId.replace(/[^a-zA-Z0-9_-]/g, "");
 
   return (
@@ -23,7 +25,7 @@ export default function LoadingSpinner({
         flexShrink: 0,
         ...style,
       }}
-      aria-label="Loading"
+      aria-label={t("Loading")}
       role="status"
       {...props}
     >

@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import apiRequest from "../api/client";
 import { useStore } from "../context/StoreContext";
+import { useLocale } from "../context/LocaleContext";
 
 const MARKETPLACE_OPTIONS = [
   { value: "daraz", label: "Daraz", color: "#E11D48", country: "Pakistan" },
@@ -13,6 +14,7 @@ const COUNTRY_OPTIONS = ["Pakistan", "UAE", "Saudi Arabia"];
 
 export default function OnboardingModal({ open, onStoreConnected }) {
   const { refreshStores } = useStore();
+  const { t } = useLocale();
 
   // Steps: 'welcome' | 'store_form'
   const [step, setStep] = useState("welcome");
@@ -46,14 +48,14 @@ export default function OnboardingModal({ open, onStoreConnected }) {
     setError("");
 
     if (!isFormValid) {
-      setError("Please fill in all required fields (Marketplace, Country, Store Name, and Store URL).");
+      setError(t("Please fill in all required fields (Marketplace, Country, Store Name, and Store URL)."));
       return;
     }
 
     try {
       new URL(storeUrl.trim());
     } catch {
-      setError("Please enter a valid URL (including https://).");
+      setError(t("Please enter a valid URL (including https://)."));
       return;
     }
 
@@ -76,7 +78,7 @@ export default function OnboardingModal({ open, onStoreConnected }) {
         onStoreConnected(newStore);
       }
     } catch (err) {
-      setError(err.message || "Failed to create store. Please check details and try again.");
+      setError(t(err.message || "Failed to create store. Please check details and try again."));
     } finally {
       setSubmitting(false);
     }
@@ -137,7 +139,7 @@ export default function OnboardingModal({ open, onStoreConnected }) {
               Price Intel
             </div>
             <div style={{ fontSize: "11px", color: "#64748B", fontWeight: 500 }}>
-              Competitive Intelligence
+              {t("Competitive Intelligence")}
             </div>
           </div>
         </div>
@@ -146,7 +148,7 @@ export default function OnboardingModal({ open, onStoreConnected }) {
         {step === "welcome" && (
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", width: "fit-content", padding: "3px 10px", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "100px", color: "#2563EB", fontSize: "11px", fontWeight: 600, marginBottom: "14px" }}>
-              <span>🚀 Getting Started</span>
+              <span>🚀 {t("Getting Started")}</span>
             </div>
 
             <h2
@@ -159,7 +161,7 @@ export default function OnboardingModal({ open, onStoreConnected }) {
                 lineHeight: 1.3,
               }}
             >
-              Welcome to Price Intel
+              {t("Welcome to Price Intel")}
             </h2>
 
             <p
@@ -170,7 +172,7 @@ export default function OnboardingModal({ open, onStoreConnected }) {
                 lineHeight: 1.55,
               }}
             >
-              Let's get your store set up and start monitoring your competitors in real time.
+              {t("Let's get your store set up and start monitoring your competitors in real time.")}
             </p>
 
             {/* Feature preview list */}
@@ -211,8 +213,8 @@ export default function OnboardingModal({ open, onStoreConnected }) {
                     ✓
                   </div>
                   <div>
-                    <div style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B" }}>{item.title}</div>
-                    <div style={{ fontSize: "11.5px", color: "#64748B" }}>{item.desc}</div>
+                    <div style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B" }}>{t(item.title)}</div>
+                    <div style={{ fontSize: "11.5px", color: "#64748B" }}>{t(item.desc)}</div>
                   </div>
                 </div>
               ))}
@@ -240,7 +242,7 @@ export default function OnboardingModal({ open, onStoreConnected }) {
                 transition: "all 0.15s ease",
               }}
             >
-              Add Your Store →
+              {t("Add Your Store")} →
             </button>
           </div>
         )}
@@ -265,18 +267,18 @@ export default function OnboardingModal({ open, onStoreConnected }) {
                   gap: "4px",
                 }}
               >
-                ← Back
+                {t("← Back")}
               </button>
               <span style={{ fontSize: "11px", fontWeight: 600, color: "#2563EB", background: "#EFF6FF", padding: "2px 8px", borderRadius: "100px" }}>
-                Step 1 of 2
+                {t("Step 1 of 2")}
               </span>
             </div>
 
             <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#0F172A", margin: "0 0 6px", letterSpacing: "-0.3px" }}>
-              Add Your Store
+              {t("Add Your Store")}
             </h2>
             <p style={{ fontSize: "13px", color: "#64748B", margin: "0 0 18px" }}>
-              Enter your marketplace seller storefront details so Price Intel can monitor your inventory.
+              {t("Enter your marketplace seller storefront details so Price Intel can monitor your inventory.")}
             </p>
 
             {error && (
@@ -303,7 +305,7 @@ export default function OnboardingModal({ open, onStoreConnected }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
-                    Marketplace *
+                    {t("Marketplace")} *
                   </label>
                   <select
                     id="input-modal-marketplace"
@@ -322,14 +324,14 @@ export default function OnboardingModal({ open, onStoreConnected }) {
                     }}
                   >
                     {MARKETPLACE_OPTIONS.map((m) => (
-                      <option key={m.value} value={m.value}>{m.label}</option>
+                      <option key={m.value} value={m.value}>{t(m.label)}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
-                    Country *
+                    {t("Country")} *
                   </label>
                   <select
                     id="input-modal-country"
@@ -348,7 +350,7 @@ export default function OnboardingModal({ open, onStoreConnected }) {
                     }}
                   >
                     {COUNTRY_OPTIONS.map((c) => (
-                      <option key={c} value={c}>{c}</option>
+                      <option key={c} value={c}>{t(c)}</option>
                     ))}
                   </select>
                 </div>
@@ -357,12 +359,12 @@ export default function OnboardingModal({ open, onStoreConnected }) {
               {/* Store Name */}
               <div>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
-                  Store Name *
+                  {t("Store Name")} *
                 </label>
                 <input
                   id="input-modal-store-name"
                   type="text"
-                  placeholder="e.g. TechZone Official"
+                  placeholder={t("e.g. TechZone Official")}
                   value={storeName}
                   onChange={(e) => setStoreName(e.target.value)}
                   required
@@ -384,7 +386,7 @@ export default function OnboardingModal({ open, onStoreConnected }) {
               {/* Store URL */}
               <div>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
-                  Store URL *
+                  {t("Store URL")} *
                 </label>
                 <input
                   id="input-modal-store-url"
@@ -407,7 +409,7 @@ export default function OnboardingModal({ open, onStoreConnected }) {
                   }}
                 />
                 <span style={{ fontSize: "11px", color: "#64748B", marginTop: "4px", display: "block" }}>
-                  The public web address of your seller storefront.
+                  {t("The public web address of your seller storefront.")}
                 </span>
               </div>
 
@@ -429,13 +431,13 @@ export default function OnboardingModal({ open, onStoreConnected }) {
                     gap: "4px",
                   }}
                 >
-                  <span>{showAdvanced ? "▾ Hide" : "▸ Show"} optional details (slug / ID)</span>
+                  <span>{showAdvanced ? `▾ ${t("Hide")}` : `▸ ${t("Show")}`} {t("optional details (slug / ID)")}</span>
                 </button>
 
                 {showAdvanced && (
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
                     <div>
-                      <label style={{ display: "block", fontSize: "11px", color: "#64748B", marginBottom: "4px" }}>Store Slug</label>
+                      <label style={{ display: "block", fontSize: "11px", color: "#64748B", marginBottom: "4px" }}>{t("Store Slug")}</label>
                       <input
                         type="text"
                         placeholder="techzone-pk"
@@ -445,10 +447,10 @@ export default function OnboardingModal({ open, onStoreConnected }) {
                       />
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: "11px", color: "#64748B", marginBottom: "4px" }}>External ID</label>
+                      <label style={{ display: "block", fontSize: "11px", color: "#64748B", marginBottom: "4px" }}>{t("External ID")}</label>
                       <input
                         type="text"
-                        placeholder="p-12345"
+                        placeholder={t("External ID example")}
                         value={externalId}
                         onChange={(e) => setExternalId(e.target.value)}
                         style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "12px", boxSizing: "border-box" }}
@@ -478,7 +480,7 @@ export default function OnboardingModal({ open, onStoreConnected }) {
                   transition: "all 0.15s ease",
                 }}
               >
-                {submitting ? "Connecting store…" : "Connect Store →"}
+                {submitting ? t("Connecting store…") : `${t("Connect Store")} →`}
               </button>
             </form>
           </div>

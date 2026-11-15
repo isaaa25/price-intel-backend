@@ -94,7 +94,7 @@ function Products() {
         });
         setKpisById(map);
       })
-      .catch((err) => setError(err.message || "Failed to load products."))
+      .catch((err) => setError(t(err.message || "Failed to load products.")))
       .finally(() => setLoading(false));
   }, [selectedStore]);
 
@@ -123,7 +123,7 @@ function Products() {
       setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
       setProductToDelete(null);
     } catch (err) {
-      setDeleteError(err.message || "Failed to delete product.");
+      setDeleteError(t(err.message || "Failed to delete product."));
     } finally {
       setDeleting(false);
     }
@@ -192,7 +192,7 @@ function Products() {
           </h1>
           <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--d-text-2)" }}>
             {selectedStore
-              ? <>Products tracked for <strong>{selectedStore.store_name}</strong>.</>
+              ? <>{t("Products tracked for")} <strong>{selectedStore.store_name}</strong>.</>
               : t("All products you're tracking across marketplaces.")}
           </p>
         </div>
@@ -580,7 +580,7 @@ function Products() {
                             onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.75")}
                             onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                           >
-                            View
+                            {t("View")}
                           </button>
                           <button
                             id={`btn-delete-${product.id}`}
@@ -600,7 +600,7 @@ function Products() {
                             onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
                             onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                           >
-                            Delete
+                            {t("Delete")}
                           </button>
                         </div>
                       </td>

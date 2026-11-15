@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useLocale } from "../context/LocaleContext";
 
 /* ─── Data ────────────────────────────────────────────────── */
 const NAV_LINKS = ["How It Works", "Features", "Platforms", "Pricing", "Contact"];
@@ -118,6 +119,7 @@ function SectionLabel({ children, style = {} }) {
 /* ─── Component ───────────────────────────────────────────── */
 function Welcome() {
   const navigate = useNavigate();
+  const { t } = useLocale();
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -165,7 +167,7 @@ function Welcome() {
             <button key={l} onClick={() => scrollTo(NAV_IDS[l])} style={{ background: "none", border: "none", fontFamily: "inherit", fontSize: "14.5px", fontWeight: 500, color: "#52525B", cursor: "pointer", padding: 0, transition: "color 0.15s" }}
               onMouseEnter={e => e.target.style.color = "#18181B"}
               onMouseLeave={e => e.target.style.color = "#52525B"}
-            >{l}</button>
+            >{t(l)}</button>
           ))}
         </div>
 
@@ -174,11 +176,11 @@ function Welcome() {
           <button id="nav-btn-login" onClick={() => navigate("/login")} style={{ background: "none", border: "none", fontFamily: "inherit", fontSize: "14.5px", fontWeight: 600, color: "#52525B", cursor: "pointer", padding: "8px 14px", borderRadius: "8px", transition: "background 0.12s" }}
             onMouseEnter={e => e.currentTarget.style.background = "#F4F4F5"}
             onMouseLeave={e => e.currentTarget.style.background = "none"}
-          >Log In</button>
+          >{t("Log In")}</button>
           <button id="nav-btn-signup" onClick={() => navigate("/signup")} style={{ background: "#2563EB", color: "#fff", border: "none", fontFamily: "inherit", fontSize: "13px", fontWeight: 600, cursor: "pointer", padding: "8px 18px", borderRadius: "8px", transition: "background 0.15s, transform 0.1s", boxShadow: "0 2px 8px rgba(37,99,235,0.3)" }}
             onMouseEnter={e => { e.currentTarget.style.background = "#1D4ED8"; e.currentTarget.style.transform = "translateY(-1px)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "#2563EB"; e.currentTarget.style.transform = "translateY(0)"; }}
-          >Get Started Free</button>
+          >{t("Get Started Free")}</button>
         </div>
       </nav>
 
@@ -203,12 +205,12 @@ function Welcome() {
         <div style={{ flex: 1, maxWidth: "560px", zIndex: 1 }}>
 
           <h1 style={{ margin: "0 0 20px", fontSize: "clamp(36px, 5vw, 58px)", fontWeight: 800, color: "#0F0F11", lineHeight: 1.1, letterSpacing: "-2px" }}>
-            Ready to outsmart<br />
-            <span style={{ color: "#2563EB" }}>your competition?</span>
+            {t("Ready to outsmart")}<br />
+            <span style={{ color: "#2563EB" }}>{t("your competition?")}</span>
           </h1>
 
           <p style={{ margin: "0 0 36px", fontSize: "17px", color: "#52525B", lineHeight: 1.7, maxWidth: "480px" }}>
-            Price Intel tracks your competitors across Noon and Daraz — giving you real-time alerts, AI-powered insights, and a clear edge over every rival seller.
+            {t("Price Intel tracks your competitors across Noon and Daraz — giving you real-time alerts, AI-powered insights, and a clear edge over every rival seller.")}
           </p>
 
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
@@ -216,13 +218,13 @@ function Welcome() {
               onMouseEnter={e => { e.currentTarget.style.background = "#1D4ED8"; e.currentTarget.style.transform = "translateY(-2px)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "#2563EB"; e.currentTarget.style.transform = "translateY(0)"; }}
             >
-              Start for Free →
+              {t("Start for Free")} →
             </button>
             <button id="hero-btn-login" onClick={() => navigate("/login")} style={{ padding: "14px 28px", background: "#fff", color: "#18181B", border: "1px solid #E4E4E7", borderRadius: "10px", fontSize: "15px", fontWeight: 600, fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#2563EB"; e.currentTarget.style.color = "#2563EB"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "#E4E4E7"; e.currentTarget.style.color = "#18181B"; }}
             >
-              Sign In
+              {t("Sign In")}
             </button>
           </div>
 
@@ -231,7 +233,7 @@ function Welcome() {
             {[["10k+", "Products tracked"], ["Real-time", "Price alerts"], ["Noon · Daraz", "Platforms supported"]].map(([n, l]) => (
               <div key={l}>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: "16px", color: "#18181B", letterSpacing: "-0.3px" }}>{n}</p>
-                <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#A1A1AA" }}>{l}</p>
+                <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#A1A1AA" }}>{t(l)}</p>
               </div>
             ))}
           </div>
@@ -259,13 +261,13 @@ function Welcome() {
               {/* Header */}
               <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid #F1F5F9" }}>
                 <div style={{ fontSize: "9px", color: "#94A3B8", marginBottom: "6px", display: "flex", alignItems: "center", gap: "3px" }}>
-                  <span>←</span> Back to Products
+                  <span>←</span> {t("Back to Products")}
                 </div>
                 <div style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", marginBottom: "5px", letterSpacing: "-0.2px" }}>Redmi Note 15 Pro</div>
                 <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                  <span style={{ fontSize: "8.5px", background: "#F1F5F9", padding: "2px 7px", borderRadius: "4px", color: "#475569", fontWeight: 500 }}>Electronics</span>
+                  <span style={{ fontSize: "8.5px", background: "#F1F5F9", padding: "2px 7px", borderRadius: "4px", color: "#475569", fontWeight: 500 }}>{t("Electronics")}</span>
                   <span style={{ fontSize: "8.5px", background: "#F1F5F9", padding: "2px 7px", borderRadius: "4px", color: "#475569", fontWeight: 500 }}>Redmi Note 15 Pro</span>
-                  <span style={{ fontSize: "8.5px", color: "#10B981", fontWeight: 600 }}>● Active</span>
+                  <span style={{ fontSize: "8.5px", color: "#10B981", fontWeight: 600 }}>● {t("Active")}</span>
                 </div>
               </div>
 
@@ -294,23 +296,23 @@ function Welcome() {
                         : {}),
                     }}
                   >
-                    <div style={{ fontSize: "6px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.2px", lineHeight: 1.3 }}>{k.label}</div>
+                    <div style={{ fontSize: "6px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.2px", lineHeight: 1.3 }}>{t(k.label)}</div>
                     <div style={{ fontSize: "10px", fontWeight: 700, color: k.color, marginTop: "3px" }}>{k.value}</div>
-                    {k.sub ? <div style={{ fontSize: "6px", color: "#94A3B8", marginTop: "2px" }}>{k.sub}</div> : null}
+                    {k.sub ? <div style={{ fontSize: "6px", color: "#94A3B8", marginTop: "2px" }}>{t(k.sub)}</div> : null}
                   </div>
                 ))}
               </div>
 
               {/* Competitor Listings heading */}
               <div style={{ padding: "6px 12px 5px", display: "flex", alignItems: "center", gap: "6px" }}>
-                <span style={{ fontSize: "11px", fontWeight: 700, color: "#0F172A" }}>Competitor Listings</span>
+                <span style={{ fontSize: "11px", fontWeight: 700, color: "#0F172A" }}>{t("Competitor Listings")}</span>
                 <span style={{ fontSize: "8px", background: "#F1F5F9", padding: "1px 6px", borderRadius: "4px", color: "#475569", fontWeight: 600 }}>7</span>
               </div>
 
               {/* Table header */}
               <div style={{ display: "grid", gridTemplateColumns: "52px 1fr 72px 68px", padding: "6px 12px", background: "#F8FAFC", borderTop: "1px solid #F1F5F9", gap: "6px" }}>
                 {["PLATFORM", "PRODUCT NAME", "THEIR PRICE", "VS YOUR PRICE"].map((h) => (
-                  <span key={h} style={{ fontSize: "6px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.2px" }}>{h}</span>
+                  <span key={h} style={{ fontSize: "6px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.2px" }}>{t(h)}</span>
                 ))}
               </div>
 
@@ -324,7 +326,7 @@ function Welcome() {
                   <span style={{ fontSize: "8px", fontWeight: 600, color: "#0F172A" }}>{row.platform}</span>
                   <span style={{ fontSize: "7.5px", color: "#475569", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</span>
                   <span style={{ fontSize: "8px", fontWeight: 600, color: "#10B981" }}>{row.price}</span>
-                  <span style={{ fontSize: "7px", fontWeight: 600, color: row.vsColor }}>{row.vs}</span>
+                  <span style={{ fontSize: "7px", fontWeight: 600, color: row.vsColor }}>{row.vs.replace(" cheaper", ` ${t("cheaper")}`)}</span>
                 </div>
               ))}
             </div>
@@ -345,7 +347,7 @@ function Welcome() {
               <div style={{ display: "flex", alignItems: "center", marginBottom: "16px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#2563EB" }} />
-                  <span style={{ fontSize: "16px", fontWeight: 700, color: "#0F172A", letterSpacing: "-0.2px" }}>Dashboard</span>
+                  <span style={{ fontSize: "16px", fontWeight: 700, color: "#0F172A", letterSpacing: "-0.2px" }}>{t("Dashboard")}</span>
                 </div>
               </div>
 
@@ -387,10 +389,10 @@ function Welcome() {
                         textAlign: "center",
                       }}
                     >
-                      {k.label}
+                      {t(k.label)}
                     </div>
                     <div style={{ fontSize: "12.5px", fontWeight: 800, color: k.color, marginTop: "4px" }}>
-                      {k.val}
+                      {t(k.val)}
                     </div>
                   </div>
                 ))}
@@ -401,7 +403,7 @@ function Welcome() {
                 {/* Header */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: "14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A" }}>Price Trend</span>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A" }}>{t("Price Trend")}</span>
                     <span style={{ fontSize: "10px", fontWeight: 600, color: "#10B981", background: "#DCFCE7", padding: "2px 7px", borderRadius: "4px" }}>▼ 3.4%</span>
                   </div>
 
@@ -424,10 +426,10 @@ function Welcome() {
                 {/* Legend */}
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: "14px", marginBottom: "10px", fontSize: "10px" }}>
                   <span style={{ color: "#94A3B8", display: "flex", alignItems: "center", gap: "4px" }}>
-                    <span style={{ display: "inline-block", width: "14px", height: "0px", borderTop: "2px dashed #94A3B8" }} /> Competitor Avg
+                  <span style={{ display: "inline-block", width: "14px", height: "0px", borderTop: "2px dashed #94A3B8" }} /> {t("Competitor Avg")}
                   </span>
                   <span style={{ color: "#2563EB", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
-                    <span style={{ display: "inline-block", width: "14px", height: "2.5px", background: "#2563EB" }} /> Your Price
+                    <span style={{ display: "inline-block", width: "14px", height: "2.5px", background: "#2563EB" }} /> {t("Your Price")}
                   </span>
                 </div>
 
@@ -487,7 +489,7 @@ function Welcome() {
                       { x: 385, text: "Sat" },
                       { x: 450, text: "Sun" },
                     ].map((xl) => (
-                      <text key={xl.text} x={xl.x} y="119" textAnchor="middle" fill="#94A3B8" fontSize="8" fontFamily="Inter, sans-serif">{xl.text}</text>
+                    <text key={xl.text} x={xl.x} y="119" textAnchor="middle" fill="#94A3B8" fontSize="8" fontFamily="Inter, sans-serif">{t(xl.text)}</text>
                     ))}
                   </svg>
                 </div>
@@ -528,7 +530,7 @@ function Welcome() {
                 <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: "7px" }}>PI</div>
                 {/* Nav items */}
                 {["Dashboard", "Products", "Competitors", "Alerts", "Reports"].map((item, i) => (
-                  <div key={item} title={item} style={{
+                  <div key={item} title={t(item)} style={{
                     width: "22px",
                     height: "22px",
                     borderRadius: "6px",
@@ -550,8 +552,8 @@ function Welcome() {
 
               {/* Content Area */}
               <div style={{ flex: 1, padding: "14px 14px 10px", minWidth: 0 }}>
-                <div style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", marginBottom: "3px", letterSpacing: "-0.2px" }}>Competitors</div>
-                <div style={{ fontSize: "9px", color: "#64748B", marginBottom: "10px" }}>Sellers competing against your products across marketplaces.</div>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", marginBottom: "3px", letterSpacing: "-0.2px" }}>{t("Competitors")}</div>
+                <div style={{ fontSize: "9px", color: "#64748B", marginBottom: "10px" }}>{t("Sellers competing against your products across marketplaces.")}</div>
 
                 {/* KPI cards */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px", marginBottom: "10px" }}>
@@ -561,7 +563,7 @@ function Welcome() {
                     { label: "STOCK-OUT EVENTS", value: "—" },
                   ].map((k) => (
                     <div key={k.label} style={{ background: "#F8FAFC", borderRadius: "6px", padding: "8px 6px", border: "1px solid #E2E8F0" }}>
-                      <div style={{ fontSize: "6px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.2px", lineHeight: 1.3 }}>{k.label}</div>
+                    <div style={{ fontSize: "6px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.2px", lineHeight: 1.3 }}>{t(k.label)}</div>
                       <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A", marginTop: "4px" }}>{k.value}</div>
                     </div>
                   ))}
@@ -570,19 +572,19 @@ function Welcome() {
                 {/* Search */}
                 <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "6px", padding: "6px 10px", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-                  <span style={{ fontSize: "9px", color: "#94A3B8" }}>Search competitors...</span>
+                  <span style={{ fontSize: "9px", color: "#94A3B8" }}>{t("Search competitors...")}</span>
                 </div>
 
                 {/* Detected Sellers heading */}
                 <div style={{ marginBottom: "6px" }}>
-                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#0F172A" }}>Detected Sellers</span>
-                  <span style={{ fontSize: "8px", color: "#2563EB", fontWeight: 600, marginLeft: "8px" }}>15 sellers found</span>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#0F172A" }}>{t("Detected Sellers")}</span>
+                  <span style={{ fontSize: "8px", color: "#2563EB", fontWeight: 600, marginLeft: "8px" }}>15 {t("sellers found")}</span>
                 </div>
 
                 {/* Table header */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 52px 68px", padding: "5px 0", borderBottom: "1px solid #F1F5F9", gap: "4px" }}>
                   {["SELLER", "MARKETPLACE", "PRICE VS YOU"].map((h) => (
-                    <span key={h} style={{ fontSize: "6px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.2px" }}>{h}</span>
+                    <span key={h} style={{ fontSize: "6px", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.2px" }}>{t(h)}</span>
                   ))}
                 </div>
 
@@ -594,7 +596,7 @@ function Welcome() {
                   <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 52px 68px", padding: "7px 0", borderBottom: "1px solid #F1F5F9", gap: "4px", alignItems: "center" }}>
                     <span style={{ fontSize: "8px", fontWeight: 600, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.seller}</span>
                     <span style={{ fontSize: "8px", color: "#2563EB", fontWeight: 500 }}>{row.market}</span>
-                    <span style={{ fontSize: "7.5px", fontWeight: 600, color: row.vsColor }}>{row.vs}</span>
+                    <span style={{ fontSize: "7.5px", fontWeight: 600, color: row.vsColor }}>{row.vs.replace(" below you", ` ${t("below you")}`)}</span>
                   </div>
                 ))}
               </div>
@@ -610,9 +612,9 @@ function Welcome() {
       ══════════════════════════════════════════════════════ */}
       <section id="how-it-works" style={{ padding: "100px 80px", background: "#fff" }}>
         <div style={{ textAlign: "center", marginBottom: "60px" }}>
-          <SectionLabel>How It Works</SectionLabel>
+          <SectionLabel>{t("How It Works")}</SectionLabel>
           <h2 style={{ margin: "6px 0 0", fontSize: "28px", fontWeight: 700, color: "#0F0F11", letterSpacing: "-0.6px" }}>
-            Just paste the URL and you are ready to go
+            {t("Just paste the URL and you are ready to go")}
           </h2>
         </div>
 
@@ -637,8 +639,8 @@ function Welcome() {
               <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px", position: "relative", zIndex: 1 }}>
                 <span style={{ fontSize: "13px", fontWeight: 800, color: "#2563EB" }}>{s.step}</span>
               </div>
-              <h3 style={{ margin: "0 0 8px", fontSize: "15px", fontWeight: 700, color: "#18181B" }}>{s.title}</h3>
-              <p style={{ margin: 0, fontSize: "13px", color: "#71717A", lineHeight: 1.6 }}>{s.desc}</p>
+              <h3 style={{ margin: "0 0 8px", fontSize: "15px", fontWeight: 700, color: "#18181B" }}>{t(s.title)}</h3>
+              <p style={{ margin: 0, fontSize: "13px", color: "#71717A", lineHeight: 1.6 }}>{t(s.desc)}</p>
             </div>
           ))}
         </div>
@@ -650,12 +652,12 @@ function Welcome() {
       ══════════════════════════════════════════════════════ */}
       <section id="features" style={{ padding: "100px 80px", background: "#F7F7F8" }}>
         <div style={{ textAlign: "center", marginBottom: "60px" }}>
-          <SectionLabel>Features</SectionLabel>
+          <SectionLabel>{t("Features")}</SectionLabel>
           <h2 style={{ margin: 0, fontSize: "36px", fontWeight: 800, color: "#0F0F11", letterSpacing: "-1px" }}>
-            Everything you need to win on price
+            {t("Everything you need to win on price")}
           </h2>
           <p style={{ margin: "12px auto 0", maxWidth: "480px", fontSize: "15px", color: "#52525B", lineHeight: 1.7 }}>
-            Built specifically for e-commerce sellers competing on Noon, Daraz, and beyond.
+            {t("Built specifically for e-commerce sellers competing on Noon, Daraz, and beyond.")}
           </p>
         </div>
 
@@ -666,8 +668,8 @@ function Welcome() {
               onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "#E4E4E7"; }}
             >
 
-              <h3 style={{ margin: "0 0 8px", fontSize: "15px", fontWeight: 700, color: "#18181B" }}>{f.title}</h3>
-              <p style={{ margin: 0, fontSize: "13px", color: "#71717A", lineHeight: 1.65 }}>{f.desc}</p>
+              <h3 style={{ margin: "0 0 8px", fontSize: "15px", fontWeight: 700, color: "#18181B" }}>{t(f.title)}</h3>
+              <p style={{ margin: 0, fontSize: "13px", color: "#71717A", lineHeight: 1.65 }}>{t(f.desc)}</p>
             </div>
           ))}
         </div>
@@ -679,12 +681,12 @@ function Welcome() {
       ══════════════════════════════════════════════════════ */}
       <section id="platforms" style={{ padding: "100px 80px", background: "#fff" }}>
         <div style={{ textAlign: "center", marginBottom: "56px" }}>
-          <SectionLabel>Supported Platforms</SectionLabel>
+          <SectionLabel>{t("Supported Platforms")}</SectionLabel>
           <h2 style={{ margin: 0, fontSize: "36px", fontWeight: 800, color: "#0F0F11", letterSpacing: "-1px" }}>
-            Where we track for you
+            {t("Where we track for you")}
           </h2>
           <p style={{ margin: "12px auto 0", maxWidth: "440px", fontSize: "15px", color: "#52525B", lineHeight: 1.7 }}>
-            We scrape the platforms your customers actually shop on — no obscure corner-case sites.
+            {t("We scrape the platforms your customers actually shop on — no obscure corner-case sites.")}
           </p>
         </div>
 
@@ -698,7 +700,7 @@ function Welcome() {
                 {p.icon}
               </div>
               <h3 style={{ margin: "0 0 6px", fontSize: "20px", fontWeight: 800, color: "#18181B" }}>{p.name}</h3>
-              <p style={{ margin: 0, fontSize: "12px", color: "#71717A", fontStyle: "italic" }}>{p.desc}</p>
+              <p style={{ margin: 0, fontSize: "12px", color: "#71717A", fontStyle: "italic" }}>{t(p.desc)}</p>
             </div>
           ))}
         </div>
@@ -710,12 +712,12 @@ function Welcome() {
       ══════════════════════════════════════════════════════ */}
       <section id="pricing" style={{ padding: "100px 80px", background: "#F7F7F8" }}>
         <div style={{ textAlign: "center", marginBottom: "56px" }}>
-          <SectionLabel>Pricing</SectionLabel>
+          <SectionLabel>{t("Pricing")}</SectionLabel>
           <h2 style={{ margin: 0, fontSize: "36px", fontWeight: 800, color: "#0F0F11", letterSpacing: "-1px" }}>
-            Simple, transparent pricing
+            {t("Simple, transparent pricing")}
           </h2>
           <p style={{ margin: "12px auto 0", maxWidth: "420px", fontSize: "15px", color: "#52525B", lineHeight: 1.7 }}>
-            Start free, scale as you grow. No hidden fees, no surprise charges.
+            {t("Start free, scale as you grow. No hidden fees, no surprise charges.")}
           </p>
         </div>
 
@@ -736,19 +738,19 @@ function Welcome() {
             >
               {plan.highlight && (
                 <div style={{ position: "absolute", top: "-12px", left: "50%", transform: "translateX(-50%)", padding: "4px 16px", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#16A34A", whiteSpace: "nowrap" }}>
-                  Most Popular
+                  {t("Most Popular")}
                 </div>
               )}
-              <h3 style={{ margin: "0 0 6px", fontSize: "16px", fontWeight: 700, color: plan.highlight ? "#fff" : "#18181B" }}>{plan.name}</h3>
+              <h3 style={{ margin: "0 0 6px", fontSize: "16px", fontWeight: 700, color: plan.highlight ? "#fff" : "#18181B" }}>{t(plan.name)}</h3>
               <div style={{ display: "flex", alignItems: "baseline", gap: "2px", marginBottom: "24px" }}>
-                <span style={{ fontSize: "38px", fontWeight: 800, color: plan.highlight ? "#fff" : "#18181B", letterSpacing: "-1px" }}>{plan.price}</span>
-                {plan.period && <span style={{ fontSize: "14px", color: plan.highlight ? "rgba(255,255,255,0.7)" : "#A1A1AA" }}>{plan.period}</span>}
+                <span style={{ fontSize: "38px", fontWeight: 800, color: plan.highlight ? "#fff" : "#18181B", letterSpacing: "-1px" }}>{t(plan.price)}</span>
+                {plan.period && <span style={{ fontSize: "14px", color: plan.highlight ? "rgba(255,255,255,0.7)" : "#A1A1AA" }}>{t(plan.period)}</span>}
               </div>
               <ul style={{ margin: "0 0 28px", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "10px" }}>
                 {plan.features.map((f) => (
                   <li key={f} style={{ display: "flex", gap: "8px", fontSize: "13px", color: plan.highlight ? "rgba(255,255,255,0.85)" : "#52525B", alignItems: "center" }}>
                     <span style={{ color: plan.highlight ? "#93C5FD" : "#16A34A", fontWeight: 700, fontSize: "14px" }}>✓</span>
-                    {f}
+                    {t(f)}
                   </li>
                 ))}
               </ul>
@@ -768,7 +770,7 @@ function Welcome() {
                 onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; e.currentTarget.style.transform = "translateY(-1px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
               >
-                {plan.cta}
+                {t(plan.cta)}
               </button>
             </div>
           ))}
@@ -783,23 +785,23 @@ function Welcome() {
         <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.05) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(255,255,255,0.04) 0%, transparent 50%)", pointerEvents: "none" }} />
         <div style={{ position: "relative", zIndex: 1 }}>
           <h2 style={{ margin: "0 0 14px", fontSize: "40px", fontWeight: 800, color: "#fff", letterSpacing: "-1px" }}>
-            Know the Market Before it Moves
+            {t("Know the Market Before it Moves")}
           </h2>
           <p style={{ margin: "0 auto 40px", maxWidth: "480px", fontSize: "16px", color: "rgba(255,255,255,0.75)", lineHeight: 1.7 }}>
-            Join sellers already using Price Intel to protect margins and react to market changes before they lose the sale.
+            {t("Join sellers already using Price Intel to protect margins and react to market changes before they lose the sale.")}
           </p>
           <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
             <button id="cta-btn-signup" onClick={() => navigate("/signup")} style={{ padding: "14px 32px", background: "#fff", color: "#2563EB", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer", transition: "transform 0.15s, box-shadow 0.15s", boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}
               onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,0.2)"; }}
               onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.15)"; }}
             >
-              Get Started Free →
+              {t("Get Started Free")} →
             </button>
             <button id="cta-btn-login" onClick={() => navigate("/login")} style={{ padding: "14px 32px", background: "transparent", color: "#fff", border: "2px solid rgba(255,255,255,0.4)", borderRadius: "10px", fontSize: "15px", fontWeight: 600, fontFamily: "inherit", cursor: "pointer", transition: "border-color 0.15s" }}
               onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.8)"}
               onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.4)"}
             >
-              Sign In
+              {t("Sign In")}
             </button>
           </div>
         </div>
@@ -819,46 +821,46 @@ function Welcome() {
               <span style={{ fontWeight: 700, fontSize: "15px", color: "#fff" }}>Price Intel</span>
             </div>
             <p style={{ margin: "0 0 20px", fontSize: "13px", color: "#71717A", lineHeight: 1.7, maxWidth: "240px" }}>
-              AI-powered price intelligence for e-commerce sellers competing on Noon and Daraz.
+              {t("AI-powered price intelligence for e-commerce sellers competing on Noon and Daraz.")}
             </p>
 
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 style={{ margin: "0 0 16px", fontSize: "13px", fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.5px" }}>Quick Links</h4>
+            <h4 style={{ margin: "0 0 16px", fontSize: "13px", fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.5px" }}>{t("Quick Links")}</h4>
             {["Home", "How It Works", "Features", "Platforms", "Pricing"].map((l) => (
               <button key={l} onClick={() => scrollTo(NAV_IDS[l] || "hero")} style={{ display: "block", background: "none", border: "none", padding: "5px 0", fontFamily: "inherit", fontSize: "13px", color: "#71717A", cursor: "pointer", transition: "color 0.12s", textAlign: "left" }}
                 onMouseEnter={e => e.currentTarget.style.color = "#fff"}
                 onMouseLeave={e => e.currentTarget.style.color = "#71717A"}
-              >{l}</button>
+              >{t(l)}</button>
             ))}
           </div>
 
           {/* Resources */}
           <div>
-            <h4 style={{ margin: "0 0 16px", fontSize: "13px", fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.5px" }}>Resources</h4>
+            <h4 style={{ margin: "0 0 16px", fontSize: "13px", fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.5px" }}>{t("Resources")}</h4>
             {["Documentation", "FAQ"].map((l) => (
               <p key={l} style={{ margin: "5px 0", fontSize: "13px", color: "#71717A", cursor: "pointer", transition: "color 0.12s" }}
                 onMouseEnter={e => e.currentTarget.style.color = "#fff"}
                 onMouseLeave={e => e.currentTarget.style.color = "#71717A"}
-              >{l}</p>
+              >{t(l)}</p>
             ))}
           </div>
 
           {/* Newsletter */}
           <div>
-            <h4 style={{ margin: "0 0 8px", fontSize: "13px", fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.5px" }}>Stay Updated</h4>
-            <p style={{ margin: "0 0 14px", fontSize: "13px", color: "#71717A", lineHeight: 1.6 }}>Get pricing insights and product updates in your inbox.</p>
+            <h4 style={{ margin: "0 0 8px", fontSize: "13px", fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.5px" }}>{t("Stay Updated")}</h4>
+            <p style={{ margin: "0 0 14px", fontSize: "13px", color: "#71717A", lineHeight: 1.6 }}>{t("Get pricing insights and product updates in your inbox.")}</p>
             {subscribed ? (
-              <p style={{ fontSize: "13px", color: "#16A34A", fontWeight: 600 }}>✓ You're subscribed!</p>
+              <p style={{ fontSize: "13px", color: "#16A34A", fontWeight: 600 }}>✓ {t("You're subscribed!")}</p>
             ) : (
               <form onSubmit={handleSubscribe} style={{ display: "flex", gap: "8px" }}>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
+                  placeholder={t("Email address")}
                   style={{ flex: 1, padding: "9px 12px", background: "#1C1C1C", border: "1px solid #2C2C2C", borderRadius: "8px", color: "#fff", fontSize: "13px", fontFamily: "inherit", outline: "none" }}
                   onFocus={e => e.target.style.borderColor = "#2563EB"}
                   onBlur={e => e.target.style.borderColor = "#2C2C2C"}
@@ -871,13 +873,13 @@ function Welcome() {
 
         {/* Bottom bar */}
         <div style={{ borderTop: "1px solid #1C1C1C", paddingTop: "24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-          <p style={{ margin: 0, fontSize: "12px", color: "#52525B" }}>© 2026 Price Intel. All rights reserved.</p>
+          <p style={{ margin: 0, fontSize: "12px", color: "#52525B" }}>© 2026 Price Intel. {t("All rights reserved.")}</p>
           <div style={{ display: "flex", gap: "20px" }}>
             {["Privacy Policy", "Terms of Service", "Cookie Policy"].map((l) => (
               <span key={l} style={{ fontSize: "12px", color: "#52525B", cursor: "pointer", transition: "color 0.12s" }}
                 onMouseEnter={e => e.currentTarget.style.color = "#A1A1AA"}
                 onMouseLeave={e => e.currentTarget.style.color = "#52525B"}
-              >{l}</span>
+              >{t(l)}</span>
             ))}
           </div>
         </div>

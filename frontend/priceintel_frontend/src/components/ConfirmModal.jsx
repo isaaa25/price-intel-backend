@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { useLocale } from "../context/LocaleContext";
 
 /**
  * Reusable Confirmation Dialog Modal for Price Intel
@@ -20,6 +21,8 @@ export default function ConfirmModal({
   isDestructive = true,
   icon,
 }) {
+  const { t } = useLocale();
+
   // Close on Escape key press
   useEffect(() => {
     if (!isOpen) return;
@@ -38,10 +41,10 @@ export default function ConfirmModal({
 
   const defaultMessage = productName ? (
     <>
-      Are you sure you want to delete <strong style={{ color: "var(--d-text)", fontWeight: 700 }}>"{productName}"</strong>? This will remove the tracked product and its competitor listings.
+      {t("Are you sure you want to delete")} <strong style={{ color: "var(--d-text)", fontWeight: 700 }}>"{productName}"</strong>? {t("This will remove the tracked product and its competitor listings.")}
     </>
   ) : (
-    "Are you sure you want to proceed with this action?"
+    t("Are you sure you want to proceed with this action?")
   );
 
   return (
@@ -156,7 +159,7 @@ export default function ConfirmModal({
             letterSpacing: "-0.3px",
           }}
         >
-          {title}
+          {t(title)}
         </h2>
 
         {/* Message */}
@@ -188,7 +191,7 @@ export default function ConfirmModal({
             }}
           >
             <span>⚠️</span>
-            <span>{error}</span>
+            <span>{t(error)}</span>
           </div>
         )}
 
@@ -229,7 +232,7 @@ export default function ConfirmModal({
               }
             }}
           >
-            {cancelText}
+            {t(cancelText)}
           </button>
 
           <button
@@ -281,10 +284,10 @@ export default function ConfirmModal({
                     animation: "confirmModalSpin 0.6s linear infinite",
                   }}
                 />
-                <span>{loadingText || (isDestructive ? "Deleting…" : "Processing…")}</span>
+                <span>{t(loadingText || (isDestructive ? "Deleting…" : "Processing…"))}</span>
               </>
             ) : (
-              confirmText
+              t(confirmText)
             )}
           </button>
         </div>

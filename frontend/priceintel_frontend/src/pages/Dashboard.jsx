@@ -111,7 +111,7 @@ function ScatterTip({ active, payload }) {
         <div>{t("Market Volatility:")} <strong style={{ color: "var(--d-text)" }}>{d?.y} / 100</strong></div>
       </div>
       <div style={{ marginTop: "6px", paddingTop: "6px", borderTop: "1px solid var(--d-border)" }}>
-        <span style={{ fontSize: "10.5px", fontWeight: 700, color: c }}>{quadLabel}</span>
+        <span style={{ fontSize: "10.5px", fontWeight: 700, color: c }}>{t(quadLabel)}</span>
       </div>
     </div>
   );
@@ -146,12 +146,12 @@ function AttentionIcon({ level }) {
 }
 
 // ── CHANGED: maps level string to display label + colors ───────
-function levelMeta(level) {
-  if (level === "HIGH") return { label: "High Priority", color: "#e05656", bg: "transparent" };
-  if (level === "OPPORTUNITY") return { label: "Opportunity", color: "#059669", bg: "transparent" };
-  if (level === "WATCH") return { label: "Watch", color: "#d97706", bg: "rgba(217,119,6,0.07)" };
-  if (level === "HEALTHY") return { label: "Healthy", color: "#059669", bg: "rgba(5,150,105,0.07)" };
-  return { label: "No data", color: "var(--d-text-3)", bg: "var(--d-bg)" };
+function levelMeta(level, t) {
+  if (level === "HIGH") return { label: t("High Priority"), color: "#e05656", bg: "transparent" };
+  if (level === "OPPORTUNITY") return { label: t("Opportunity"), color: "#059669", bg: "transparent" };
+  if (level === "WATCH") return { label: t("Watch"), color: "#d97706", bg: "rgba(217,119,6,0.07)" };
+  if (level === "HEALTHY") return { label: t("Healthy"), color: "#059669", bg: "rgba(5,150,105,0.07)" };
+  return { label: t("No data"), color: "var(--d-text-3)", bg: "var(--d-bg)" };
 }
 
 export default function Dashboard() {
@@ -363,7 +363,7 @@ export default function Dashboard() {
     {
       id: "action",
       label: "NEEDS ACTION",
-      value: portfolio?.needs_action != null ? `${portfolio.needs_action} Products` : "—",
+      value: portfolio?.needs_action != null ? `${portfolio.needs_action} ${t("Products")}` : "—",
       sub: "Require pricing review",
       accent: "var(--d-accent)",
       filter: "HIGH",
@@ -500,7 +500,7 @@ export default function Dashboard() {
         </div>
       ) : storeProducts.length === 0 ? (
         <div style={{ ...card, textAlign: "center", padding: "80px 20px" }}>
-          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>No Tracked Products in {selectedStore.store_name}</h2>
+          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>{t("No Tracked Products in")} {selectedStore.store_name}</h2>
           <p style={{ fontSize: "13.5px", color: "var(--d-text-2)", maxWidth: "380px", margin: "0 auto 22px", lineHeight: 1.65 }}>{t("Add products to start monitoring competitor prices.")}</p>
           <button onClick={() => navigate("/products/add")} style={{ padding: "10px 24px", background: "var(--d-accent)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13.5px", fontWeight: 600, cursor: "pointer" }}>{t("+ Add Products")}</button>
         </div>
@@ -512,7 +512,7 @@ export default function Dashboard() {
               <div
                 key={kpi.id}
                 onClick={() => handleKpiClick(kpi)}
-                title="Click to view details in What Needs Your Attention below"
+                title={t("Click to view details in What Needs Your Attention below")}
                 style={{
                   ...card,
                   textAlign: "center",
@@ -532,12 +532,12 @@ export default function Dashboard() {
                 }}
               >
                 <div style={{ marginBottom: "14px" }}>
-                  <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--d-text-3)", letterSpacing: "0.7px", textTransform: "uppercase" }}>{kpi.label}</span>
+                  <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--d-text-3)", letterSpacing: "0.7px", textTransform: "uppercase" }}>{t(kpi.label)}</span>
                 </div>
                 <div style={{ fontSize: "16px", fontWeight: 800, color: "var(--d-text)", marginBottom: "5px", letterSpacing: "-0.3px", lineHeight: 1.2 }}>{kpi.value}</div>
-                <div style={{ fontSize: "11px", color: "var(--d-text-3)", lineHeight: 1.45 }}>{kpi.sub}</div>
+                <div style={{ fontSize: "11px", color: "var(--d-text-3)", lineHeight: 1.45 }}>{t(kpi.sub)}</div>
                 <div style={{ marginTop: "10px", fontSize: "11px", fontWeight: 600, color: kpi.accent, display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", opacity: 0.9 }}>
-                  <span>{kpi.cue}</span>
+                  <span>{t(kpi.cue)}</span>
                 </div>
               </div>
             ))}
@@ -549,7 +549,7 @@ export default function Dashboard() {
               <h2 style={sectionTitle}>{t("Product Price Trend Analysis")}</h2>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                 <select value={selectedTrendProduct} onChange={(e) => setSelectedTrendProduct(e.target.value)} style={{ padding: "5px 32px 5px 12px", borderRadius: "7px", border: "1px solid var(--d-border)", background: "var(--d-surface-2)", color: "var(--d-text)", fontSize: "12.5px", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", outline: "none", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", minWidth: "160px", maxWidth: "240px" }}>
-                  <option value="all">All Tracked Products</option>
+                  <option value="all">{t("All Tracked Products")}</option>
                   {storeProducts.map((p) => { const dispName = p.search_keyword || p.title; const short = dispName?.length > 28 ? dispName.slice(0, 26).trim() + "…" : dispName; return <option key={p.id} value={p.id} title={dispName}>{short}</option>; })}
                 </select>
                 <div style={{ display: "flex", background: "var(--d-surface-2)", padding: "3px", borderRadius: "8px", border: "1px solid var(--d-border)", gap: "2px" }}>
@@ -559,7 +559,7 @@ export default function Dashboard() {
             </div>
             {selectedTrendProduct !== "all" && (
               <div style={{ marginBottom: "16px", fontSize: "12px", color: "var(--d-text-2)", lineHeight: 1.4, wordBreak: "break-word" }}>
-                <span style={{ color: "var(--d-text-3)", fontWeight: 500 }}>Active Product: </span>
+                <span style={{ color: "var(--d-text-3)", fontWeight: 500 }}>{t("Active Product: ")}</span>
                 <span style={{ color: "var(--d-text)", fontWeight: 600 }}>{storeProducts.find((p) => String(p.id) === String(selectedTrendProduct))?.title}</span>
               </div>
             )}
@@ -568,10 +568,10 @@ export default function Dashboard() {
                 <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "20px" }}>
                   <div style={{ fontSize: "28px", marginBottom: "8px", opacity: 0.6 }}>📈</div>
                   <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--d-text)", marginBottom: "4px" }}>
-                    Select the product first from dropdown
+                    {t("Select the product first from dropdown")}
                   </div>
                   <p style={{ fontSize: "12.5px", color: "var(--d-text-3)", margin: 0, maxWidth: "340px", lineHeight: 1.5 }}>
-                    Please select a specific product from the dropdown above to view its price trend chart and insights.
+                    {t("Please select a specific product from the dropdown above to view its price trend chart and insights.")}
                   </p>
                 </div>
               ) : loadingTrend ? (
@@ -579,21 +579,21 @@ export default function Dashboard() {
                   <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
                     <LoadingSpinner size={28} color="var(--d-accent)" />
                   </div>
-                  <p style={{ margin: 0 }}>Loading price trend analysis…</p>
+                  <p style={{ margin: 0 }}>{t("Loading price trend analysis…")}</p>
                 </div>
               ) : trendError ? (
                 <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#e05656", fontSize: "13px" }}>
-                  <p style={{ margin: 0 }}>Unable to load price trend data.</p>
+                  <p style={{ margin: 0 }}>{t("Unable to load price trend data.")}</p>
                 </div>
               ) : !trendHasData || trendChartData.length < 2 ? (
                 <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "20px" }}>
                   <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--d-text)", marginBottom: "6px" }}>
-                    Not enough historical data
+                    {t("Not enough historical data")}
                   </div>
                   <p style={{ fontSize: "12.5px", color: "var(--d-text-3)", maxWidth: "380px", margin: "0 auto", lineHeight: 1.5 }}>
                     {trendChartData.length === 1
-                      ? "Only 1 historical observation recorded for this period. At least 2 observations are required to show a trend."
-                      : "No competitor or own price observations recorded for the selected period."}
+                      ? t("Only 1 historical observation recorded for this period. At least 2 observations are required to show a trend.")
+                      : t("No competitor or own price observations recorded for the selected period.")}
                   </p>
                 </div>
               ) : (
@@ -605,10 +605,10 @@ export default function Dashboard() {
                       <YAxis stroke="var(--d-text-3)" fontSize={11} tickLine={false} axisLine={false} width={88} domain={["auto", "auto"]} tickFormatter={(v) => `${curr} ${Number(v).toLocaleString()}`} />
                       <Tooltip content={<LineTip currency={curr} />} />
                       <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: "12px", fontSize: "11.5px", fontWeight: 600 }} />
-                      <Line type="monotone" dataKey="cheapest" name="Cheapest in Market" stroke="#059669" strokeWidth={1.8} strokeDasharray="3 3" dot={{ r: 3, fill: "#059669" }} connectNulls={true} />
-                      <Line type="monotone" dataKey="marketAvg" name="Market Average" stroke="#94a3b8" strokeWidth={1.8} strokeDasharray="5 4" dot={{ r: 3, fill: "#94a3b8" }} connectNulls={true} />
-                      <Line type="monotone" dataKey="expensive" name="Expensive in Market" stroke="#e05656" strokeWidth={1.8} strokeDasharray="4 4" dot={{ r: 3, fill: "#e05656" }} connectNulls={true} />
-                      <Line type="monotone" dataKey="yourAvg" name={selectedTrendProduct !== "all" ? "Your Price" : "Your Avg Price"} stroke="var(--d-accent)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--d-accent)", stroke: "var(--d-surface)", strokeWidth: 2 }} activeDot={{ r: 6 }} connectNulls={true} />
+                      <Line type="monotone" dataKey="cheapest" name={t("Cheapest in Market")} stroke="#059669" strokeWidth={1.8} strokeDasharray="3 3" dot={{ r: 3, fill: "#059669" }} connectNulls={true} />
+                      <Line type="monotone" dataKey="marketAvg" name={t("Market Average")} stroke="#94a3b8" strokeWidth={1.8} strokeDasharray="5 4" dot={{ r: 3, fill: "#94a3b8" }} connectNulls={true} />
+                      <Line type="monotone" dataKey="expensive" name={t("Expensive in Market")} stroke="#e05656" strokeWidth={1.8} strokeDasharray="4 4" dot={{ r: 3, fill: "#e05656" }} connectNulls={true} />
+                      <Line type="monotone" dataKey="yourAvg" name={t(selectedTrendProduct !== "all" ? "Your Price" : "Your Avg Price")} stroke="var(--d-accent)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--d-accent)", stroke: "var(--d-surface)", strokeWidth: 2 }} activeDot={{ r: 6 }} connectNulls={true} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -618,7 +618,7 @@ export default function Dashboard() {
               <div style={{ marginTop: "18px", padding: "11px 16px", borderRadius: "8px", background: "rgba(79,126,247,0.06)", border: "1px solid rgba(79,126,247,0.15)", display: "flex", alignItems: "center", gap: "10px" }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--d-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                 <p style={{ margin: 0, fontSize: "12.5px", color: "var(--d-text-2)", lineHeight: 1.5 }}>
-                  <strong style={{ color: "var(--d-accent)", fontWeight: 700 }}>Trend Insight — </strong>{trendInsight}
+                  <strong style={{ color: "var(--d-accent)", fontWeight: 700 }}>{t("Trend Insight — ")}</strong>{t(trendInsight)}
                 </p>
               </div>
             )}
@@ -629,7 +629,7 @@ export default function Dashboard() {
             {/* Header: Title + Product Selector + Timeframe Selector */}
             <div style={{ marginBottom: "18px" }}>
               <h2 style={{ ...sectionTitle, margin: "0 0 10px" }}>
-                Market Movement
+                {t("Market Movement")}
               </h2>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                 {/* Product Selector */}
@@ -701,24 +701,24 @@ export default function Dashboard() {
                 <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
                   <LoadingSpinner size={28} color="var(--d-accent)" />
                 </div>
-                <p style={{ margin: 0, fontSize: "13px" }}>Loading market movement…</p>
+                <p style={{ margin: 0, fontSize: "13px" }}>{t("Loading market movement…")}</p>
               </div>
             ) : marketMovementError ? (
               <div style={{ padding: "48px 0", textAlign: "center", color: "#e05656" }}>
-                <p style={{ margin: 0, fontSize: "13px" }}>Unable to load market movement.</p>
+                <p style={{ margin: 0, fontSize: "13px" }}>{t("Unable to load market movement.")}</p>
               </div>
             ) : (marketMovementData?.pct_change == null || marketMovementData?.recent_avg == null || marketMovementData?.prior_avg == null) ? (
               /* Insufficient History / Not Enough Data */
               <div style={{ padding: "36px 16px", textAlign: "center" }}>
                 <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--d-text)", marginBottom: "6px" }}>
-                  Not enough data
+                  {t("Not enough data")}
                 </div>
                 <p style={{ fontSize: "12.5px", color: "var(--d-text-3)", maxWidth: "360px", margin: "0 auto 16px", lineHeight: 1.5 }}>
-                  Not enough competitor price history to calculate market movement for this period.
+                  {t("Not enough competitor price history to calculate market movement for this period.")}
                 </p>
                 {marketMovementData?.competitor_count != null && (
                   <div style={{ display: "inline-block", padding: "4px 14px", borderRadius: "6px", background: "var(--d-surface-2)", border: "1px solid var(--d-border)", fontSize: "12px", color: "var(--d-text-2)" }}>
-                    <strong style={{ color: "var(--d-text)", fontWeight: 700 }}>{marketMovementData.competitor_count}</strong> active competitor{marketMovementData.competitor_count === 1 ? "" : "s"}
+                    <strong style={{ color: "var(--d-text)", fontWeight: 700 }}>{marketMovementData.competitor_count}</strong> {t(marketMovementData.competitor_count === 1 ? "active competitor" : "active competitors")}
                   </div>
                 )}
               </div>
@@ -759,7 +759,7 @@ export default function Dashboard() {
                         color: "var(--d-text)",
                         marginBottom: "10px",
                       }}>
-                        {statusText}
+                        {t(statusText)}
                       </div>
 
                       {/* Description */}
@@ -770,7 +770,7 @@ export default function Dashboard() {
                         maxWidth: "360px",
                         lineHeight: 1.5,
                       }}>
-                        {descriptionText}
+                        {t("Competitor market prices")} {t(actionVerb)} {t("compared with")} {t(tfLabel)}
                       </p>
                     </div>
 
@@ -786,7 +786,7 @@ export default function Dashboard() {
                     }}>
                       <div>
                         <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
-                          Previous Avg
+                          {t("Previous Avg")}
                         </div>
                         <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--d-text)", letterSpacing: "-0.2px" }}>
                           {curr} {Number(Math.round(marketMovementData.prior_avg)).toLocaleString()}
@@ -795,7 +795,7 @@ export default function Dashboard() {
 
                       <div>
                         <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
-                          Current Avg
+                          {t("Current Avg")}
                         </div>
                         <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--d-text)", letterSpacing: "-0.2px" }}>
                           {curr} {Number(Math.round(marketMovementData.recent_avg)).toLocaleString()}
@@ -804,10 +804,10 @@ export default function Dashboard() {
 
                       <div>
                         <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
-                          Competitors
+                          {t("Competitors")}
                         </div>
                         <div style={{ fontSize: "15px", fontWeight: 800, color: "var(--d-text)", letterSpacing: "-0.2px" }}>
-                          {marketMovementData.competitor_count != null ? `${marketMovementData.competitor_count} active` : "—"}
+                          {marketMovementData.competitor_count != null ? `${marketMovementData.competitor_count} ${t("active")}` : "—"}
                         </div>
                       </div>
                     </div>
@@ -835,10 +835,10 @@ export default function Dashboard() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
               <div>
-                <h2 style={{ ...sectionTitle, margin: "0 0 3px" }}>What Needs Your Attention</h2>
-                <p style={sectionSub}>Prioritized items requiring pricing review or capturing market opportunities</p>
+                <h2 style={{ ...sectionTitle, margin: "0 0 3px" }}>{t("What Needs Your Attention")}</h2>
+                <p style={sectionSub}>{t("Prioritized items requiring pricing review or capturing market opportunities")}</p>
               </div>
-              <span onClick={() => navigate("/alerts")} style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-accent)", cursor: "pointer", flexShrink: 0 }}>View all alerts →</span>
+              <span onClick={() => navigate("/alerts")} style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-accent)", cursor: "pointer", flexShrink: 0 }}>{t("View all alerts")} →</span>
             </div>
 
             {/* Filter Tabs / Pills */}
@@ -870,7 +870,7 @@ export default function Dashboard() {
                         transition: "all 0.15s ease",
                       }}
                     >
-                      <span>{tab.label}</span>
+                      <span>{t(tab.label)}</span>
                       <span style={{
                         fontSize: "10.5px",
                         padding: "1px 5px",
@@ -890,8 +890,8 @@ export default function Dashboard() {
             {displayedAttentionItems.length === 0 ? (
               <div style={{ textAlign: "center", padding: "32px 0", color: "var(--d-text-3)", fontSize: "13px" }}>
                 {attentionFilter === "all"
-                  ? "No actionable items right now — your portfolio looks clean."
-                  : "No items matching this filter."}
+                  ? t("No actionable items right now — your portfolio looks clean.")
+                  : t("No items matching this filter.")}
                 {attentionFilter !== "all" && (
                   <button
                     onClick={() => setAttentionFilter("all")}
@@ -908,14 +908,14 @@ export default function Dashboard() {
                       cursor: "pointer",
                     }}
                   >
-                    Show all items
+                    {t("Show all items")}
                   </button>
                 )}
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {displayedAttentionItems.map((item) => {
-                  const meta = levelMeta(item.level);
+                  const meta = levelMeta(item.level, t);
                   const shortTitle = item.title?.length > 60 ? item.title.slice(0, 58).trim() + "…" : item.title;
                   return (
                     <div key={item.id} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 16px", borderRadius: "10px", background: "var(--d-surface-2)", border: "1px solid var(--d-border)", transition: "opacity 0.15s ease" }}>
@@ -930,11 +930,11 @@ export default function Dashboard() {
                             {meta.label}
                           </span>
                           <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--d-text)" }} title={item.title}>
-                            {shortTitle}
+                            {t(shortTitle)}
                           </span>
                         </div>
                         <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-2)", lineHeight: 1.55 }}>
-                          {item.explanation}
+                          {t(item.explanation)}
                         </p>
                       </div>
                       {/* Action button */}
@@ -944,7 +944,7 @@ export default function Dashboard() {
                         onMouseEnter={(e) => { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.color = meta.color; e.currentTarget.style.background = meta.bg; }}
                         onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--d-border)"; e.currentTarget.style.color = "var(--d-accent)"; e.currentTarget.style.background = "var(--d-surface)"; }}
                       >
-                        {item.action} →
+                        {t(item.action)} →
                       </button>
                     </div>
                   );
@@ -957,22 +957,22 @@ export default function Dashboard() {
           <div style={{ ...card, overflow: "hidden", minWidth: 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
               <div>
-                <h2 style={sectionTitle}>Product Insights</h2>
-                <p style={sectionSub}>Price competitiveness vs market volatility — each point represents one tracked product</p>
+                <h2 style={sectionTitle}>{t("Product Insights")}</h2>
+                <p style={sectionSub}>{t("Price competitiveness vs market volatility — each point represents one tracked product")}</p>
               </div>
-              <span onClick={() => navigate("/products")} style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-accent)", cursor: "pointer", flexShrink: 0 }}>View products →</span>
+              <span onClick={() => navigate("/products")} style={{ fontSize: "12px", fontWeight: 600, color: "var(--d-accent)", cursor: "pointer", flexShrink: 0 }}>{t("View products")} →</span>
             </div>
             <div style={{ width: "100%", height: "340px", position: "relative", minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
-              <div style={{ position: "absolute", top: 30, left: "12%", fontSize: "12px", fontWeight: 700, color: "#e05656", pointerEvents: "none", zIndex: 2 }}>⚠ Risk Zone</div>
-              <div style={{ position: "absolute", top: 30, right: "7%", fontSize: "12px", fontWeight: 700, color: "#d97706", pointerEvents: "none", zIndex: 2 }}>👁 Monitor Closely</div>
+              <div style={{ position: "absolute", top: 30, left: "12%", fontSize: "12px", fontWeight: 700, color: "#e05656", pointerEvents: "none", zIndex: 2 }}>⚠ {t("Risk Zone")}</div>
+              <div style={{ position: "absolute", top: 30, right: "7%", fontSize: "12px", fontWeight: 700, color: "#d97706", pointerEvents: "none", zIndex: 2 }}>👁 {t("Monitor Closely")}</div>
               <div style={{ position: "absolute", bottom: 68, left: "12%", fontSize: "12px", fontWeight: 700, color: "var(--d-accent)", pointerEvents: "none", zIndex: 2, display: "inline-flex", alignItems: "center", gap: "4px" }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
                   <polyline points="17 6 23 6 23 12" />
                 </svg>
-                Improve Pricing
+                {t("Improve Pricing")}
               </div>
-              <div style={{ position: "absolute", bottom: 68, right: "7%", fontSize: "12px", fontWeight: 700, color: "#059669", pointerEvents: "none", zIndex: 2 }}>✓ Healthy Position</div>
+              <div style={{ position: "absolute", bottom: 68, right: "7%", fontSize: "12px", fontWeight: 700, color: "#059669", pointerEvents: "none", zIndex: 2 }}>✓ {t("Healthy Position")}</div>
               <div style={{ position: "absolute", inset: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ScatterChart margin={{ top: 24, right: 34, left: 4, bottom: 28 }}>
@@ -998,8 +998,8 @@ export default function Dashboard() {
                 <div key={l.label} style={{ display: "flex", alignItems: "flex-start", gap: "8px", padding: "10px 12px", borderRadius: "8px", background: `${l.color}08`, border: `1px solid ${l.color}1a` }}>
                   <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: l.color, flexShrink: 0, marginTop: "3px" }} />
                   <div>
-                    <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--d-text)", marginBottom: "2px" }}>{l.label}</div>
-                    <div style={{ fontSize: "11px", color: "var(--d-text-3)", lineHeight: 1.4 }}>{l.desc}</div>
+                    <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--d-text)", marginBottom: "2px" }}>{t(l.label)}</div>
+                    <div style={{ fontSize: "11px", color: "var(--d-text-3)", lineHeight: 1.4 }}>{t(l.desc)}</div>
                   </div>
                 </div>
               ))}
