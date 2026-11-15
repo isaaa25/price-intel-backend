@@ -243,6 +243,7 @@ function StoreSwitcher() {
 
 function UserAvatar() {
   const navigate = useNavigate();
+  const { t } = useLocale();
 
   // Derive the initial from stored user info
   const [initial, setInitial] = useState(() => {
