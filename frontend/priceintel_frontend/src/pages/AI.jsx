@@ -599,7 +599,6 @@ export function AIFloatingButton({ onClick }) {
             : "0 4px 18px rgba(59,130,246,0.38), 0 1px 4px rgba(0,0,0,0.10)",
           transform: hovered ? "translateY(-2px) scale(1.04)" : "translateY(0) scale(1)",
           transition: "all 0.20s ease",
-          fontFamily: "'Inter', sans-serif",
           overflow: "visible",
         }}
       >
@@ -628,7 +627,7 @@ export function AIFloatingButton({ onClick }) {
             letterSpacing: "-0.2px",
             fontFamily: "'Inter', sans-serif",
           }}>PI</span>
-        <span style={{ fontWeight: 600, fontSize: "13.5px", letterSpacing: "-0.1px", whiteSpace: "nowrap" }}>
+        <span style={{ fontWeight: 600, fontSize: "13.5px", letterSpacing: "-0.1px" }}>
           {t("Ask Agent")}
         </span>
       </button>

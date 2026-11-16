@@ -139,7 +139,7 @@ function Welcome() {
   };
 
   return (
-    <div style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif", color: "#18181B", overflowX: "hidden" }}>
+    <div style={{ color: "#18181B", overflowX: "hidden" }}>
 
       {/* ══════════════════════════════════════════════════════
           NAVBAR

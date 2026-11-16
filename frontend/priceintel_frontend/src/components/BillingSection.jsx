@@ -173,7 +173,7 @@ export default function BillingSection() {
               {t("Next Billing Date")}
             </div>
             <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
-              {new Date(currentPlan.nextBillingDate).toLocaleDateString(language === "ar" ? "ar" : language === "ur" ? "ur" : "en", { year: "numeric", month: "long", day: "numeric" })}
+              {new Date(currentPlan.nextBillingDate).toLocaleDateString(language === "ar" ? "ar" : language === "ur" ? "ur" : language === "bn" ? "bn-BD" : "en", { year: "numeric", month: "long", day: "numeric" })}
             </div>
           </div>
         </div>
@@ -486,7 +486,7 @@ export default function BillingSection() {
                   }}
                 >
                   <td style={{ padding: "14px 16px", color: "var(--d-text)", fontWeight: 500 }}>
-                    {new Date(item.date).toLocaleDateString(language === "ar" ? "ar" : language === "ur" ? "ur" : "en", { year: "numeric", month: "short", day: "numeric" })}
+                    {new Date(item.date).toLocaleDateString(language === "ar" ? "ar" : language === "ur" ? "ur" : language === "bn" ? "bn-BD" : "en", { year: "numeric", month: "short", day: "numeric" })}
                   </td>
                   <td style={{ padding: "14px 16px", color: "var(--d-text)" }}>
                     {t(item.description)}

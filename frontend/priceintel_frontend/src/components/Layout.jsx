@@ -160,7 +160,7 @@ function StoreSwitcher() {
           style={{
             position: "absolute",
             top: "calc(100% + 6px)",
-            left: 0,
+            insetInlineStart: 0,
             background: "var(--d-surface)",
             border: "1px solid var(--d-border)",
             borderRadius: "8px",
@@ -331,13 +331,10 @@ function SidebarNavItem({ item, active, onClick }) {
         <div
           style={{
             position: "absolute",
-            left: "-4px",
             top: "8px",
             bottom: "8px",
-            width: "3.5px",
-            background: "var(--d-accent)",
-            borderRadius: "0 4px 4px 0",
           }}
+          className="sidebar-nav-active-indicator"
         />
       )}
       <span style={{ display: "flex", alignItems: "center", color: active ? "var(--d-accent)" : hovered ? "var(--d-text)" : "var(--d-text-3)" }}>
@@ -564,7 +561,7 @@ export default function Layout({ children }) {
   );
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", background: "var(--d-bg)", fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ minHeight: "100vh", display: "flex", background: "var(--d-bg)" }}>
 
       {/* ── Desktop Sidebar (hidden on mobile via CSS class) ── */}
       <aside className="layout-sidebar-desktop">
@@ -601,7 +598,7 @@ export default function Layout({ children }) {
           <StoreSwitcher />
 
           {/* Right side: avatar */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginInlineStart: "auto" }}>
             <UserAvatar />
           </div>
         </header>

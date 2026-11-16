@@ -3,6 +3,60 @@ import { createContext, useContext, useEffect, useState } from "react";
 const LocaleContext = createContext(null);
 
 const translations = {
+  bn: {
+    "Dashboard": "ড্যাশবোর্ড",
+    "Products": "পণ্য",
+    "Competitors": "প্রতিযোগীরা",
+    "Alerts": "সতর্কতা",
+    "Reports": "প্রতিবেদন",
+    "Account": "অ্যাকাউন্ট",
+    "Settings": "সেটিংস",
+    "Help": "সাহায্য",
+    "Logout": "লগ আউট",
+    "Language": "ভাষা",
+    "Choose your preferred language for Price Intel.": "Price Intel-এর জন্য আপনার পছন্দের ভাষা নির্বাচন করুন।",
+    "English": "ইংরেজি",
+    "Arabic": "আরবি",
+    "Urdu": "উর্দু",
+    "Bengali": "বাংলা",
+    "Appearance": "চেহারা",
+    "Choose how Price Intel looks for you. Saved automatically.": "Price Intel-এর চেহারা বেছে নিন। স্বয়ংক্রিয়ভাবে সংরক্ষিত হবে।",
+    "Light": "লাইট",
+    "Dark": "ডার্ক",
+    "System": "সিস্টেম",
+    "Account Information": "অ্যাকাউন্টের তথ্য",
+    "Your primary credentials and contact details associated with this account.": "এই অ্যাকাউন্টের সঙ্গে যুক্ত আপনার পরিচয়পত্র ও যোগাযোগের তথ্য।",
+    "Email Address": "ইমেইল ঠিকানা",
+    "Full Name / Display Name": "পূর্ণ নাম / প্রদর্শিত নাম",
+    "Security": "নিরাপত্তা",
+    "Manage your authentication password and account access.": "আপনার পাসওয়ার্ড এবং অ্যাকাউন্টে প্রবেশাধিকার পরিচালনা করুন।",
+    "To change your password, verify your identity by entering your current password first.": "পাসওয়ার্ড পরিবর্তন করতে, প্রথমে বর্তমান পাসওয়ার্ড দিয়ে আপনার পরিচয় নিশ্চিত করুন।",
+    "Change / Reset Password": "পাসওয়ার্ড পরিবর্তন / রিসেট",
+    "Current Password": "বর্তমান পাসওয়ার্ড",
+    "Enter your current password": "আপনার বর্তমান পাসওয়ার্ড লিখুন",
+    "New Password": "নতুন পাসওয়ার্ড",
+    "Min. 8 characters": "কমপক্ষে ৮টি অক্ষর",
+    "Confirm New Password": "নতুন পাসওয়ার্ড নিশ্চিত করুন",
+    "Re-enter new password": "নতুন পাসওয়ার্ড আবার লিখুন",
+    "Updating…": "আপডেট হচ্ছে…",
+    "Update Password": "পাসওয়ার্ড আপডেট করুন",
+    "Cancel": "বাতিল",
+    "Manage your Price Intel plan, usage, payment method, and billing history.": "আপনার Price Intel পরিকল্পনা, ব্যবহার, পেমেন্ট পদ্ধতি এবং বিলিংয়ের ইতিহাস পরিচালনা করুন।",
+    "Manage your account profile, appearance, and security preferences.": "আপনার অ্যাকাউন্ট প্রোফাইল, চেহারা এবং নিরাপত্তা পছন্দ পরিচালনা করুন।",
+    "Billing & Subscription": "বিলিং ও সাবস্ক্রিপশন",
+    "General": "সাধারণ",
+    "Welcome back": "ফিরে আসার জন্য স্বাগতম",
+    "Sign in to your Price Intel account": "আপনার Price Intel অ্যাকাউন্টে সাইন ইন করুন",
+    "Email address": "ইমেইল ঠিকানা",
+    "Password": "পাসওয়ার্ড",
+    "Remember me": "আমাকে মনে রাখুন",
+    "Forgot password?": "পাসওয়ার্ড ভুলে গেছেন?",
+    "Sign in": "সাইন ইন",
+    "Signing in…": "সাইন ইন হচ্ছে…",
+    "or": "অথবা",
+    "No account?": "অ্যাকাউন্ট নেই?",
+    "Create one free": "বিনামূল্যে অ্যাকাউন্ট তৈরি করুন",
+  },
   ar: {
     "Dashboard": "لوحة المعلومات",
     "Products": "المنتجات",
@@ -1155,6 +1209,7 @@ const translations = {
 
 export const localeOptions = [
   { value: "en", label: "English", nativeLabel: "English" },
+  { value: "bn", label: "Bengali", nativeLabel: "বাংলা" },
   { value: "ar", label: "Arabic", nativeLabel: "العربية" },
   { value: "ur", label: "Urdu", nativeLabel: "اردو" },
 ];
@@ -1166,7 +1221,7 @@ export function LocaleProvider({ children }) {
   });
 
   useEffect(() => {
-    const direction = language === "en" ? "ltr" : "rtl";
+    const direction = language === "ar" || language === "ur" ? "rtl" : "ltr";
     document.documentElement.lang = language;
     document.documentElement.dir = direction;
     localStorage.setItem("priceintel_language", language);
