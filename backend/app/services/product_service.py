@@ -150,7 +150,7 @@ async def get_product_kpis(db: AsyncSession, product_id) -> Optional[dict]:
 async def discover_competitors(db: AsyncSession, product_id, user_id) -> list[dict]:
     """
     On-demand discovery for one product. Verifies ownership, then runs
-    the Daraz discovery pipeline and returns pending candidates.
+    the marketplace discovery pipeline (Daraz / Noon) and returns pending candidates.
     """
     # Ownership check (raises 404 if not owned)
     await get_product_by_id(db, product_id, user_id)

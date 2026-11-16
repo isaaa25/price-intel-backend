@@ -553,9 +553,11 @@ def build_api_url(keyword: str, page: int, sort_by: str) -> str:
     return url
 
 
-def build_referer_url(keyword: str, page: int, sort_by: str) -> str:
+def build_referer_url(keyword: str, page: int, sort_by: str, locale: str = "uae-en") -> str:
     encoded = quote_plus(keyword)
-    url     = f"{WEB_SEARCH_BASE}?q={encoded}&page={page}"
+    clean_locale = (locale or "uae-en").strip().strip("/")
+    base = f"https://www.noon.com/{clean_locale}/search/"
+    url = f"{base}?q={encoded}&page={page}"
 
     sort = SORT_OPTIONS.get(sort_by)
     if sort:
@@ -573,6 +575,7 @@ def extract_product(
     index:       int,
     page_number: int,
     keyword:     str,
+    locale:      str = "uae-en",
 ) -> Optional[dict]:
     try:
         noon_sku = hit.get("sku")
@@ -622,7 +625,7 @@ def extract_product(
             "name":            hit.get("name", "").strip(),
             "brand":           hit.get("brand", "").strip() or None,
             "url_slug":        url_slug,
-            "product_url":     build_product_url(url_slug, noon_sku),
+            "product_url":     build_product_url(url_slug, noon_sku, locale=locale),
             "image_url":       hit.get("image_url"),
             "store_name":      hit.get("store_name", "unknown").strip() or "unknown",
             "partner_id":      partner_id,
@@ -654,6 +657,7 @@ async def scrape_page(
     page_number:     int,
     sort_by:         str,
     total_pages:     int,
+    locale:          str = "uae-en",
 ) -> tuple[list[dict], Optional[int]]:
     """
     Scrapes a single search results page via the persistent Session.
@@ -668,7 +672,7 @@ async def scrape_page(
       6. log_request()
     """
     api_url = build_api_url(keyword, page_number, sort_by)
-    referer = build_referer_url(keyword, page_number, sort_by)
+    referer = build_referer_url(keyword, page_number, sort_by, locale=locale)
 
     logger.info(
         f"[{keyword}] Page {page_number}/{total_pages} "
@@ -735,7 +739,7 @@ async def scrape_page(
 
     products = []
     for index, hit in enumerate(hits):
-        product = extract_product(hit, index, page_number, keyword)
+        product = extract_product(hit, index, page_number, keyword, locale=locale)
         if product is not None:
             products.append(product)
 
@@ -758,6 +762,7 @@ async def scrape_search(
     keyword:         str,
     pages:           int  = None,
     sort_by:         str  = "recommended",
+    locale:          str  = "uae-en",
 ) -> list[dict]:
     """
     Scrapes multiple pages of Noon search results for a keyword.
@@ -787,6 +792,7 @@ async def scrape_search(
             page_number=page_number,
             sort_by=sort_by,
             total_pages=pages,
+            locale=locale,
         )
 
         if not products:
