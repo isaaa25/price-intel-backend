@@ -48,21 +48,12 @@ app.add_middleware(
     allow_origins=[
         "https://price-intel-frontend-pds3jfzig-price-intel1.vercel.app",
         "https://price-intel-frontend.vercel.app",
-        "http://localhost:3000",
         "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "http://localhost:5176",
-        "http://localhost:5177",
-        "http://localhost:5178",
-        "http://localhost:5179",
-        "http://localhost:5180",
-    ],  # allow all Vite dev server ports
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 app.include_router(auth.router)
 app.include_router(products.router,prefix="/products",tags=["Products"])

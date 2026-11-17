@@ -68,6 +68,8 @@ class Settings(BaseSettings):
     # scrapfly api key
     SCRAPFLY_API_KEY: str
 
+    BROWSERBASE_API_KEY: str
+
     # ─── Session Management ───────────────────────────────────────────────────
     SESSION_MAX_AGE_HOURS: int = 4
     JWT_REFRESH_THRESHOLD_SECS: int = 90
@@ -83,7 +85,7 @@ class Settings(BaseSettings):
     # PAGES_PER_KEYWORD: int = 2
 
     search_keywords: list[str] = ["iphone 15"]
-    pages_per_keyword: int = 2
+    pages_per_keyword: int = 1
 
     # ─── User Agents ──────────────────────────────────────────────────────────
     user_agents: list[str] = [
