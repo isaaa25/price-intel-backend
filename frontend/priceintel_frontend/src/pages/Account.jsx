@@ -1,10 +1,12 @@
 // src/pages/Account.jsx
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { getStores } from "../api/products";
 import apiRequest from "../api/client";
 import { useStore } from "../context/StoreContext";
 import { parseMarketplaceUrl } from "../api/marketplaceUrl";
+import { useLocale } from "../context/LocaleContext";
 
 const cardStyle = {
   background: "var(--d-surface)",
@@ -52,26 +54,10 @@ const COUNTRY_OPTIONS = [
 function MarketplaceBadge({ marketplace }) {
   const normalized = (marketplace || "other").toLowerCase();
   const styles = {
-    noon: {
-      color: "#ea580c",
-      background: "rgba(234, 88, 12, 0.10)",
-      border: "1px solid rgba(234, 88, 12, 0.20)",
-    },
-    daraz: {
-      color: "#e11d48",
-      background: "rgba(225, 29, 72, 0.10)",
-      border: "1px solid rgba(225, 29, 72, 0.20)",
-    },
-    amazon: {
-      color: "#d97706",
-      background: "rgba(217, 119, 6, 0.10)",
-      border: "1px solid rgba(217, 119, 6, 0.20)",
-    },
-    other: {
-      color: "var(--d-accent)",
-      background: "var(--d-accent-bg)",
-      border: "1px solid rgba(59, 130, 246, 0.20)",
-    },
+    noon: { color: "#ea580c" },
+    daraz: { color: "#e11d48" },
+    amazon: { color: "#d97706" },
+    other: { color: "var(--d-accent)" },
   };
 
   const current = styles[normalized] || styles.other;
@@ -81,16 +67,11 @@ function MarketplaceBadge({ marketplace }) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "4px",
-        padding: "3px 9px",
-        borderRadius: "6px",
         fontSize: "11px",
         fontWeight: 700,
         textTransform: "uppercase",
         letterSpacing: "0.5px",
         color: current.color,
-        background: current.background,
-        border: current.border,
       }}
     >
       {marketplace || "OTHER"}
@@ -106,13 +87,9 @@ function StatusBadge({ active }) {
         display: "inline-flex",
         alignItems: "center",
         gap: "5px",
-        padding: "3px 9px",
-        borderRadius: "6px",
         fontSize: "11.5px",
         fontWeight: 600,
-        color: isActive ? "var(--d-success)" : "var(--d-text-3)",
-        background: isActive ? "var(--d-success-bg)" : "var(--d-surface-2)",
-        border: `1px solid ${isActive ? "rgba(34, 197, 94, 0.25)" : "var(--d-border)"}`,
+        color: isActive ? "#059669" : "var(--d-text-3)",
       }}
     >
       <span
@@ -120,7 +97,7 @@ function StatusBadge({ active }) {
           width: "6px",
           height: "6px",
           borderRadius: "50%",
-          background: isActive ? "var(--d-success)" : "var(--d-text-3)",
+          background: isActive ? "#059669" : "var(--d-text-3)",
         }}
       />
       {isActive ? "Active" : "Inactive"}
@@ -130,6 +107,7 @@ function StatusBadge({ active }) {
 
 function StoreCard({ store, onDelete, isSelected, onSelect }) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const { t } = useLocale();
 
   return (
     <div
@@ -156,16 +134,12 @@ function StoreCard({ store, onDelete, isSelected, onSelect }) {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "4px",
-                padding: "3px 9px",
-                borderRadius: "6px",
-                fontSize: "11px",
+                fontSize: "11.5px",
                 fontWeight: 700,
-                color: "#2563eb",
-                background: "rgba(37, 99, 235, 0.12)",
-                border: "1px solid rgba(37, 99, 235, 0.3)",
+                color: "var(--d-accent)",
               }}
             >
-              ✓ Active Store
+              ✓ {t("Active Store")}
             </span>
           ) : (
             <button
@@ -179,13 +153,13 @@ function StoreCard({ store, onDelete, isSelected, onSelect }) {
                 fontSize: "11.5px",
                 fontWeight: 600,
                 color: "var(--d-accent)",
-                background: "var(--d-accent-bg)",
-                border: "1px solid rgba(59, 130, 246, 0.3)",
+                background: "transparent",
+                border: "1px solid var(--d-border)",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
             >
-              Select Store
+              {t("Select Store")}
             </button>
           )}
           <StatusBadge active={store.is_active} />
@@ -281,7 +255,7 @@ function StoreCard({ store, onDelete, isSelected, onSelect }) {
             onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.75")}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
           >
-            <span>Visit Store</span>
+            <span>{t("Visit Store")}</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
               <polyline points="15 3 21 3 21 9" />
@@ -289,7 +263,7 @@ function StoreCard({ store, onDelete, isSelected, onSelect }) {
             </svg>
           </a>
         ) : (
-          <span style={{ fontSize: "12px", color: "var(--d-text-3)" }}>No URL</span>
+          <span style={{ fontSize: "12px", color: "var(--d-text-3)" }}>{t("No URL")}</span>
         )}
 
         <button
@@ -329,7 +303,7 @@ function StoreCard({ store, onDelete, isSelected, onSelect }) {
             <polyline points="3 6 5 6 21 6" />
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
           </svg>
-          <span>{isDeleting ? "Deleting..." : "Delete"}</span>
+          <span>{isDeleting ? t("Deleting...") : t("Delete")}</span>
         </button>
       </div>
     </div>
@@ -338,6 +312,7 @@ function StoreCard({ store, onDelete, isSelected, onSelect }) {
 
 function Account() {
   const { refreshStores, stores: contextStores, selectedStore, setSelectedStore } = useStore();
+  const { t } = useLocale();
   const [stores, setStores] = useState([]);
   const [storesLoading, setStoresLoading] = useState(true);
   const [storesError, setStoresError] = useState("");
@@ -392,7 +367,7 @@ function Account() {
         setStores(list);
         refreshStores();
       })
-      .catch((err) => setStoresError(err.message || "Failed to load stores."))
+      .catch((err) => setStoresError(t(err.message || "Failed to load stores.")))
       .finally(() => setStoresLoading(false));
   }
 
@@ -415,14 +390,14 @@ function Account() {
     setSuccessMsg("");
 
     if (!storeName.trim() || !storeUrl.trim()) {
-      setSubmitError("Please fill in Store Name and Store URL.");
+      setSubmitError(t("Please fill in Store Name and Store URL."));
       return;
     }
 
     if (urlError || !urlMeta) {
       setSubmitError(
         urlError ||
-          "Enter a valid Noon or Daraz store URL so we can detect marketplace and country."
+          t("Enter a valid Noon or Daraz store URL so we can detect marketplace and country.")
       );
       return;
     }
@@ -440,7 +415,7 @@ function Account() {
           store_url: storeUrl.trim(),
         }),
       });
-      setSuccessMsg("Store added successfully!");
+      setSuccessMsg(t("Store added successfully!"));
       resetForm();
       setShowForm(false);
       loadStores();
@@ -451,14 +426,14 @@ function Account() {
         setSelectedStore(updated[0]);
       }
     } catch (err) {
-      setSubmitError(err.message || "Something went wrong.");
+      setSubmitError(t(err.message || "Something went wrong."));
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDeleteStore(store) {
-    if (!window.confirm(`Are you sure you want to delete "${store.store_name}"? This action cannot be undone.`)) {
+    if (!window.confirm(`${t("Are you sure you want to delete")} "${store.store_name}"? ${t("This action cannot be undone.")}`)) {
       return;
     }
     setSubmitError("");
@@ -467,7 +442,7 @@ function Account() {
       await apiRequest(`/stores/${store.id}`, {
         method: "DELETE",
       });
-      setSuccessMsg(`Store "${store.store_name}" deleted successfully.`);
+      setSuccessMsg(`${t("Store")} "${store.store_name}" ${t("deleted successfully.")}`);
       loadStores();
       const updated = await refreshStores();
       if (selectedStore?.id === store.id) {
@@ -478,7 +453,7 @@ function Account() {
         }
       }
     } catch (err) {
-      setSubmitError(err.message || "Failed to delete store.");
+      setSubmitError(t(err.message || "Failed to delete store."));
     }
   }
 
@@ -496,10 +471,10 @@ function Account() {
           }}
         >
           <span style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-            Account
+            {t("Account")}
           </span>
           <span>/</span>
-          <span style={{ color: "var(--d-accent)", fontWeight: 600 }}>Stores</span>
+          <span style={{ color: "var(--d-accent)", fontWeight: 600 }}>{t("stores")}</span>
         </div>
 
         <h1
@@ -511,10 +486,10 @@ function Account() {
             letterSpacing: "-0.4px",
           }}
         >
-          Stores
+          {t("Store")}
         </h1>
         <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--d-text-2)" }}>
-          Manage your connected marketplace seller accounts and active store tracking.
+          {t("Seller accounts connected to your Price Intel workspace.")}
         </p>
       </div>
 
@@ -537,7 +512,7 @@ function Account() {
             padding: "8px 16px",
             borderRadius: "8px",
             border: "1px solid var(--d-accent)",
-            background: "var(--d-accent-bg)",
+            background: "transparent",
             color: "var(--d-accent)",
             fontWeight: 600,
             fontSize: "13px",
@@ -548,7 +523,7 @@ function Account() {
             <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
-          Stores ({(stores.length > 0 ? stores : contextStores).length})
+          {t("Store")} ({(stores.length > 0 ? stores : contextStores).length})
         </button>
       </div>
 
@@ -565,10 +540,10 @@ function Account() {
         >
           <div>
             <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 600, color: "var(--d-text)" }}>
-              Your Stores
+              {t("Your Stores")}
             </h2>
             <p style={{ margin: "3px 0 0", fontSize: "12.5px", color: "var(--d-text-2)" }}>
-              Seller accounts connected to your Price Intel workspace.
+              {t("Seller accounts connected to your Price Intel workspace.")}
             </p>
           </div>
 
@@ -602,7 +577,7 @@ function Account() {
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
-                Cancel
+                {t("Cancel")}
               </>
             ) : (
               <>
@@ -610,7 +585,7 @@ function Account() {
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                Add Store
+                {t("Add Store")}
               </>
             )}
           </button>
@@ -647,10 +622,10 @@ function Account() {
           >
             <div style={{ marginBottom: "16px" }}>
               <h3 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
-                Connect a New Store
+                {t("Connect a New Store")}
               </h3>
               <p style={{ margin: 0, fontSize: "12px", color: "var(--d-text-3)" }}>
-                Paste your Noon or Daraz store URL — marketplace and country are detected automatically.
+                {t("Paste your Noon or Daraz store URL — marketplace and country are detected automatically.")}
               </p>
             </div>
 
@@ -672,7 +647,7 @@ function Account() {
 
             {/* Store URL first — drives marketplace + country */}
             <div style={{ marginBottom: "14px" }}>
-              <label style={labelStyle}>Store URL *</label>
+              <label style={labelStyle}>{t("Store URL")} *</label>
               <input
                 type="url"
                 placeholder="https://www.noon.com/uae-en/... or https://www.daraz.pk/..."
@@ -696,7 +671,7 @@ function Account() {
               )}
               {urlMeta && !urlError && (
                 <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--d-success)" }}>
-                  Detected: {urlMeta.marketplace.toUpperCase()} · {urlMeta.country} ·{" "}
+                  {t("Detected:")} {t(urlMeta.marketplace.toUpperCase())} · {t(urlMeta.country)} ·{" "}
                   {urlMeta.currency}
                 </p>
               )}
@@ -705,7 +680,7 @@ function Account() {
             {/* Marketplace + Country (auto-filled, locked when URL is valid) */}
             <div className="form-grid-2">
               <div>
-                <label style={labelStyle}>Marketplace *</label>
+                <label style={labelStyle}>{t("Marketplace")} *</label>
                 <select
                   value={marketplace}
                   onChange={(e) => setMarketplace(e.target.value)}
@@ -718,13 +693,13 @@ function Account() {
                 >
                   {MARKETPLACE_OPTIONS.map((m) => (
                     <option key={m} value={m}>
-                      {m.toUpperCase()}
+                      {t(m.toUpperCase())}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Country *</label>
+                <label style={labelStyle}>{t("Country")} *</label>
                 <select
                   value={country}
                   onChange={(e) => setCountry(e.target.value)}
@@ -737,7 +712,7 @@ function Account() {
                 >
                   {COUNTRY_OPTIONS.map((c) => (
                     <option key={c} value={c}>
-                      {c}
+                      {t(c)}
                     </option>
                   ))}
                 </select>
@@ -746,10 +721,10 @@ function Account() {
 
             <div className="form-grid-2">
               <div>
-                <label style={labelStyle}>Store Name *</label>
+                <label style={labelStyle}>{t("Store Name")} *</label>
                 <input
                   type="text"
-                  placeholder="e.g. TechHub Store"
+                  placeholder={t("e.g. TechHub Store")}
                   value={storeName}
                   onChange={(e) => setStoreName(e.target.value)}
                   style={inputStyle}
@@ -758,10 +733,10 @@ function Account() {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Store Slug (Optional)</label>
+                <label style={labelStyle}>{t("Store Slug (Optional)")}</label>
                 <input
                   type="text"
-                  placeholder="e.g. techhub-store"
+                  placeholder={t("e.g. techhub-store")}
                   value={storeSlug}
                   onChange={(e) => setStoreSlug(e.target.value)}
                   style={inputStyle}
@@ -772,10 +747,10 @@ function Account() {
             </div>
 
             <div style={{ marginBottom: "14px" }}>
-              <label style={labelStyle}>External Store ID (Optional)</label>
+              <label style={labelStyle}>{t("External Store ID (Optional)")}</label>
               <input
                 type="text"
-                placeholder="e.g. p-10492"
+                placeholder={t("e.g. p-10492")}
                 value={externalId}
                 onChange={(e) => setExternalId(e.target.value)}
                 style={inputStyle}
@@ -801,7 +776,7 @@ function Account() {
                   transition: "background 0.15s ease",
                 }}
               >
-                {submitting ? "Saving Store..." : "Save Store"}
+                {submitting ? t("Saving Store...") : t("Save Store")}
               </button>
 
               <button
@@ -821,7 +796,7 @@ function Account() {
                   cursor: "pointer",
                 }}
               >
-                Cancel
+                {t("Cancel")}
               </button>
             </div>
           </form>
@@ -829,7 +804,10 @@ function Account() {
 
         {storesLoading && (
           <div style={{ padding: "32px", textAlign: "center", color: "var(--d-text-2)", fontSize: "13.5px" }}>
-            Loading your stores...
+            <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
+              <LoadingSpinner size={28} color="var(--d-accent)" />
+            </div>
+            {t("Loading your stores...")}
           </div>
         )}
 
@@ -863,7 +841,8 @@ function Account() {
                 width: "48px",
                 height: "48px",
                 borderRadius: "50%",
-                background: "var(--d-accent-bg)",
+                background: "var(--d-surface-2)",
+                border: "1px solid var(--d-border)",
                 color: "var(--d-accent)",
                 display: "inline-flex",
                 alignItems: "center",
@@ -877,10 +856,10 @@ function Account() {
               </svg>
             </div>
             <h3 style={{ margin: "0 0 6px", fontSize: "16px", fontWeight: 600, color: "var(--d-text)" }}>
-              No stores connected yet
+              {t("No stores connected yet")}
             </h3>
             <p style={{ margin: "0 auto 20px", maxWidth: "380px", fontSize: "13px", color: "var(--d-text-2)" }}>
-              Connect your marketplace seller account on Noon or Daraz to start tracking products and competitors automatically.
+              {t("Connect your marketplace seller account on Noon or Daraz to start tracking products and competitors automatically.")}
             </p>
             <button
               onClick={() => setShowForm(true)}
@@ -895,7 +874,7 @@ function Account() {
                 cursor: "pointer",
               }}
             >
-              + Add Your First Store
+              + {t("Add Your First Store")}
             </button>
           </div>
         )}

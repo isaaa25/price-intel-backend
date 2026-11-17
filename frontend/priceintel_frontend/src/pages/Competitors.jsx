@@ -13,6 +13,8 @@ import {
 } from "../api/products";
 import { validateProductUrl } from "../api/marketplaceUrl";
 import ConfirmModal from "../components/ConfirmModal";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { useLocale } from "../context/LocaleContext";
 
 const card = {
   background: "var(--d-surface)",
@@ -27,17 +29,12 @@ function displayName(product) {
 }
 
 function MarketplaceBadge({ marketplace }) {
-  const colors = {
-    noon: { color: "#C2410C" },
-    daraz: { color: "#E11D48" },
-  };
-  const c = colors[(marketplace || "").toLowerCase()] || { color: "var(--d-text-2)" };
   return (
     <span
       style={{
         fontSize: "12.5px",
         fontWeight: 600,
-        color: c.color,
+        color: "var(--d-accent)",
         textTransform: "capitalize",
       }}
     >
@@ -47,6 +44,7 @@ function MarketplaceBadge({ marketplace }) {
 }
 
 function StockBadge({ status }) {
+  const { t } = useLocale();
   if (!status || status === "unknown") {
     return <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>—</span>;
   }
@@ -56,24 +54,18 @@ function StockBadge({ status }) {
   const config = {
     in_stock: {
       label: "In Stock",
-      color: "#16a34a",
-      bg: "rgba(22, 163, 74, 0.08)",
-      border: "rgba(22, 163, 74, 0.2)",
-      dot: "#16a34a",
+      color: "var(--d-accent)",
+      dot: "var(--d-accent)",
     },
     out_of_stock: {
       label: "Out of Stock",
-      color: "#dc2626",
-      bg: "rgba(220, 38, 38, 0.08)",
-      border: "rgba(220, 38, 38, 0.2)",
-      dot: "#dc2626",
+      color: "var(--d-text)",
+      dot: "var(--d-text)",
     },
     limited: {
       label: "Limited",
-      color: "#d97706",
-      bg: "rgba(217, 119, 6, 0.08)",
-      border: "rgba(217, 119, 6, 0.2)",
-      dot: "#d97706",
+      color: "var(--d-text-2)",
+      dot: "var(--d-text-2)",
     },
     pre_order: {
       label: "Pre-order",
@@ -109,26 +101,30 @@ function StockBadge({ status }) {
           flexShrink: 0,
         }}
       />
-      {current.label}
+      {t(current.label)}
     </span>
   );
 }
 
 function BehaviorBadge({ behavior }) {
+  const { t } = useLocale();
   if (!behavior) return <span style={{ color: "var(--d-text-3)", fontSize: "12.5px" }}>—</span>;
 
+  const b = String(behavior).trim().toLowerCase();
   let color = "var(--d-text-2)";
 
-  if (behavior.includes("Aggressive") || behavior.includes("Undercutter")) {
-    color = "#ef4444";
-  } else if (behavior === "Price Matcher") {
-    color = "#3b82f6";
-  } else if (behavior === "Premium Seller") {
-    color = "#8b5cf6";
-  } else if (behavior === "Discount Seller") {
-    color = "#d97706";
-  } else if (behavior === "Above Market") {
-    color = "#10b981";
+  if (b.includes("aggressive")) {
+    color = "#b91c1c";
+  } else if (b.includes("discount")) {
+    color = "#b45309";
+  } else if (b.includes("undercutter")) {
+    color = "#c2410c";
+  } else if (b.includes("premium")) {
+    color = "#6d28d9";
+  } else if (b.includes("match")) {
+    color = "#1d4ed8";
+  } else if (b.includes("above")) {
+    color = "#047857";
   }
 
   return (
@@ -137,42 +133,44 @@ function BehaviorBadge({ behavior }) {
         display: "inline-block",
         fontSize: "12px",
         fontWeight: 600,
-        color: color,
+        color,
         whiteSpace: "nowrap",
       }}
     >
-      {behavior}
+      {t(behavior)}
     </span>
   );
 }
 
 function VelocityBadge({ velocity }) {
+  const { t } = useLocale();
   if (!velocity) return <span style={{ color: "var(--d-text-3)", fontSize: "12.5px" }}>—</span>;
 
   let color = "var(--d-text-2)";
   let dotColor = "#94a3b8";
 
   if (velocity === "High") {
-    color = "#ef4444";
-    dotColor = "#ef4444";
+    color = "var(--d-text)";
+    dotColor = "var(--d-text)";
   } else if (velocity === "Moderate") {
-    color = "#f59e0b";
-    dotColor = "#f59e0b";
+    color = "#6b7280";
+    dotColor = "#6b7280";
   } else if (velocity === "Low") {
-    color = "#10B981";
-    dotColor = "#10B981";
+    color = "var(--d-accent)";
+    dotColor = "var(--d-accent)";
   }
 
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color, whiteSpace: "nowrap" }}>
       <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
-      {velocity}
+      {t(velocity)}
     </span>
   );
 }
 
 function Competitors() {
   const navigate = useNavigate();
+  const { t } = useLocale();
   const { selectedStore, currency } = useStore();
 
   const [products, setProducts] = useState([]);
@@ -454,8 +452,8 @@ function Competitors() {
     if (c.latest_price == null || c.ownPrice == null) return null;
     const diff = c.latest_price - c.ownPrice;
     const pct = Math.abs((diff / c.ownPrice) * 100).toFixed(1);
-    if (diff < 0) return { text: `${pct}% below you`, color: "#dc2626" };
-    if (diff > 0) return { text: `${pct}% above you`, color: "#16a34a" };
+    if (diff < 0) return { text: `${pct}% below you`, color: "var(--d-text)" };
+    if (diff > 0) return { text: `${pct}% above you`, color: "var(--d-accent)" };
     return { text: "Same price", color: "var(--d-text-2)" };
   }
 
@@ -640,10 +638,10 @@ function Competitors() {
       >
         <div>
           <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "var(--d-text)", letterSpacing: "-0.3px" }}>
-            Competitors
+            {t("Competitors")}
           </h1>
           <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--d-text-2)" }}>
-            Sellers competing against your products across marketplaces.
+            {t("Sellers competing against your products across marketplaces.")}
           </p>
         </div>
 
@@ -692,7 +690,7 @@ function Competitors() {
                   }}
                 />
               )}
-              <span>Auto Discovery</span>
+              <span>{t("Auto Discovery")}</span>
             </button>
 
             <button
@@ -729,7 +727,7 @@ function Competitors() {
               }}
             >
               <span style={{ fontSize: "15px", lineHeight: 1 }}>+</span>
-              <span>Add Competitor</span>
+              <span>{t("Add Competitor")}</span>
             </button>
           </div>
         )}
@@ -752,10 +750,10 @@ function Competitors() {
             </svg>
           </div>
           <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--d-text)", margin: "0 0 8px" }}>
-            No Store Connected
+            {t("No Store Connected")}
           </h2>
           <p style={{ fontSize: "14px", color: "var(--d-text-2)", maxWidth: "420px", margin: "0 auto 20px", lineHeight: "1.5" }}>
-            Connect your marketplace store in Account &amp; Stores to start tracking competing sellers and price shifts.
+            {t("Connect your marketplace store in Account & Stores to start tracking competing sellers and price shifts.")}
           </p>
           <button
             onClick={() => navigate("/account")}
@@ -765,7 +763,7 @@ function Competitors() {
               cursor: "pointer", boxShadow: "0 2px 8px rgba(79,70,229,0.25)",
             }}
           >
-            + Go to Account &amp; Add Store
+            {t("+ Go to Account & Add Store")}
           </button>
         </div>
       ) : (
@@ -816,7 +814,7 @@ function Competitors() {
                       letterSpacing: "0.5px",
                     }}
                   >
-                    {s.label}
+                    {t(s.label)}
                   </p>
                   {s.label === "Pending Review" && filteredCandidates.length > 0 && (
                     <span
@@ -846,21 +844,18 @@ function Competitors() {
                   {s.badge && (
                     <span
                       style={{
-                        fontSize: "11px",
+                        fontSize: "12.5px",
                         fontWeight: 600,
-                        color: "#16a34a",
-                        background: "rgba(22, 163, 74, 0.12)",
-                        padding: "2px 8px",
-                        borderRadius: "6px",
+                        color: "var(--d-accent)",
                       }}
                     >
-                      {s.badge}
+                      {t(s.badge)}
                     </span>
                   )}
                 </div>
                 {s.subtext && (
                   <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--d-text-3)" }}>
-                    {s.subtext}
+                    {t(s.subtext)}
                   </p>
                 )}
               </div>
@@ -883,15 +878,15 @@ function Competitors() {
                     <div>
                       <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "var(--d-text)", display: "flex", alignItems: "center", gap: "8px" }}>
                         <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />
-                        Pending Review
+                        {t("Pending Review")}
                       </h2>
                       <p style={{ margin: "3px 0 0", fontSize: "12px", color: "var(--d-text-3)" }}>
-                        Price Intel discovered these competitors — review and accept or reject them.
+                        {t("Price Intel discovered these competitors — review and accept or reject them.")}
                       </p>
                     </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <span style={{ fontSize: "12px", fontWeight: 600, color: "#f59e0b" }}>
-                      {filteredCandidates.length} waiting
+                      {filteredCandidates.length} {t("waiting")}
                     </span>
                     <button
                       onClick={handleClearCandidates}
@@ -938,10 +933,10 @@ function Competitors() {
                               animation: "spin 0.7s linear infinite",
                             }}
                           />
-                          <span>Clearing…</span>
+                          <span>{t("Clearing…")}</span>
                         </>
                       ) : (
-                        "Clear list"
+                        t("Clear list")
                       )}
                     </button>
                     <button
@@ -958,7 +953,7 @@ function Competitors() {
                         cursor: "pointer",
                       }}
                     >
-                      {candidatesVisible ? "Hide list" : "Show list"}
+                      {t(candidatesVisible ? "Hide list" : "Show list")}
                     </button>
                   </div>
                   </div>
@@ -1003,7 +998,7 @@ function Competitors() {
                                 rel="noopener noreferrer"
                                 style={{ fontSize: "11px", color: "var(--d-accent)", textDecoration: "none" }}
                               >
-                                View listing ↗
+                                {t("View listing")} ↗
                               </a>
                             </div>
                           </div>
@@ -1015,14 +1010,14 @@ function Competitors() {
                               onClick={() => handleConfirm(c.id)}
                               style={{ ...btnStyle("success"), opacity: busy ? 0.5 : 1 }}
                             >
-                              {busy === "confirming" ? "…" : "✓ Accept"}
+                              {busy === "confirming" ? "…" : `✓ ${t("Accept")}`}
                             </button>
                             <button
                               disabled={!!busy}
                               onClick={() => handleReject(c.id)}
                               style={{ ...btnStyle("danger"), opacity: busy ? 0.5 : 1 }}
                             >
-                              {busy === "rejecting" ? "…" : "✕ Reject"}
+                              {busy === "rejecting" ? "…" : `✕ ${t("Reject")}`}
                             </button>
                           </div>
                         </div>
@@ -1036,11 +1031,11 @@ function Competitors() {
             /* Empty state after search when 0 candidates were found — visible for 6s only */
             <div className="animate-in" style={{ marginBottom: "16px", animationDelay: "0s" }}>
               <div style={{ ...card, textAlign: "center", padding: "32px 24px", borderColor: "var(--d-border)" }}>
-                <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--d-text)" }}>No new competitors found</p>
+                <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--d-text)" }}>{t("No new competitors found")}</p>
                 <p style={{ margin: "6px 0 0", fontSize: "12.5px", color: "var(--d-text-3)" }}>
-                  No unconfirmed competitor candidates were found for your{" "}
-                  {selectedProductId === "all" ? "products" : "selected product"}.
-                  Try adding competitors manually above.
+                  {t("No unconfirmed competitor candidates were found for your")}{" "}
+                  {t(selectedProductId === "all" ? "products" : "selected product")}.{" "}
+                  {t("Try adding competitors manually above.")}
                 </p>
               </div>
             </div>
@@ -1090,7 +1085,7 @@ function Competitors() {
                 </span>
                 <input
                   type="text"
-                  placeholder="Search competitors, products, or URLs..."
+                  placeholder={t("Search competitors...")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   style={{
@@ -1120,7 +1115,7 @@ function Competitors() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  Product:
+                  {t("Product:")}
                 </label>
                 <select
                   value={selectedProductId}
@@ -1144,11 +1139,11 @@ function Competitors() {
                   onBlur={(e) => (e.target.style.borderColor = "var(--d-border)")}
                 >
                   {products.length === 0 ? (
-                    <option value="all">No products tracked yet (0)</option>
+                    <option value="all">{t("No products tracked yet (0)")}</option>
                   ) : (
                     <>
                       <option value="all">
-                        All Tracked Products ({products.length})
+                        {t("All Tracked Products")} ({products.length})
                       </option>
                       {products.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -1184,10 +1179,10 @@ function Competitors() {
                   flexShrink: 0,
                 }}
               >
-                <option value="default">Filter: Default</option>
-                <option value="stock">Stock (Out of Stock → In Stock)</option>
-                <option value="velocity">Velocity (High → Low)</option>
-                <option value="behavior">Behavior (Undercutter → Matcher)</option>
+                <option value="default">{t("Filter: Default")}</option>
+                <option value="stock">{t("Stock (Out of Stock → In Stock)")}</option>
+                <option value="velocity">{t("Velocity (High → Low)")}</option>
+                <option value="behavior">{t("Behavior (Undercutter → Matcher)")}</option>
               </select>
 
               {/* Sellers found count */}
@@ -1201,7 +1196,7 @@ function Competitors() {
                 }}
               >
                 {loadingCompetitors
-                  ? "Loading…"
+                  ? t("Loading…")
                   : `${filteredCompetitors.length} sellers found`}
               </span>
             </div>
@@ -1210,19 +1205,19 @@ function Competitors() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px 14px" }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "var(--d-text)" }}>
-                  Detected Sellers in {selectedStore.store_name}
+                  {t("Detected Sellers")} {t("in")} {selectedStore.store_name}
                 </h2>
                 <p style={{ margin: "3px 0 0", fontSize: "12px", color: "var(--d-text-3)" }}>
                   {products.length === 0
-                    ? `No tracked products found for ${selectedStore.store_name}`
+                    ? `${t("No tracked products found for")} ${selectedStore.store_name}`
                     : selectedProductId === "all"
-                      ? "Showing all confirmed competitor sellers across your store's catalog"
-                      : `Filtered competitors for ${displayName(products.find((p) => String(p.id) === String(selectedProductId))) || "selected product"}`}
+                      ? t("Showing all confirmed competitor sellers across your store's catalog")
+                      : `${t("Filtered competitors for")} ${displayName(products.find((p) => String(p.id) === String(selectedProductId))) || t("selected product")}`}
                 </p>
               </div>
               <div>
                 <span style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--d-text-3)", whiteSpace: "nowrap" }}>
-                  {loadingCompetitors ? "Loading…" : `${filteredCompetitors.length} sellers found`}
+                  {loadingCompetitors ? t("Loading…") : `${filteredCompetitors.length} ${t("sellers found")}`}
                 </span>
               </div>
             </div>
@@ -1240,7 +1235,7 @@ function Competitors() {
                           letterSpacing: "0.5px", borderBottom: "1px solid var(--d-border)", whiteSpace: "nowrap",
                         }}
                       >
-                        {col}
+                        {t(col)}
                       </th>
                     ))}
                   </tr>
@@ -1249,19 +1244,22 @@ function Competitors() {
                   {loadingCompetitors ? (
                     <tr>
                       <td colSpan={7} style={{ textAlign: "center", padding: "48px 14px", color: "var(--d-text-3)", fontSize: "13px" }}>
-                        Loading competitors…
+                        <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
+                          <LoadingSpinner size={28} color="var(--d-accent)" />
+                        </div>
+                        {t("Loading competitors…")}
                       </td>
                     </tr>
                   ) : filteredCompetitors.length === 0 ? (
                     <tr>
                       <td colSpan={7} style={{ textAlign: "center", padding: "48px 14px", color: "var(--d-text-3)", fontSize: "13px" }}>
                         <p style={{ margin: "0 0 6px", fontSize: "14px", fontWeight: 600, color: "var(--d-text)" }}>
-                          No confirmed competitors yet
+                          {t("No confirmed competitors yet")}
                         </p>
                         <p style={{ margin: 0 }}>
                           {products.length === 0
-                            ? `No tracked products in ${selectedStore.store_name}. Add products to begin monitoring competitors.`
-                            : "Add competitors manually above, or click \"Search My Competitors\" to discover them automatically."}
+                            ? `${t("No tracked products in")} ${selectedStore.store_name}. ${t("Add products to begin monitoring competitors.")}`
+                            : t("Add competitors manually above, or click \"Search My Competitors\" to discover them automatically.")}
                         </p>
                         {products.length === 0 && (
                           <button
@@ -1272,7 +1270,7 @@ function Competitors() {
                               fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
                             }}
                           >
-                            + Add Products to {selectedStore.store_name}
+                            + {t("Add Products to")} {selectedStore.store_name}
                           </button>
                         )}
                       </td>
@@ -1313,7 +1311,7 @@ function Competitors() {
                                 </span>
                                 {selectedProductId === "all" && (
                                   <span style={{ fontSize: "11px", color: "var(--d-text-3)" }}>
-                                    on {c.productName}
+                                    {t("on")} {c.productName}
                                   </span>
                                 )}
                               </div>
@@ -1328,7 +1326,7 @@ function Competitors() {
                           {/* 3. Price Position */}
                           <td style={{ padding: "14px", whiteSpace: "nowrap" }}>
                             {pos ? (
-                              <span style={{ fontSize: "12.5px", fontWeight: 600, color: pos.color }}>{pos.text}</span>
+                              <span style={{ fontSize: "12.5px", fontWeight: 600, color: pos.color }}>                              {t(pos.text)}</span>
                             ) : (
                               <span style={{ fontSize: "12.5px", color: "var(--d-text-3)" }}>—</span>
                             )}
@@ -1366,23 +1364,21 @@ function Competitors() {
       {/* ── Search Confirmation Modal (Price Intel Theme) ────── */}
       <ConfirmModal
         isOpen={searchConfirmOpen}
-        title="Discover Competitors?"
+        title={t("Discover Competitors?")}
         message={
           <span>
-            Discover competitors for{" "}
+            {t("Discover competitors for")}{" "}
             <strong style={{ color: "var(--d-text)", fontWeight: 700 }}>
               "{searchTargetLabel}"
             </strong>
-            ?
+            {t("?")}
             <br />
             <br />
-            This will search the marketplace, filter results, and show you
-            candidates to Accept or Reject. Previous pending candidates for these
-            products will be cleared.
+            {t("This will search the marketplace, filter results, and show you candidates to Accept or Reject. Previous pending candidates for these products will be cleared.")}
           </span>
         }
-        confirmText="Search Competitors"
-        cancelText="Cancel"
+        confirmText={t("Search Competitors")}
+        cancelText={t("Cancel")}
         isDestructive={false}
         icon={
           <svg
@@ -1477,24 +1473,24 @@ function Competitors() {
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = "var(--d-text)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = "var(--d-text-3)"; }}
-                title="Close"
+                title={t("Close")}
               >
                 ✕
               </button>
             </div>
 
             <h2 style={{ margin: "0 0 6px", fontSize: "17px", fontWeight: 700, color: "var(--d-text)", letterSpacing: "-0.3px" }}>
-              Add Competitor Manually
+              {t("Add Competitor Manually")}
             </h2>
             <p style={{ margin: "0 0 20px", fontSize: "13px", color: "var(--d-text-2)", lineHeight: 1.5 }}>
-              Paste a competitor product URL — it will be immediately confirmed and tracked for price changes.
+              {t("Paste a competitor product URL — it will be immediately confirmed and tracked for price changes.")}
             </p>
 
             <form onSubmit={handleAddManual} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               {/* Product selection dropdown */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <label style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                  Tracking Against Product
+                  {t("Tracking Against Product")}
                 </label>
                 <select
                   value={addModalProductId}
@@ -1525,11 +1521,11 @@ function Competitors() {
               {/* Competitor URL */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <label style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                  Competitor URL <span style={{ color: "var(--d-danger)" }}>*</span>
+                  {t("Competitor URL")} <span style={{ color: "var(--d-danger)" }}>*</span>
                 </label>
                 <input
                   type="url"
-                  placeholder="https://www.noon.com/product/... or Daraz URL"
+                  placeholder={t("https://www.noon.com/product/... or Daraz URL")}
                   value={addForm.url}
                   onChange={(e) => setAddForm((f) => ({ ...f, url: e.target.value }))}
                   required
@@ -1553,7 +1549,7 @@ function Competitors() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "10px" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   <label style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                    Platform
+                    {t("Platform")}
                   </label>
                   <select
                     value={addForm.platform}
@@ -1576,11 +1572,11 @@ function Competitors() {
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   <label style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--d-text-3)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                    Seller Name (Optional)
+                    {t("Seller Name (Optional)")}
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Official Store"
+                    placeholder={t("e.g. Official Store")}
                     value={addForm.name}
                     onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
                     style={{
@@ -1616,7 +1612,7 @@ function Competitors() {
                   }}
                 >
                   <span>⚠️</span>
-                  <span>{addError}</span>
+                  <span>{t(addError)}</span>
                 </div>
               )}
               {addSuccess && (
@@ -1634,7 +1630,7 @@ function Competitors() {
                   }}
                 >
                   <span>✓</span>
-                  <span>{addSuccess}</span>
+                  <span>{t(addSuccess)}</span>
                 </div>
               )}
 
@@ -1656,7 +1652,7 @@ function Competitors() {
                     fontFamily: "inherit",
                   }}
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   type="submit"
@@ -1691,10 +1687,10 @@ function Competitors() {
                           animation: "confirmModalSpin 0.6s linear infinite",
                         }}
                       />
-                      <span>Adding…</span>
+                      <span>{t("Adding…")}</span>
                     </>
                   ) : (
-                    "+ Add Competitor"
+                    `+ ${t("Add Competitor")}`
                   )}
                 </button>
               </div>

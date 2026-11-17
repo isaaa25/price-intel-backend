@@ -1,6 +1,7 @@
 // src/components/BillingSection.jsx
 import React, { useState } from "react";
 import { BILLING_MOCK } from "../mock/billingData";
+import { useLocale } from "../context/LocaleContext";
 
 const cardStyle = {
   background: "var(--d-surface)",
@@ -11,6 +12,7 @@ const cardStyle = {
 };
 
 export default function BillingSection() {
+  const { language, t } = useLocale();
   const [toastMessage, setToastMessage] = useState(null);
 
   function showNotice(msg) {
@@ -96,7 +98,7 @@ export default function BillingSection() {
                   color: "var(--d-text-3)",
                 }}
               >
-                Current Plan
+                {t("Current Plan")}
               </span>
               <span
                 style={{
@@ -113,14 +115,14 @@ export default function BillingSection() {
                 }}
               >
                 <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--d-success)" }} />
-                {currentPlan.badge}
+                {t(currentPlan.badge)}
               </span>
             </div>
             <h2 style={{ margin: "4px 0", fontSize: "22px", fontWeight: 700, color: "var(--d-text)" }}>
-              {currentPlan.name}
+              {t(currentPlan.name)}
             </h2>
             <p style={{ margin: 0, fontSize: "13px", color: "var(--d-text-2)" }}>
-              {currentPlan.description}
+              {t(currentPlan.description)}
             </p>
           </div>
 
@@ -128,11 +130,11 @@ export default function BillingSection() {
             <div style={{ fontSize: "24px", fontWeight: 700, color: "var(--d-text)", letterSpacing: "-0.5px" }}>
               {currentPlan.price}
               <span style={{ fontSize: "13px", fontWeight: 400, color: "var(--d-text-3)", marginLeft: "4px" }}>
-                / {currentPlan.interval}
+                / {t(currentPlan.interval)}
               </span>
             </div>
             <div style={{ fontSize: "12px", color: "var(--d-text-2)", marginTop: "2px" }}>
-              Billed monthly
+              {t("Billed monthly")}
             </div>
           </div>
         </div>
@@ -150,7 +152,7 @@ export default function BillingSection() {
         >
           <div>
             <div style={{ fontSize: "11.5px", color: "var(--d-text-3)", fontWeight: 500, marginBottom: "4px" }}>
-              Tracked Products
+              {t("Tracked Products")}
             </div>
             <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--d-text)" }}>
               {currentPlan.trackedProductsCount.toLocaleString()} <span style={{ fontSize: "13px", color: "var(--d-text-3)", fontWeight: 400 }}>/ {currentPlan.trackedProductsLimit.toLocaleString()}</span>
@@ -159,7 +161,7 @@ export default function BillingSection() {
 
           <div>
             <div style={{ fontSize: "11.5px", color: "var(--d-text-3)", fontWeight: 500, marginBottom: "4px" }}>
-              Price Checks
+              {t("Price Checks")}
             </div>
             <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--d-text)" }}>
               {currentPlan.priceChecksCount.toLocaleString()} <span style={{ fontSize: "13px", color: "var(--d-text-3)", fontWeight: 400 }}>/ {currentPlan.priceChecksLimit.toLocaleString()}</span>
@@ -168,17 +170,17 @@ export default function BillingSection() {
 
           <div>
             <div style={{ fontSize: "11.5px", color: "var(--d-text-3)", fontWeight: 500, marginBottom: "4px" }}>
-              Next Billing Date
+              {t("Next Billing Date")}
             </div>
             <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--d-text)" }}>
-              {currentPlan.nextBillingDate}
+              {new Date(currentPlan.nextBillingDate).toLocaleDateString(language === "ar" ? "ar" : language === "ur" ? "ur" : language === "bn" ? "bn-BD" : "en", { year: "numeric", month: "long", day: "numeric" })}
             </div>
           </div>
         </div>
 
         <button
           id="btn-manage-subscription"
-          onClick={() => showNotice("Subscription management will be available soon.")}
+          onClick={() => showNotice(t("Subscription management will be available soon."))}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -201,7 +203,7 @@ export default function BillingSection() {
             <path d="M12 20h9" />
             <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
           </svg>
-          Manage Subscription
+          {t("Manage Subscription")}
         </button>
       </div>
 
@@ -209,10 +211,10 @@ export default function BillingSection() {
       <div style={cardStyle}>
         <div style={{ marginBottom: "20px" }}>
           <h2 style={{ margin: "0 0 4px", fontSize: "16px", fontWeight: 600, color: "var(--d-text)" }}>
-            Usage
+            {t("Usage")}
           </h2>
           <p style={{ margin: 0, fontSize: "12.5px", color: "var(--d-text-3)" }}>
-            Your current monthly consumption against plan allowances.
+            {t("Your current monthly consumption against plan allowances.")}
           </p>
         </div>
 
@@ -227,7 +229,7 @@ export default function BillingSection() {
                   <line x1="12" y1="22.08" x2="12" y2="12" />
                 </svg>
                 <span style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--d-text)" }}>
-                  Tracked Products
+                  {t("Tracked Products")}
                 </span>
               </div>
               <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--d-text)" }}>
@@ -270,7 +272,7 @@ export default function BillingSection() {
                   <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
                 <span style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--d-text)" }}>
-                  Price Checks
+                  {t("Price Checks")}
                 </span>
               </div>
               <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--d-text)" }}>
@@ -310,10 +312,10 @@ export default function BillingSection() {
       <div style={cardStyle}>
         <div style={{ marginBottom: "18px" }}>
           <h2 style={{ margin: "0 0 4px", fontSize: "16px", fontWeight: 600, color: "var(--d-text)" }}>
-            Payment Method
+            {t("Payment Method")}
           </h2>
           <p style={{ margin: 0, fontSize: "12.5px", color: "var(--d-text-3)" }}>
-            Card used for automatic subscription renewals and billing invoices.
+            {t("Card used for automatic subscription renewals and billing invoices.")}
           </p>
         </div>
 
@@ -368,19 +370,19 @@ export default function BillingSection() {
                       border: "1px solid rgba(59, 130, 246, 0.2)",
                     }}
                   >
-                    Default
+                    {t("Default")}
                   </span>
                 )}
               </div>
               <div style={{ fontSize: "12px", color: "var(--d-text-2)", marginTop: "2px" }}>
-                Expires {paymentMethod.expiry}
+                {t("Expires")} {paymentMethod.expiry}
               </div>
             </div>
           </div>
 
           <button
             id="btn-update-payment-method"
-            onClick={() => showNotice("Payment method management will be available soon.")}
+            onClick={() => showNotice(t("Payment method management will be available soon."))}
             style={{
               padding: "8px 16px",
               background: "var(--d-surface)",
@@ -401,7 +403,7 @@ export default function BillingSection() {
               e.currentTarget.style.color = "var(--d-text)";
             }}
           >
-            Update Payment Method
+            {t("Update Payment Method")}
           </button>
         </div>
       </div>
@@ -420,16 +422,16 @@ export default function BillingSection() {
         >
           <div>
             <h2 style={{ margin: "0 0 4px", fontSize: "16px", fontWeight: 600, color: "var(--d-text)" }}>
-              Billing History
+              {t("Billing History")}
             </h2>
             <p style={{ margin: 0, fontSize: "12.5px", color: "var(--d-text-3)" }}>
-              View and download past invoices and subscription receipts.
+              {t("View and download past invoices and subscription receipts.")}
             </p>
           </div>
 
           <button
             id="btn-view-all-invoices"
-            onClick={() => showNotice("All recent invoices are displayed below.")}
+            onClick={() => showNotice(t("All recent invoices are displayed below."))}
             style={{
               padding: "7px 14px",
               background: "transparent",
@@ -444,7 +446,7 @@ export default function BillingSection() {
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--d-accent-bg)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
-            View All
+            {t("View All")}
           </button>
         </div>
 
@@ -461,16 +463,16 @@ export default function BillingSection() {
             <thead>
               <tr style={{ background: "var(--d-surface-2)", borderBottom: "1px solid var(--d-border)" }}>
                 <th style={{ padding: "12px 16px", fontWeight: 600, color: "var(--d-text-3)", fontSize: "12px" }}>
-                  Date
+                  {t("Date")}
                 </th>
                 <th style={{ padding: "12px 16px", fontWeight: 600, color: "var(--d-text-3)", fontSize: "12px" }}>
-                  Description
+                  {t("Description")}
                 </th>
                 <th style={{ padding: "12px 16px", fontWeight: 600, color: "var(--d-text-3)", fontSize: "12px" }}>
-                  Amount
+                  {t("Amount")}
                 </th>
                 <th style={{ padding: "12px 16px", fontWeight: 600, color: "var(--d-text-3)", fontSize: "12px" }}>
-                  Status
+                  {t("Status")}
                 </th>
               </tr>
             </thead>
@@ -484,10 +486,10 @@ export default function BillingSection() {
                   }}
                 >
                   <td style={{ padding: "14px 16px", color: "var(--d-text)", fontWeight: 500 }}>
-                    {item.date}
+                    {new Date(item.date).toLocaleDateString(language === "ar" ? "ar" : language === "ur" ? "ur" : language === "bn" ? "bn-BD" : "en", { year: "numeric", month: "short", day: "numeric" })}
                   </td>
                   <td style={{ padding: "14px 16px", color: "var(--d-text)" }}>
-                    {item.description}
+                    {t(item.description)}
                   </td>
                   <td style={{ padding: "14px 16px", color: "var(--d-text)", fontWeight: 600 }}>
                     {item.amount}
@@ -507,7 +509,7 @@ export default function BillingSection() {
                         border: "1px solid rgba(34, 197, 94, 0.25)",
                       }}
                     >
-                      ✓ {item.status}
+                      ✓ {t(item.status)}
                     </span>
                   </td>
                 </tr>

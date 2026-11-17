@@ -164,7 +164,7 @@ function Login() {
                   color: "#94a3b8",
                 }}
                 tabIndex={-1}
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-label={t(showPassword ? "Hide password" : "Show password")}
               >
                 {showPassword ? (
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -194,7 +194,7 @@ function Login() {
               {t("Remember me")}
             </label>
             <span
-              onClick={() => alert("Password reset link will be sent to your email.")}
+              onClick={() => alert(t("Password reset link will be sent to your email."))}
               style={{ color: "#2563EB", fontWeight: 600, cursor: "pointer" }}
             >
               {t("Forgot password?")}

@@ -15,8 +15,9 @@ run_in_threadpool for the same reason bcrypt was.
 
 from typing import List, Optional
 import uuid
+from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 from app.queries import (
@@ -24,6 +25,7 @@ from app.queries import (
     fetch_opportunities_rows, fetch_price_wars_rows, fetch_market_movement_rows,
     fetch_product_market_movement_rows, fetch_competitor_candidates_rows, fetch_attention_items, fetch_alerts_rows, mark_alerts_read_by_user,
     fetch_price_trend_rows,
+    fetch_last_known_price_state,
 )
 from fastapi import HTTPException
 
@@ -148,7 +150,7 @@ async def get_product_kpis(db: AsyncSession, product_id) -> Optional[dict]:
 async def discover_competitors(db: AsyncSession, product_id, user_id) -> list[dict]:
     """
     On-demand discovery for one product. Verifies ownership, then runs
-    the Daraz discovery pipeline and returns pending candidates.
+    the marketplace discovery pipeline (Daraz / Noon) and returns pending candidates.
     """
     # Ownership check (raises 404 if not owned)
     await get_product_by_id(db, product_id, user_id)
@@ -513,6 +515,47 @@ async def get_product_market_movement(
         raw_pct = ((recent_avg - prior_avg) / prior_avg) * 100
         pct_change = round(max(-100.0, min(100.0, raw_pct)), 1)
         direction = "up" if pct_change > 0 else ("down" if pct_change < 0 else "flat")
+    elif comp_count > 0:
+        # Carry-forward fallback: when prices have been stable and loader skipped
+        # inserting redundant snapshots in the strict 1d or 3d window, seed with
+        # last known competitor price so the dashboard reports "Price Stable" (0.0%)
+        comp_seed, _ = await fetch_last_known_price_state(
+            db, user_id, store_id=store_id, product_id=product.id
+        )
+        if comp_seed and comp_seed.market_avg is not None:
+            m_val = float(comp_seed.market_avg)
+            recent_avg = recent_avg if recent_avg is not None else m_val
+            prior_avg = prior_avg if prior_avg is not None else m_val
+            pct_change = 0.0
+            direction = "flat"
+
+            if len(series) == 0:
+                now = datetime.utcnow()
+                if tf == "1d":
+                    buckets = [now - timedelta(hours=i) for i in (18, 12, 6, 0)]
+                    def _fmt(dt):
+                        h = dt.hour
+                        period = "AM" if h < 12 else "PM"
+                        return f"{(h % 12) or 12} {period}"
+                elif tf == "3d":
+                    buckets = [now - timedelta(days=i) for i in (2, 1, 0)]
+                    def _fmt(dt):
+                        return dt.strftime("%b %d")
+                else:  # 30d
+                    buckets = [now - timedelta(days=i) for i in range(29, -1, -1)]
+                    def _fmt(dt):
+                        return dt.strftime("%b %d")
+
+                series = [
+                    {
+                        "time": _fmt(dt),
+                        "date": dt.strftime("%b %d, %Y"),
+                        "raw_time": dt.isoformat(),
+                        "avg_price": round(m_val, 2),
+                        "snapshot_count": comp_count,
+                    }
+                    for dt in buckets
+                ]
 
     return {
         "product_id": str(product.id),
@@ -714,11 +757,29 @@ async def get_price_trend(
     """
     # 1. Product ownership validation if specific product requested
     product_own_cost = None
-    if product_id is not None:
-        product = await get_product_by_id(db, product_id, user_id)
+    target_pid = product_id if product_id is not None and str(product_id).lower() != "all" else None
+    if target_pid is not None:
+        product = await get_product_by_id(db, target_pid, user_id)
         if store_id is not None and str(product.store_id) != str(store_id):
             raise HTTPException(status_code=404, detail="Product not found in this store")
         product_own_cost = float(product.own_cost) if product.own_cost is not None else None
+
+    # Resolve baseline active price for store or specific product
+    active_own_price = product_own_cost
+    if active_own_price is None and store_id is not None:
+        avg_stmt = select(func.avg(TrackedProduct.own_cost)).join(
+            UserStore, UserStore.id == TrackedProduct.store_id
+        ).where(
+            UserStore.user_id == user_id,
+            TrackedProduct.store_id == store_id,
+            TrackedProduct.is_active == True,
+            TrackedProduct.own_cost.is_not(None),
+            TrackedProduct.own_cost > 0,
+        )
+        avg_res = await db.execute(avg_stmt)
+        val = avg_res.scalar()
+        if val is not None:
+            active_own_price = round(float(val), 2)
 
     # 2. Timeframe validation
     valid_timeframes = ("1d", "7d", "30d")
@@ -726,7 +787,7 @@ async def get_price_trend(
 
     # 3. Execute query
     result = await fetch_price_trend_rows(
-        db, user_id, store_id=store_id, product_id=product_id, timeframe=tf
+        db, user_id, store_id=store_id, product_id=target_pid, timeframe=tf
     )
     rows = result.fetchall()
 
@@ -748,7 +809,7 @@ async def get_price_trend(
 
         c_val = float(r.cheapest) if r.cheapest is not None else None
         m_val = float(r.market_avg) if r.market_avg is not None else None
-        e_val = float(r.most_expensive) if hasattr(r, "most_expensive") and r.most_expensive is not None else None
+        e_val = float(r.most_expensive) if getattr(r, "most_expensive", None) is not None else None
         y_val = float(r.your_avg) if r.your_avg is not None else None
 
         if m_val is not None:
@@ -766,60 +827,79 @@ async def get_price_trend(
             "yourAvg": y_val,
         })
 
-    # For a specific product: align known prices across observation points
-    if product_id is not None and data:
-        last_c = None
-        last_m = None
-        last_e = None
-        last_y = product_own_cost
+    # 5. Price continuity: maintain active price when not scraped, update to new price on scraped dates
+    first_observed_snapshot = next((d["yourAvg"] for d in data if d["yourAvg"] is not None), None)
+    initial_seed_price = first_observed_snapshot if first_observed_snapshot is not None else active_own_price
 
-        for pt in data:
-            if pt["cheapest"] is not None:
-                last_c = pt["cheapest"]
-            elif last_c is not None:
-                pt["cheapest"] = last_c
+    last_known_price = initial_seed_price
+    for d in data:
+        if d["yourAvg"] is not None:
+            last_known_price = d["yourAvg"]
+        elif last_known_price is not None:
+            d["yourAvg"] = last_known_price
 
-            if pt["marketAvg"] is not None:
-                last_m = pt["marketAvg"]
-            elif last_m is not None:
-                pt["marketAvg"] = last_m
-
-            if pt["expensive"] is not None:
-                last_e = pt["expensive"]
-            elif last_e is not None:
-                pt["expensive"] = last_e
-
-            if pt["yourAvg"] is not None:
-                last_y = pt["yourAvg"]
-            elif last_y is not None:
-                pt["yourAvg"] = last_y
-
-        b_c = None
-        b_m = None
-        b_e = None
-        for pt in reversed(data):
-            if pt["cheapest"] is not None:
-                b_c = pt["cheapest"]
-            elif b_c is not None:
-                pt["cheapest"] = b_c
-
-            if pt["marketAvg"] is not None:
-                b_m = pt["marketAvg"]
-            elif b_m is not None:
-                pt["marketAvg"] = b_m
-
-            if pt["expensive"] is not None:
-                b_e = pt["expensive"]
-            elif b_e is not None:
-                pt["expensive"] = b_e
-
-        market_avg_values = [pt["marketAvg"] for pt in data if pt["marketAvg"] is not None]
-        your_avg_values = [pt["yourAvg"] for pt in data if pt["yourAvg"] is not None]
+    # Recalculate your_avg_values with active continuity
+    your_avg_values = [d["yourAvg"] for d in data if d["yourAvg"] is not None]
 
     has_data = len(data) >= 2
 
+    # ── Carry-forward fallback ────────────────────────────────────────────
+    # If the requested window has fewer than 2 real data points (e.g. prices
+    # were stable so the loader skipped writing new rows), fetch the last known
+    # price state from the past 90 days and synthesise a flat-line dataset.
+    # This ensures the 1-day and 7-day charts always show something meaningful
+    # instead of "no data" when prices haven't changed recently.
+    if not has_data:
+        comp_seed, own_seed = await fetch_last_known_price_state(
+            db, user_id, store_id=store_id, product_id=target_pid
+        )
+
+        c_val = float(comp_seed.cheapest)   if comp_seed and comp_seed.cheapest    is not None else None
+        m_val = float(comp_seed.market_avg) if comp_seed and comp_seed.market_avg  is not None else None
+        e_val = float(comp_seed.most_expensive) if comp_seed and comp_seed.most_expensive is not None else None
+        y_val = float(own_seed.your_avg)    if own_seed  and own_seed.your_avg     is not None else active_own_price
+
+        if c_val is not None or m_val is not None:
+            # Build synthetic flat-line buckets across the full window
+            now = datetime.utcnow()
+            if tf == "1d":
+                # Exactly 4 snapshot points across 24 h (every 6 hours: 18h ago, 12h ago, 6h ago, Now)
+                buckets = [now - timedelta(hours=i) for i in (18, 12, 6, 0)]
+                def _fmt(dt):
+                    h = dt.hour
+                    period = "AM" if h < 12 else "PM"
+                    return f"{(h % 12) or 12} {period}"
+            elif tf == "7d":
+                # One point per day for the last 7 days
+                buckets = [now - timedelta(days=i) for i in range(6, -1, -1)]
+                def _fmt(dt):
+                    return dt.strftime("%b %d")
+            else:  # 30d
+                # One point per day for the last 30 days
+                buckets = [now - timedelta(days=i) for i in range(29, -1, -1)]
+                def _fmt(dt):
+                    return dt.strftime("%b %d")
+
+            data = [
+                {
+                    "time":      _fmt(dt),
+                    "date":      dt.strftime("%b %d, %Y"),
+                    "raw_time":  dt.isoformat(),
+                    "cheapest":  c_val,
+                    "marketAvg": m_val,
+                    "expensive": e_val,
+                    "yourAvg":   y_val,
+                }
+                for dt in buckets
+            ]
+            has_data = True
+            market_avg_values = [m_val] * len(data) if m_val is not None else []
+            your_avg_values   = [y_val] * len(data) if y_val is not None else []
+
     # 5. Derive honest insight from real observations
-    if len(data) < 2:
+    if target_pid is None:
+        insight = "Select a product to get insights."
+    elif len(data) < 2:
         if len(data) == 1:
             insight = "Only 1 historical observation recorded. At least 2 observations are needed to show a price trend."
         else:
@@ -832,7 +912,13 @@ async def get_price_trend(
             if avg_m > 0:
                 diff_pct = round(((avg_y - avg_m) / avg_m) * 100, 1)
                 term = "Your price is" if product_id is not None else "Your prices averaged"
-                if diff_pct < 0:
+                # Distinguish carry-forward (stable prices) from real observations
+                is_carry_forward = has_data and all(
+                    d.get("marketAvg") == data[0].get("marketAvg") for d in data
+                ) and len(set(d["raw_time"][:10] for d in data)) > 1
+                if is_carry_forward:
+                    insight = f"Prices stable — showing last known market state. {term} {abs(diff_pct)}% {'below' if diff_pct < 0 else 'above'} market average." if diff_pct != 0 else "Prices stable — showing last known market state. Your price matches the market average."
+                elif diff_pct < 0:
                     insight = f"{term} {abs(diff_pct)}% below market average across this period."
                 elif diff_pct > 0:
                     insight = f"{term} {diff_pct}% above market average across this period."

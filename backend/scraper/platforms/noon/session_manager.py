@@ -1755,7 +1755,12 @@ class SessionManager:
             raise RuntimeError(
                 "[SessionManager] get_headers() called before initialise()."
             )
-        return _build_headers(self._bundle, referer)
+        headers = _build_headers(self._bundle, referer)
+        if self._country:
+            clean_c = self._country.lower()
+            headers["x-mp-country"] = clean_c
+            headers["x-locale"] = f"en-{clean_c}"
+        return headers
 
     def get_proxy(self) -> Optional[str]:
         """

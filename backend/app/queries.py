@@ -522,7 +522,7 @@ async def fetch_price_trend_rows(
         store_filter = "AND tp.store_id = :sid"
         params["sid"] = str(store_id)
 
-    if product_id is not None:
+    if product_id is not None and str(product_id).lower() != "all":
         product_filter = "AND tp.id = :pid"
         params["pid"] = str(product_id)
 
@@ -587,3 +587,68 @@ async def fetch_price_trend_rows(
         FULL OUTER JOIN own_series o ON c.bucket_time = o.bucket_time
         ORDER BY bucket_time ASC
     """), params)
+
+
+
+async def fetch_last_known_price_state(
+    db: AsyncSession,
+    user_id,
+    store_id=None,
+    product_id=None,
+):
+    """
+    Fetches the most recent competitor price state from the past 90 days
+    regardless of time window. Used as a carry-forward seed in get_price_trend()
+    when the requested timeframe window (1d / 7d) contains no rows — e.g.
+    because prices have been stable and the skip-unchanged logic in the loader
+    hasn't written a new row yet. Returns cheapest, market_avg, most_expensive
+    for competitors and your_avg for own snapshots.
+    Powers: get_price_trend() fallback in services/product_service.py
+    """
+    store_filter = ""
+    product_filter = ""
+    params = {"uid": str(user_id)}
+
+    if store_id is not None:
+        store_filter = "AND tp.store_id = :sid"
+        params["sid"] = str(store_id)
+
+    if product_id is not None and str(product_id).lower() != "all":
+        product_filter = "AND tp.id = :pid"
+        params["pid"] = str(product_id)
+
+    comp_result = await db.execute(text(f"""
+        SELECT
+            ROUND(MIN(ps.price)::numeric, 2) AS cheapest,
+            ROUND(AVG(ps.price)::numeric, 2) AS market_avg,
+            ROUND(MAX(ps.price)::numeric, 2) AS most_expensive
+        FROM price_snapshots ps
+        JOIN competitor_listings cl ON cl.id = ps.competitor_listing_id
+        JOIN tracked_products tp    ON tp.id = cl.tracked_product_id
+        JOIN user_stores us         ON us.id = tp.store_id
+        WHERE us.user_id = :uid
+          AND tp.is_active = true
+          AND cl.is_active = true
+          AND ps.price IS NOT NULL
+          AND ps.price > 0
+          {store_filter}
+          {product_filter}
+          AND ps.scraped_at >= NOW() - INTERVAL '90 days'
+    """), params)
+
+    own_result = await db.execute(text(f"""
+        SELECT
+            ROUND(AVG(tps.price)::numeric, 2) AS your_avg
+        FROM tracked_product_snapshots tps
+        JOIN tracked_products tp ON tp.id = tps.tracked_product_id
+        JOIN user_stores us      ON us.id = tp.store_id
+        WHERE us.user_id = :uid
+          AND tp.is_active = true
+          AND tps.price IS NOT NULL
+          AND tps.price > 0
+          {store_filter}
+          {product_filter}
+          AND tps.scraped_at >= NOW() - INTERVAL '90 days'
+    """), params)
+
+    return comp_result.fetchone(), own_result.fetchone()

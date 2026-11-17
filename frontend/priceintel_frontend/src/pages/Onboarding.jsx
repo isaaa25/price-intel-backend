@@ -2,10 +2,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AuthBackground from "../components/AuthBackground";
+import LoadingSpinner from "../components/LoadingSpinner";
 import apiRequest from "../api/client";
 import { getStores } from "../api/products";
 import { completeOnboarding } from "../api/auth";
 import { useStore } from "../context/StoreContext";
+import { useLocale } from "../context/LocaleContext";
 
 const MARKETPLACE_OPTIONS = [
   { value: "daraz", label: "Daraz", color: "#E11D48", country: "Pakistan" },
@@ -17,6 +19,7 @@ const COUNTRY_OPTIONS = ["Pakistan", "UAE", "Saudi Arabia"];
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { t } = useLocale();
   const [searchParams] = useSearchParams();
   const { refreshStores } = useStore();
 
@@ -81,7 +84,7 @@ export default function Onboarding() {
     setError("");
 
     if (!isFormValid) {
-      setError("Please fill in all required fields (Marketplace, Country, Store Name, and Store URL).");
+      setError(t("Please fill in all required fields (Marketplace, Country, Store Name, and Store URL)."));
       return;
     }
 
@@ -89,7 +92,7 @@ export default function Onboarding() {
     try {
       new URL(storeUrl.trim());
     } catch {
-      setError("Please enter a valid URL (including https://).");
+      setError(t("Please enter a valid URL (including https://)."));
       return;
     }
 
@@ -111,7 +114,7 @@ export default function Onboarding() {
       await refreshStores();
       setStep("store_success");
     } catch (err) {
-      setError(err.message || "Failed to create store. Please check details and try again.");
+      setError(t(err.message || "Failed to create store. Please check details and try again."));
     } finally {
       setSubmitting(false);
     }
@@ -134,10 +137,11 @@ export default function Onboarding() {
 
   if (loadingInitial) {
     return (
-      <div className="auth-page">
+      <div className="auth-page" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <AuthBackground />
-        <div style={{ zIndex: 2, color: "#475569", fontSize: "14px", fontWeight: 500 }}>
-          Loading your onboarding…
+        <div style={{ zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center", gap: "14px", color: "var(--d-text-2)", fontSize: "14px", fontWeight: 500 }}>
+          <LoadingSpinner size={38} color="var(--d-accent)" />
+          {t("Loading your onboarding…")}
         </div>
       </div>
     );
@@ -185,7 +189,7 @@ export default function Onboarding() {
               Price Intel
             </div>
             <div style={{ fontSize: "11px", color: "#64748B", fontWeight: 500 }}>
-              Competitive Intelligence
+              {t("Competitive Intelligence")}
             </div>
           </div>
         </div>
@@ -195,7 +199,7 @@ export default function Onboarding() {
           <div style={{ display: "flex", flexDirection: "column" }}>
             {/* Step indicator */}
             <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", width: "fit-content", padding: "3px 10px", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "100px", color: "#2563EB", fontSize: "11px", fontWeight: 600, marginBottom: "16px" }}>
-              <span>🚀 Getting Started</span>
+              <span>🚀 {t("Getting Started")}</span>
             </div>
 
             <h1
@@ -208,7 +212,7 @@ export default function Onboarding() {
                 lineHeight: 1.25,
               }}
             >
-              Welcome to Price Intel
+              {t("Welcome to Price Intel")}
             </h1>
 
             <p
@@ -219,7 +223,7 @@ export default function Onboarding() {
                 lineHeight: 1.55,
               }}
             >
-              Let's get your store set up and start monitoring your competitors in real time.
+              {t("Let's get your store set up and start monitoring your competitors in real time.")}
             </p>
 
             {/* Feature preview list */}
@@ -260,8 +264,8 @@ export default function Onboarding() {
                     ✓
                   </div>
                   <div>
-                    <div style={{ fontSize: "12.5px", fontWeight: 600, color: "#1E293B" }}>{item.title}</div>
-                    <div style={{ fontSize: "11.5px", color: "#64748B" }}>{item.desc}</div>
+                    <div style={{ fontSize: "12.5px", fontWeight: 600, color: "#1E293B" }}>{t(item.title)}</div>
+                    <div style={{ fontSize: "11.5px", color: "#64748B" }}>{t(item.desc)}</div>
                   </div>
                 </div>
               ))}
@@ -288,7 +292,7 @@ export default function Onboarding() {
                 transition: "all 0.15s ease",
               }}
             >
-              Add Your Store →
+              {t("Add Your Store")} →
             </button>
           </div>
         )}
@@ -313,18 +317,18 @@ export default function Onboarding() {
                   gap: "4px",
                 }}
               >
-                ← Back
+                {t("← Back")}
               </button>
               <span style={{ fontSize: "11px", fontWeight: 600, color: "#2563EB", background: "#EFF6FF", padding: "2px 8px", borderRadius: "100px" }}>
-                Step 1 of 2
+                {t("Step 1 of 2")}
               </span>
             </div>
 
             <h2 style={{ fontSize: "20px", fontWeight: 700, color: "var(--d-text, #0F172A)", margin: "0 0 6px", letterSpacing: "-0.3px" }}>
-              Add Your Store
+              {t("Add Your Store")}
             </h2>
             <p style={{ fontSize: "13px", color: "var(--d-text-2, #64748B)", margin: "0 0 20px" }}>
-              Enter your marketplace seller details so Price Intel can track your inventory.
+              {t("Enter your marketplace seller details so Price Intel can track your inventory.")}
             </p>
 
             {error && (
@@ -351,7 +355,7 @@ export default function Onboarding() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
-                    Marketplace *
+                    {t("Marketplace")} *
                   </label>
                   <select
                     id="input-onboarding-marketplace"
@@ -370,14 +374,14 @@ export default function Onboarding() {
                     }}
                   >
                     {MARKETPLACE_OPTIONS.map((m) => (
-                      <option key={m.value} value={m.value}>{m.label}</option>
+                      <option key={m.value} value={m.value}>{t(m.label)}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
-                    Country *
+                    {t("Country")} *
                   </label>
                   <select
                     id="input-onboarding-country"
@@ -396,7 +400,7 @@ export default function Onboarding() {
                     }}
                   >
                     {COUNTRY_OPTIONS.map((c) => (
-                      <option key={c} value={c}>{c}</option>
+                      <option key={c} value={c}>{t(c)}</option>
                     ))}
                   </select>
                 </div>
@@ -405,12 +409,12 @@ export default function Onboarding() {
               {/* Store Name */}
               <div>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
-                  Store Name *
+                  {t("Store Name")} *
                 </label>
                 <input
                   id="input-onboarding-store-name"
                   type="text"
-                  placeholder="e.g. TechZone Official"
+                  placeholder={t("e.g. TechZone Official")}
                   value={storeName}
                   onChange={(e) => setStoreName(e.target.value)}
                   required
@@ -432,7 +436,7 @@ export default function Onboarding() {
               {/* Store URL */}
               <div>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
-                  Store URL *
+                  {t("Store URL")} *
                 </label>
                 <input
                   id="input-onboarding-store-url"
@@ -455,7 +459,7 @@ export default function Onboarding() {
                   }}
                 />
                 <span style={{ fontSize: "11px", color: "#64748B", marginTop: "4px", display: "block" }}>
-                  The public web address of your seller storefront.
+                  {t("The public web address of your seller storefront.")}
                 </span>
               </div>
 
@@ -477,13 +481,13 @@ export default function Onboarding() {
                     gap: "4px",
                   }}
                 >
-                  <span>{showAdvanced ? "▾ Hide" : "▸ Show"} optional details (slug / ID)</span>
+                  <span>{showAdvanced ? `▾ ${t("Hide")}` : `▸ ${t("Show")}`} {t("optional details (slug / ID)")}</span>
                 </button>
 
                 {showAdvanced && (
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
                     <div>
-                      <label style={{ display: "block", fontSize: "11px", color: "#64748B", marginBottom: "4px" }}>Store Slug</label>
+                      <label style={{ display: "block", fontSize: "11px", color: "#64748B", marginBottom: "4px" }}>{t("Store Slug")}</label>
                       <input
                         type="text"
                         placeholder="techzone-pk"
@@ -493,10 +497,10 @@ export default function Onboarding() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: "11px", color: "#64748B", marginBottom: "4px" }}>External ID</label>
+                      <label style={{ display: "block", fontSize: "11px", color: "#64748B", marginBottom: "4px" }}>{t("External ID")}</label>
                       <input
                         type="text"
-                        placeholder="p-12345"
+                        placeholder={t("External ID example")}
                         value={externalId}
                         onChange={(e) => setExternalId(e.target.value)}
                         style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "12px", boxSizing: "border-box" }}
@@ -526,7 +530,7 @@ export default function Onboarding() {
                   transition: "all 0.15s ease",
                 }}
               >
-                {submitting ? "Saving store…" : "Continue →"}
+                {submitting ? t("Saving store…") : `${t("Continue")} →`}
               </button>
             </form>
           </div>
@@ -556,11 +560,11 @@ export default function Onboarding() {
             </div>
 
             <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--d-text, #0F172A)", margin: "0 0 8px", letterSpacing: "-0.4px" }}>
-              Store Created Successfully!
+              {t("Store Created Successfully!")}
             </h2>
 
             <p style={{ fontSize: "13.5px", color: "var(--d-text-2, #64748B)", margin: "0 0 20px", maxWidth: "340px", lineHeight: 1.5 }}>
-              Your store <strong style={{ color: "#0F172A" }}>{createdStore?.store_name || "New Store"}</strong> is now connected. Let's take a quick interactive tour of the platform.
+              {t("Your store")} <strong style={{ color: "#0F172A" }}>{createdStore?.store_name || t("New Store")}</strong> {t("is now connected. Let's take a quick interactive tour of the platform.")}
             </p>
 
             {/* Store card summary */}
@@ -619,7 +623,7 @@ export default function Onboarding() {
                   transition: "all 0.15s ease",
                 }}
               >
-                Start Website Tour →
+                {t("Start Website Tour")} →
               </button>
 
               <button
@@ -637,7 +641,7 @@ export default function Onboarding() {
                   cursor: "pointer",
                 }}
               >
-                Skip Tour & Go to Dashboard
+                {t("Skip Tour & Go to Dashboard")}
               </button>
             </div>
           </div>

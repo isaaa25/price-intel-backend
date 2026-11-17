@@ -1,7 +1,9 @@
 // src/components/AuthBackground.jsx
 import React from "react";
+import { useLocale } from "../context/LocaleContext";
 
 export default function AuthBackground({ children }) {
+  const { t } = useLocale();
   return (
     <>
       {/* Brand Header Top-Left */}
@@ -9,7 +11,7 @@ export default function AuthBackground({ children }) {
         <div className="brand-logo-box">PI</div>
         <div className="brand-logo-text">
           <span className="brand-title">Price Intel</span>
-          <span className="brand-subtitle">Enterprise Analytics</span>
+          <span className="brand-subtitle">{t("Enterprise Analytics")}</span>
         </div>
       </div>
 

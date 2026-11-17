@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { completeOnboarding } from "../api/auth";
+import { useLocale } from "../context/LocaleContext";
 
 const TOUR_STEPS = [
   {
@@ -42,6 +43,7 @@ const TOUR_STEPS = [
 ];
 
 export default function WebsiteTour({ active, onDismiss }) {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(0);
@@ -228,17 +230,17 @@ export default function WebsiteTour({ active, onDismiss }) {
                 border: "1px solid #BFDBFE",
               }}
             >
-              {step.badge}
+              {t(step.badge)}
             </span>
             <span style={{ fontSize: "11px", fontWeight: 600, color: "#64748B" }}>
-              Step {currentStep + 1} of {TOUR_STEPS.length}
+              {t("Step")} {currentStep + 1} {t("of")} {TOUR_STEPS.length}
             </span>
           </div>
 
           <button
             id="tour-btn-skip-top"
             onClick={handleSkip}
-            title="Skip Tour"
+            title={t("Skip Tour")}
             style={{
               background: "none",
               border: "none",
@@ -253,7 +255,7 @@ export default function WebsiteTour({ active, onDismiss }) {
             onMouseEnter={(e) => (e.currentTarget.style.color = "#475569")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "#94A3B8")}
           >
-            Skip
+            {t("Skip")}
           </button>
         </div>
 
@@ -267,7 +269,7 @@ export default function WebsiteTour({ active, onDismiss }) {
             letterSpacing: "-0.2px",
           }}
         >
-          {step.title}
+          {t(step.title)}
         </h3>
 
         {/* Description */}
@@ -279,7 +281,7 @@ export default function WebsiteTour({ active, onDismiss }) {
             lineHeight: 1.55,
           }}
         >
-          {step.description}
+          {t(step.description)}
         </p>
 
         {/* Footer: Step Dots + Action Buttons */}
@@ -321,7 +323,7 @@ export default function WebsiteTour({ active, onDismiss }) {
               onMouseEnter={(e) => (e.currentTarget.style.color = "#0F172A")}
               onMouseLeave={(e) => (e.currentTarget.style.color = "#64748B")}
             >
-              Skip Tour
+              {t("Skip Tour")}
             </button>
 
             {!isFirst && (
@@ -341,7 +343,7 @@ export default function WebsiteTour({ active, onDismiss }) {
                   transition: "background 0.15s ease",
                 }}
               >
-                Back
+                {t("Back")}
               </button>
             )}
 
@@ -363,7 +365,7 @@ export default function WebsiteTour({ active, onDismiss }) {
                 transition: "all 0.15s ease",
               }}
             >
-              {isLast ? (completing ? "Finishing…" : "Finish Tour") : "Next →"}
+              {isLast ? (completing ? t("Finishing…") : t("Finish Tour")) : `${t("Next")} →`}
             </button>
           </div>
         </div>

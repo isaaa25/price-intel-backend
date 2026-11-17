@@ -149,9 +149,13 @@ async def discover_competitors_for_product(product_id: uuid.UUID) -> list[dict]:
         raise ValueError("Product not found or inactive")
 
     marketplace = (ctx["marketplace"] or "").lower()
+    if marketplace == "noon":
+        from pipeline.discovery_noon import discover_competitors_for_noon_context
+        return await discover_competitors_for_noon_context(ctx)
+
     if marketplace != "daraz":
         raise ValueError(
-            f"On-demand discovery is currently only supported for Daraz "
+            f"On-demand discovery is currently only supported for Daraz and Noon "
             f"(this product's store is marketplace={marketplace!r})."
         )
 

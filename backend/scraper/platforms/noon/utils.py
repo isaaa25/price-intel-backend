@@ -113,7 +113,7 @@ async def retry(func, retries: int = None, *args, **kwargs):
 
 # ─── URL Builder ─────────────────────────────────────────────
 
-def build_product_url(url_slug: str, sku: str) -> str:
+def build_product_url(url_slug: str, sku: str, locale: str = "uae-en") -> str:
     """
     Constructs a full Noon product URL from the url slug and SKU.
     Both values come directly from the search API response.
@@ -123,7 +123,8 @@ def build_product_url(url_slug: str, sku: str) -> str:
         sku      = "N12345678V"
         result   = "https://www.noon.com/uae-en/apple-iphone-15-pro-max-256gb/N12345678V/p/"
     """
-    base = "https://www.noon.com/uae-en"
+    clean_locale = (locale or "uae-en").strip().strip("/")
+    base = f"https://www.noon.com/{clean_locale}"
     return f"{base}/{url_slug}/{sku}/p/"
 
 

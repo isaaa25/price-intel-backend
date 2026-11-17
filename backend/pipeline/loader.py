@@ -1089,7 +1089,28 @@ async def save_monitoring_snapshot(
         previous = await get_latest_snapshot(session, listing.id)
 
         # ── Step 2: Change detection (identical function, both paths) ────
-        if not _has_changed(previous, offer_data):
+        # Force-insert a snapshot at least once every 24 h even when price
+        # and stock are unchanged — without this, the 1-day and 7-day price
+        # trend charts show no data during stable-price periods because there
+        # are no rows within the query window.
+        FORCE_INSERT_AFTER_HOURS = 24
+        force_insert = False
+        if previous is not None and not _has_changed(previous, offer_data):
+            last_scraped = previous.scraped_at
+            # scraped_at may be timezone-aware (UTC) or naive — normalise to naive UTC
+            if last_scraped is not None and hasattr(last_scraped, "tzinfo") and last_scraped.tzinfo is not None:
+                last_scraped = last_scraped.replace(tzinfo=None)
+            if last_scraped is not None:
+                age_hours = (datetime.utcnow() - last_scraped).total_seconds() / 3600
+                if age_hours >= FORCE_INSERT_AFTER_HOURS:
+                    force_insert = True
+                    logger.debug(
+                        f"[Monitoring][ForceInsert] Price unchanged but last snapshot "
+                        f"is {age_hours:.1f}h old — inserting heartbeat snapshot | "
+                        f"listing={listing.id}"
+                    )
+
+        if not force_insert and not _has_changed(previous, offer_data):
             listing.consecutive_unchanged = (listing.consecutive_unchanged or 0) + 1
             session.add(listing)
             await session.flush()
@@ -1427,7 +1448,28 @@ async def save_daraz_monitoring_snapshot(
         }
 
         # ── Step 3: Change detection (identical function, all paths) ──────
-        if not _has_changed(previous, snapshot_data):
+        # Force-insert a snapshot at least once every 24 h even when price
+        # and stock are unchanged — without this, the 1-day and 7-day price
+        # trend charts show no data during stable-price periods because there
+        # are no rows within the query window.
+        FORCE_INSERT_AFTER_HOURS = 24
+        force_insert = False
+        if previous is not None and not _has_changed(previous, snapshot_data):
+            last_scraped = previous.scraped_at
+            # scraped_at may be timezone-aware (UTC) or naive — normalise to naive UTC
+            if last_scraped is not None and hasattr(last_scraped, "tzinfo") and last_scraped.tzinfo is not None:
+                last_scraped = last_scraped.replace(tzinfo=None)
+            if last_scraped is not None:
+                age_hours = (datetime.utcnow() - last_scraped).total_seconds() / 3600
+                if age_hours >= FORCE_INSERT_AFTER_HOURS:
+                    force_insert = True
+                    logger.debug(
+                        f"[DarazMonitoring][ForceInsert] Price unchanged but last snapshot "
+                        f"is {age_hours:.1f}h old — inserting heartbeat snapshot | "
+                        f"listing={listing.id}"
+                    )
+
+        if not force_insert and not _has_changed(previous, snapshot_data):
             listing.consecutive_unchanged = (listing.consecutive_unchanged or 0) + 1
             session.add(listing)
             await session.flush()

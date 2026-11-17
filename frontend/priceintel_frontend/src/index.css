@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;700&family=Noto+Sans+Arabic:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap');
 
 /* ─── Design Tokens ─────────────────────────────────────── */
 :root {
@@ -67,6 +67,20 @@ body {
 html[lang="ar"] body,
 html[lang="ur"] body {
   font-family: "Noto Sans Arabic", sans-serif;
+}
+
+html[lang="bn"] body {
+  font-family: "Noto Sans Bengali", sans-serif;
+  line-height: 1.6;
+}
+
+html[lang="ar"] .auth-page,
+html[lang="ur"] .auth-page {
+  font-family: "Noto Sans Arabic", sans-serif;
+}
+
+html[lang="bn"] .auth-page {
+  font-family: "Noto Sans Bengali", sans-serif;
 }
 
 /* ─── Auth pages shared wrapper ────────────────────────── */
@@ -879,6 +893,15 @@ html[lang="ur"] body {
   animation: fadeUp 0.35s ease both;
 }
 
+@keyframes pi-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .fade-in {
   animation: fadeIn 0.3s ease both;
 }
@@ -918,6 +941,7 @@ html[lang="ur"] body {
   overflow-y: auto;
   box-sizing: border-box;
   z-index: 50;
+  overflow-wrap: anywhere;
 }
 
 [dir="rtl"] .layout-sidebar-desktop {
@@ -926,9 +950,26 @@ html[lang="ur"] body {
   box-shadow: -2px 0 8px -2px rgba(0,0,0,0.05);
 }
 
+.layout-sidebar-desktop [id^="sidebar-nav-"] > span:last-child,
+.layout-sidebar-mobile [id^="sidebar-nav-"] > span:last-child {
+  min-width: 0;
+}
+
+.sidebar-nav-active-indicator {
+  position: absolute;
+  inset-inline-start: -4px;
+  top: 8px;
+  bottom: 8px;
+  width: 3.5px;
+  background: var(--d-accent);
+  border-start-end-radius: 4px;
+  border-end-end-radius: 4px;
+}
+
 /* ── Layout: Mobile Sidebar Drawer ────────────────────────── */
 .layout-sidebar-mobile {
   display: none; /* hidden on desktop */
+  overflow-wrap: anywhere;
 }
 
 /* ── Layout: Mobile Backdrop ──────────────────────────────── */
@@ -958,6 +999,7 @@ html[lang="ur"] body {
 /* ── Layout: Top Header ───────────────────────────────────── */
 .layout-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   padding: 14px 36px;
@@ -967,6 +1009,11 @@ html[lang="ur"] body {
   top: 0;
   z-index: 40;
   gap: 12px;
+  overflow-wrap: anywhere;
+}
+
+.layout-header > * {
+  min-width: 0;
 }
 
 /* ── Layout: Main Content ─────────────────────────────────── */
@@ -980,6 +1027,7 @@ html[lang="ur"] body {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 /* ── Responsive Grid Utilities ────────────────────────────── */
@@ -1043,6 +1091,11 @@ html[lang="ur"] body {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 24px;
+}
+
+.res-page-header > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* Table scroll wrapper */

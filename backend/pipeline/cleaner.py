@@ -56,11 +56,17 @@ VALID_STOCK_STATUSES = {"in_stock", "out_of_stock", "limited", "unknown"}
 COUNTRY_CURRENCY = {
     "UAE": "AED",
     "SAU": "SAR",
+    "Saudi Arabia": "SAR",
     "EGY": "EGP",
+    "Egypt": "EGP",
     "KWT": "KWD",
+    "Kuwait": "KWD",
     "QAT": "QAR",
+    "Qatar": "QAR",
     "BHR": "BHD",
+    "Bahrain": "BHD",
     "OMN": "OMR",
+    "Oman": "OMR",
 }
 
 
