@@ -68,7 +68,7 @@ class Settings(BaseSettings):
     # scrapfly api key
     SCRAPFLY_API_KEY: str
 
-    BROWSERBASE_API_KEY: str
+    BROWSERBASE_API_KEY: Optional[str] = None
 
     # ─── Session Management ───────────────────────────────────────────────────
     SESSION_MAX_AGE_HOURS: int = 4
