@@ -51,6 +51,7 @@ jobs:
           SCRAPEOPS_API_KEY: ${{ secrets.SCRAPEOPS_API_KEY }}
           SCRAPFLY_API_KEY: ${{ secrets.SCRAPFLY_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
 
           # ── IPRoyal (required by Settings even if USE_PROXY=False)
           IPROYAL_USERNAME: ${{ secrets.IPROYAL_USERNAME }}
